@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana - Build Showcase Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            font-size: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result-content {
+            white-space: pre-line;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ Build Showcase Generator</h1>
+        
+        <form id="buildForm">
+            <div class="form-group">
+                <label for="size">La taille du build :</label>
+                <input type="text" id="size" name="size" placeholder="600 ou 600x600" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="creators">Réalisé par (ex si plusieurs : Archibald,ced,Boubakar) :</label>
+                <input type="text" id="creators" name="creators" placeholder="Archibald,ced,Boubakar" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="buildName">Nom du build :</label>
+                <input type="text" id="buildName" name="buildName" placeholder="Greek Countryside" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="version">Version :</label>
+                <input type="text" id="version" name="version" placeholder="1.21.4" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="customer">For a customer ? (oui = y sinon écrire) :</label>
+                <input type="text" id="customer" name="customer" placeholder="y (laisser vide) ou autre texte (remplir)" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="price">Prix :</label>
+                <input type="text" id="price" name="price" placeholder="Stocké mais non affiché" required>
+            </div>
+            
+            <button type="submit">Générer le message</button>
+        </form>
+        
+        <div class="result" id="result">
+            <div class="result-content" id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('buildForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Récupération des valeurs
+            let a = document.getElementById('size').value.trim();
+            let b = document.getElementById('creators').value.trim();
+            let c = document.getElementById('buildName').value.trim();
+            let d = document.getElementById('version').value.trim();
+            let customerInput = document.getElementById('customer').value.trim();
+            let f = document.getElementById('price').value.trim(); // Stocké mais non affiché
+            
+            // Traitement de la taille : si pas de "x", ajouter "x{taille}"
+            if (!a.toLowerCase().includes('x')) {
+                a = `${a}x${a}`;
+            }
+            
+            // Capitalisation du nom du build
+            c = c.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+            
+            // Traitement des créateurs (gestion des virgules et capitalisation)
+            let creators = b.split(',').map(creator => {
+                let trimmed = creator.trim();
+                return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+            });
+            
+            let creators_str, creators_str_fr;
+            if (creators.length === 1) {
+                creators_str = creators[0];
+                creators_str_fr = creators[0];
+            } else if (creators.length === 2) {
+                creators_str = `${creators[0]} & ${creators[1]}`;
+                creators_str_fr = `${creators[0]} & ${creators[1]}`;
+            } else {
+                creators_str = creators.slice(0, -1).join(', ') + ` & ${creators[creators.length - 1]}`;
+                creators_str_fr = creators.slice(0, -1).join(', ') + ` & ${creators[creators.length - 1]}`;
+            }
+            
+            // Gestion du "For a customer"
+            let customer_en, customer_fr, collaboration_en, collaboration_fr;
+            if (customerInput.toLowerCase() === 'y' || customerInput.toLowerCase() === 'oui') {
+                customer_en = ''; // Laisser vide si c'est pour un client
+                customer_fr = ''; // Laisser vide si c'est pour un client
+                collaboration_en = creators.length > 1 ? 'In collaboration' : '';
+                collaboration_fr = creators.length > 1 ? 'En collaboration' : '';
+            } else {
+                customer_en = customerInput || ''; // Remplir avec ce qui a été écrit
+                customer_fr = customerInput || ''; // Remplir avec ce qui a été écrit
+                collaboration_en = creators.length > 1 ? 'In collaboration' : '';
+                collaboration_fr = creators.length > 1 ? 'En collaboration' : '';
+            }
+            
+            // Construction du message
+            let x = '> :sparkles: **Lusciana - New Build Showcase**';
+            let y = `> **${c}**`;
+            let z = '> :link: [Order a custom map](https://lusciana.fr/devis) - .gg/lusciana';
+            
+            let m = [
+                x,
+                y,
+                z,
+                '',
+                c,
+                `Size : ${a}`,
+                customer_en,
+                collaboration_en,
+                `By ${creators_str}`,
+                '',
+                c,
+                `Taille : ${a}`,
+                customer_fr,
+                collaboration_fr,
+                `Par ${creators_str_fr}`,
+                '',
+                `Version : ${d}`
+            ];
+            
+            // Construire le résultat en gardant les lignes vides
+            let result = m.map(item => item === '' ? '' : item).join('\n');
+            
+            // Afficher le résultat
+            document.getElementById('resultContent').textContent = result;
+            document.getElementById('result').classList.add('show');
+            
+            // Copier automatiquement dans le presse-papiers
+            navigator.clipboard.writeText(result).then(function() {
+                // Feedback visuel sur le bouton
+                let submitBtn = document.querySelector('button[type="submit"]');
+                let originalText = submitBtn.textContent;
+                submitBtn.textContent = '✅ Copié !';
+                submitBtn.style.background = '#28a745';
+                setTimeout(() => {
+                    submitBtn.textContent = originalText;
+                    submitBtn.style.background = '';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Erreur lors de la copie:', err);
+            });
+            
+            // Scroll vers le résultat
+            document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+        
+    </script>
+</body>
+</html>
+
