@@ -1197,6 +1197,7 @@
         }
 
         function showApp(user) {
+            console.log('[Lusciana Auth] showApp', { email: user.email, uid: user.uid });
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appContainer').classList.add('authenticated');
             var photo = document.getElementById('userPhoto');
@@ -1206,8 +1207,10 @@
             emailEl.textContent = user.email || user.displayName || 'Connecté';
             // Attendre que le token auth soit prêt avant d'accéder à la Realtime Database
             user.getIdToken().then(function () {
+                console.log('[Lusciana Auth] token prêt, chargement Firebase...');
                 loadFromFirebase();
-            }).catch(function () {
+            }).catch(function (e) {
+                console.warn('[Lusciana Auth] getIdToken catch', e);
                 loadFromFirebase();
             });
         }
@@ -1311,6 +1314,7 @@
         }
 
         auth.onAuthStateChanged(function (user) {
+            console.log('[Lusciana Auth] onAuthStateChanged', user ? { email: user.email, uid: user.uid } : 'déconnecté');
             if (user) {
                 showApp(user);
             } else {
@@ -1320,10 +1324,12 @@
 
         auth.getRedirectResult().then(function (result) {
             if (result && result.user) {
+                console.log('[Lusciana Auth] getRedirectResult OK', result.user.email);
                 setLoginError('');
             }
         }).catch(function (err) {
             if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+                console.warn('[Lusciana Auth] getRedirectResult erreur', err);
                 setLoginError(err.message || 'Erreur de connexion.');
             }
         });
@@ -1352,6 +1358,7 @@
                 agentsCache = results[0].val() || [];
                 commissionsCache = results[1].val() || [];
                 expensesCache = results[2].val() || [];
+                console.log('[Lusciana Auth] loadFromFirebase OK', { agents: agentsCache.length, commissions: commissionsCache.length, expenses: expensesCache.length });
                 // Migration : si la DB est vide et qu'il y a des données en localStorage
                 if (agentsCache.length === 0 && commissionsCache.length === 0 && expensesCache.length === 0) {
                     var localAgents = localStorage.getItem('agents');
@@ -1366,10 +1373,11 @@
             }).catch(function (err) {
                 var isPermissionDenied = (err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission_denied') !== -1)));
                 if (isPermissionDenied && retryCount < 1) {
+                    console.log('[Lusciana Auth] permission_denied, retry dans 800ms...');
                     setTimeout(function () { loadFromFirebase(1); }, 800);
                     return;
                 }
-                console.error('Erreur chargement Firebase (vérifiez les règles Realtime Database):', err);
+                console.error('[Lusciana Auth] loadFromFirebase erreur', err);
                 agentsCache = (localStorage.getItem('agents') && JSON.parse(localStorage.getItem('agents'))) || [];
                 commissionsCache = (localStorage.getItem('commissions') && JSON.parse(localStorage.getItem('commissions'))) || [];
                 expensesCache = (localStorage.getItem('analystExpenses') && JSON.parse(localStorage.getItem('analystExpenses'))) || [];
@@ -1379,30 +1387,47 @@
         }
 
         function isEmailAllowed(allowed, userEmail) {
-            if (!allowed || !userEmail) return false;
+            if (!allowed || !userEmail) {
+                console.log('[Lusciana Auth] isEmailAllowed', { allowed: !!allowed, userEmail: userEmail, result: false });
+                return false;
+            }
             var emailLower = userEmail.toLowerCase();
             var emailKey = emailLower.replace(/\./g, ',');
-            if (allowed[emailKey] || allowed[emailLower] || allowed[userEmail]) return true;
+            if (allowed[emailKey] || allowed[emailLower] || allowed[userEmail]) {
+                console.log('[Lusciana Auth] isEmailAllowed OK (clé directe)', { userEmail: userEmail, emailKey: emailKey });
+                return true;
+            }
             var keys = Object.keys(allowed);
             for (var i = 0; i < keys.length; i++) {
                 if (!allowed[keys[i]]) continue;
                 var keyAsEmail = keys[i].replace(/,/g, '.').toLowerCase();
-                if (keyAsEmail === emailLower) return true;
+                if (keyAsEmail === emailLower) {
+                    console.log('[Lusciana Auth] isEmailAllowed OK (clé convertie)', { userEmail: userEmail, key: keys[i] });
+                    return true;
+                }
             }
+            console.log('[Lusciana Auth] isEmailAllowed REFUSÉ', { userEmail: userEmail, emailKey: emailKey, allowedKeys: keys });
             return false;
         }
 
         function checkAccessControl() {
             var user = auth.currentUser;
-            if (!user || !user.email) return;
+            console.log('[Lusciana Auth] checkAccessControl', { user: user ? { email: user.email, uid: user.uid } : null });
+            if (!user || !user.email) {
+                console.log('[Lusciana Auth] checkAccessControl: pas d\'utilisateur, abandon');
+                return;
+            }
             db.ref('allowedEmails').once('value').then(function (snap) {
                 var allowed = snap.val() || {};
                 var keys = allowed && Object.keys(allowed);
+                console.log('[Lusciana Auth] allowedEmails depuis Firebase', { keys: keys, raw: allowed });
                 if (keys && keys.length > 0 && !isEmailAllowed(allowed, user.email)) {
+                    console.warn('[Lusciana Auth] Accès refusé: email pas dans la liste → déconnexion');
                     sessionStorage.setItem('accessRevoked', '1');
                     auth.signOut();
                     return;
                 }
+                console.log('[Lusciana Auth] Accès autorisé (allowedEmails OK ou liste vide)');
                 return db.ref('adminEmails').once('value');
             }).then(function (snap) {
                 if (!snap) return;
@@ -1420,8 +1445,11 @@
                         }
                     }
                 }
+                console.log('[Lusciana Auth] admin?', isAdmin, { adminKeys: Object.keys(adminEmails || {}) });
                 document.getElementById('adminLink').style.display = isAdmin ? '' : 'none';
-            }).catch(function () {});
+            }).catch(function (err) {
+                console.error('[Lusciana Auth] checkAccessControl erreur', err);
+            });
         }
 
         // Gestion des onglets
