@@ -1248,11 +1248,9 @@
                 return;
             }
             auth.createUserWithEmailAndPassword(email, password).then(function (userCredential) {
-                return userCredential.user.sendEmailVerification();
-            }).then(function () {
-                auth.signOut();
-                showLoginForm();
-                setLoginSuccess('Compte créé ! Vérifie ton email (et les spams) puis connecte-toi avec ton mot de passe.');
+                userCredential.user.sendEmailVerification().catch(function () {});
+                showApp(userCredential.user);
+                setLoginSuccess('Compte créé ! Tu es connecté. Un email de vérification a été envoyé si tu veux vérifier ton adresse.');
             }).catch(function (err) {
                 var msg = err.message || 'Erreur lors de la création du compte.';
                 if (err.code === 'auth/email-already-in-use') msg = 'Cette adresse email est déjà utilisée. Connecte-toi ou réinitialise ton mot de passe.';
@@ -1279,12 +1277,7 @@
                 setLoginError('Saisis ton email et ton mot de passe.');
                 return;
             }
-            auth.signInWithEmailAndPassword(email, password).then(function (result) {
-                if (!result.user.emailVerified) {
-                    auth.signOut();
-                    setLoginError('Tu dois vérifier ton adresse email avant de te connecter. Vérifie ta boîte mail (et les spams).');
-                    return;
-                }
+            auth.signInWithEmailAndPassword(email, password).then(function () {
                 // onAuthStateChanged va appeler showApp
             }).catch(function (err) {
                 var msg = err.message || 'Erreur de connexion.';
