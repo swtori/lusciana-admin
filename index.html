@@ -6,6 +6,7 @@
     <title>Lusciana - Commission Manager</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics-compat.js"></script>
     <style>
@@ -692,12 +693,48 @@
         .transaction-type-badge.expense { background: #fee2e2; color: #991b1b; }
         .transaction-type-badge.builder { background: #dcfce7; color: #166534; }
         .transaction-type-badge.manager { background: #e0e7ff; color: #3730a3; }
+        /* Écran de connexion */
+        #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .login-card { background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 48px; max-width: 400px; width: 100%; text-align: center; }
+        .login-card h2 { color: #333; margin-bottom: 12px; font-size: 24px; }
+        .login-card p { color: #666; margin-bottom: 28px; font-size: 15px; }
+        .btn-google { display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 28px; background: #fff; color: #333; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-google:hover { background: #f8f8f8; border-color: #667eea; color: #667eea; }
+        .btn-google img { width: 24px; height: 24px; }
+        #appContainer { display: none; }
+        #appContainer.authenticated { display: block; }
+        .header-auth { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+        .header-auth h1 { margin: 0; }
+        .user-badge { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #555; }
+        .user-badge img { width: 32px; height: 32px; border-radius: 50%; }
+        .btn-logout { padding: 8px 16px; background: #f0f0f0; color: #555; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .btn-logout:hover { background: #e0e0e0; color: #333; }
+        .login-error { color: #dc2626; font-size: 14px; margin-top: 16px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🏗️ Commission Manager</h1>
-        
+    <!-- Écran de connexion (affiché tant que non connecté) -->
+    <div id="loginScreen">
+        <div class="login-card">
+            <h2>🏗️ Commission Manager</h2>
+            <p>Connecte-toi avec ton compte Google pour accéder aux commissions.</p>
+            <button type="button" class="btn-google" id="btnGoogleLogin" onclick="loginWithGoogle()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
+                Se connecter avec Google
+            </button>
+            <p id="loginError" class="login-error" style="display: none;"></p>
+        </div>
+    </div>
+
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <h1>🏗️ Commission Manager</h1>
+            <div class="user-badge">
+                <img id="userPhoto" src="" alt="" style="display: none;">
+                <span id="userEmail"></span>
+                <button type="button" class="btn-logout" onclick="logout()">Déconnexion</button>
+            </div>
+        </div>
         <div class="tabs">
             <button class="tab active" onclick="showTab('list', this)">Liste des Commissions</button>
             <button class="tab" onclick="showTab('agents', this)">Gérer les Agents</button>
@@ -1097,6 +1134,47 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const auth = firebase.auth();
+
+        function showLoginScreen() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('appContainer').classList.remove('authenticated');
+        }
+
+        function showApp(user) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').classList.add('authenticated');
+            var photo = document.getElementById('userPhoto');
+            var emailEl = document.getElementById('userEmail');
+            if (user.photoURL) { photo.src = user.photoURL; photo.alt = user.displayName || ''; photo.style.display = ''; }
+            else photo.style.display = 'none';
+            emailEl.textContent = user.email || user.displayName || 'Connecté';
+            loadFromFirebase();
+        }
+
+        function loginWithGoogle() {
+            var errEl = document.getElementById('loginError');
+            errEl.style.display = 'none';
+            errEl.textContent = '';
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
+                // onAuthStateChanged va appeler showApp
+            }).catch(function (err) {
+                errEl.style.display = 'block';
+                errEl.textContent = err.message || 'Erreur de connexion. Réessaie.';
+            });
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        auth.onAuthStateChanged(function (user) {
+            if (user) {
+                showApp(user);
+            } else {
+                showLoginScreen();
+            }
+        });
 
         // Caches synchronisés avec Firebase Realtime Database
         let agentsCache = [];
@@ -2776,9 +2854,8 @@ Version : ${version}`;
             }
         });
         
-        // Initialisation (données chargées depuis Firebase)
+        // Initialisation (données chargées après connexion Google dans showApp)
         loadMinecraftVersions();
-        loadFromFirebase();
         
         setTimeout(function() {
             const commissionInput = document.getElementById('commissionPercent');
