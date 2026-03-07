@@ -1282,9 +1282,7 @@
 
         function loginWithGoogle() {
             setLoginError('');
-            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
-                // onAuthStateChanged va appeler showApp
-            }).catch(function (err) {
+            auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()).catch(function (err) {
                 setLoginError(err.message || 'Erreur de connexion. Réessaie.');
             });
         }
@@ -1318,6 +1316,16 @@
                 showApp(user);
             } else {
                 showLoginScreen();
+            }
+        });
+
+        auth.getRedirectResult().then(function (result) {
+            if (result && result.user) {
+                setLoginError('');
+            }
+        }).catch(function (err) {
+            if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+                setLoginError(err.message || 'Erreur de connexion.');
             }
         });
 
