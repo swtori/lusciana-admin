@@ -693,7 +693,7 @@
         .transaction-type-badge.expense { background: #fee2e2; color: #991b1b; }
         .transaction-type-badge.builder { background: #dcfce7; color: #166534; }
         .transaction-type-badge.manager { background: #e0e7ff; color: #3730a3; }
-        /* ├ëcran de connexion */
+        /* Écran de connexion */
         #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
         .login-card { background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 48px; max-width: 400px; width: 100%; text-align: center; }
         .login-card h2 { color: #333; margin-bottom: 12px; font-size: 24px; }
@@ -724,13 +724,13 @@
     </style>
 </head>
 <body>
-    <!-- ├ëcran de connexion (affich├® tant que non connect├®) -->
+    <!-- Écran de connexion (affiché tant que non connecté) -->
     <div id="loginScreen">
         <div class="login-card">
-            <h2>­ƒÅù´©Å Commission Manager</h2>
+            <h2>Commission Manager</h2>
             <!-- Connexion admin : Google uniquement (luscianabuilds@gmail.com) -->
             <div id="loginView">
-                <p>Espace admin. Connecte-toi avec le compte Google autoris├®.</p>
+                <p>Espace admin. Connecte-toi avec le compte Google autorisé.</p>
                 <button type="button" class="btn-google" id="btnGoogleLogin" onclick="loginWithGoogle()">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
                     Se connecter avec Google
@@ -743,18 +743,18 @@
 
     <div id="appContainer" class="container">
         <div class="header-auth">
-            <h1>­ƒÅù´©Å Commission Manager</h1>
+            <h1>Commission Manager</h1>
             <div class="user-badge">
                 <img id="userPhoto" src="" alt="" style="display: none;">
                 <span id="userEmail"></span>
-                <button type="button" class="btn-logout" onclick="logout()">D├®connexion</button>
+                <button type="button" class="btn-logout" onclick="logout()">Déconnexion</button>
             </div>
         </div>
         <div class="tabs">
             <button class="tab active" onclick="showTab('list', this)">Liste des Commissions</button>
-            <button class="tab" onclick="showTab('agents', this)">G├®rer les Agents</button>
+            <button class="tab" onclick="showTab('agents', this)">Gérer les Agents</button>
             <button class="tab" onclick="showTab('analyst', this)">Data Analyst</button>
-            <button class="tab" onclick="showTab('data', this)">Gestion des Donn├®es</button>
+            <button class="tab" onclick="showTab('data', this)">Gestion des Données</button>
         </div>
         
         <!-- Onglet Liste des Commissions (liste + formulaire nouvelle commission) -->
@@ -762,13 +762,13 @@
             <div id="commissionListView">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
                     <h2 style="margin: 0;">Liste des Commissions</h2>
-                    <button type="button" onclick="showCommissionForm()" style="padding: 12px 24px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Ô×ò Nouvelle commission</button>
+                    <button type="button" onclick="showCommissionForm()" style="padding: 12px 24px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">+ Nouvelle commission</button>
                 </div>
                 <div id="commissionList" class="commission-list"></div>
             </div>
             <div id="commissionFormView" style="display: none;">
                 <div style="margin-bottom: 16px;">
-                    <button type="button" onclick="showCommissionList()" class="secondary" style="padding: 10px 18px;">ÔåÉ Retour ├á la liste</button>
+                    <button type="button" onclick="showCommissionList()" class="secondary" style="padding: 10px 18px;">ÔåÉ Retour à la liste</button>
                 </div>
             <form id="commissionForm">
                 <div class="form-section">
@@ -785,24 +785,24 @@
                         <div class="form-group">
                             <label for="worldName">Nom du monde :</label>
                             <input type="text" id="worldName" name="worldName" value="c-" placeholder="c-mon-monde" required pattern="c-.*" title="Doit commencer par c-">
-                            <p style="font-size: 12px; color: #666; margin-top: 4px;">Obligatoire, doit commencer par ┬½ c- ┬╗.</p>
+                            <p style="font-size: 12px; color: #666; margin-top: 4px;">Obligatoire, doit commencer par « c- ».</p>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="clientWants">Description de la demande :</label>
-                        <textarea id="clientWants" name="clientWants" placeholder="D├®crire la demande"></textarea>
+                        <textarea id="clientWants" name="clientWants" placeholder="Décrire la demande"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="version">Version :</label>
                         <select id="version" name="version" required>
-                            <option value="">S├®lectionner une version</option>
+                            <option value="">Sélectionner une version</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>R├®partition du Prix</label>
-                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">R├®partition (Ôé¼) = part totale. % = taxe que l'agent paie. Prix total = somme des r├®partitions. La taxe pr├®-remplit avec le taux de l'agent.</p>
+                        <label>Répartition du Prix</label>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">Répartition (€) = part totale. % = taxe que l'agent paie. Prix total = somme des répartitions. La taxe pré-remplit avec le taux de l'agent.</p>
                         <div style="margin-top: 10px;">
-                            <label style="font-size: 14px; margin-bottom: 8px; display: block;">S├®lectionner les agents :</label>
+                            <label style="font-size: 14px; margin-bottom: 8px; display: block;">Sélectionner les agents :</label>
                             <div id="agentSelector" class="agent-selector"></div>
                         </div>
                         <div id="priceDistribution" class="price-distribution"></div>
@@ -817,7 +817,7 @@
                     <h2>Dates</h2>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="buildStart">D├®but build :</label>
+                            <label for="buildStart">Début build :</label>
                             <input type="date" id="buildStart" name="buildStart" required>
                         </div>
                         <div class="form-group">
@@ -830,7 +830,7 @@
                 <div class="form-section">
                     <h2>Paiement</h2>
                     <div class="form-group">
-                        <label for="depositPaid">Est-ce que l'acompte est vers├® ?</label>
+                        <label for="depositPaid">Est-ce que l'acompte est versé ?</label>
                         <div class="yes-no-buttons">
                             <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
                             <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
@@ -838,9 +838,9 @@
                         <input type="hidden" id="depositPaid" name="depositPaid" value="no">
                     </div>
                     <div class="form-group">
-                        <label for="depositAmount">Acompte per├ºu (Ôé¼)</label>
+                        <label for="depositAmount">Acompte perçu (€)</label>
                         <input type="number" id="depositAmount" name="depositAmount" step="0.01" min="0" placeholder="Prix total / 2" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
-                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Par d├®faut : prix total / 2. Pour les commissions en cours, seul l'acompte est compt├® dans le Data Analyst.</p>
+                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Par défaut : prix total / 2. Pour les commissions en cours, seul l'acompte est compté dans le Data Analyst.</p>
                     </div>
                 </div>
                 
@@ -878,9 +878,9 @@
                         <label for="clientName">Nom du client :</label>
                         <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
                             <select id="clientName" name="clientName" required style="flex: 1; min-width: 200px;">
-                                <option value="">S├®lectionner un client</option>
+                                <option value="">Sélectionner un client</option>
                             </select>
-                            <button type="button" onclick="toggleNewClientForm()" style="padding: 10px 16px; white-space: nowrap;">Ô×ò Cr├®er un client</button>
+                            <button type="button" onclick="toggleNewClientForm()" style="padding: 10px 16px; white-space: nowrap;">+ Créer un client</button>
                         </div>
                         <div id="newClientForm" class="hidden" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e0e0e0;">
                             <p style="font-weight: 600; margin-bottom: 12px;">Nouveau client</p>
@@ -901,7 +901,7 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="clientFeedback">Clients ont-ils donn├® un avis ?</label>
+                        <label for="clientFeedback">Clients ont-ils donné un avis ?</label>
                         <div class="yes-no-buttons">
                             <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
                             <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
@@ -923,8 +923,8 @@
                 </div>
                 
                 <div class="button-group">
-                    <button type="submit">­ƒÆ¥ Enregistrer la Commission</button>
-                    <button type="button" class="secondary" onclick="resetForm()">­ƒöä R├®initialiser</button>
+                    <button type="submit">Enregistrer la Commission</button>
+                    <button type="button" class="secondary" onclick="resetForm()">Réinitialiser</button>
                 </div>
             </form>
             </div>
@@ -947,16 +947,16 @@
                 <div class="form-group">
                     <label>Moyens de paiement :</label>
                     <div id="paymentMethodsList"></div>
-                    <button type="button" onclick="addPaymentMethod()" style="margin-top: 10px; padding: 10px 20px; font-size: 14px;">Ô×ò Ajouter un moyen de paiement</button>
+                    <button type="button" onclick="addPaymentMethod()" style="margin-top: 10px; padding: 10px 20px; font-size: 14px;">+ Ajouter un moyen de paiement</button>
                 </div>
                 <div class="form-group">
                     <label for="agentPF">PF (si dispo) :</label>
                     <input type="text" id="agentPF" name="agentPF" placeholder="Portfolio">
                 </div>
                 <div class="form-group">
-                    <label for="agentCategory">Cat├®gorie :</label>
+                    <label for="agentCategory">Catégorie :</label>
                     <select id="agentCategory" name="agentCategory" required>
-                        <option value="">S├®lectionner</option>
+                        <option value="">Sélectionner</option>
                         <option value="manager">Manager</option>
                         <option value="builder">Builder</option>
                         <option value="client">Client</option>
@@ -1005,8 +1005,8 @@
                     </div>
                 </div>
                 <div class="button-group">
-                    <button type="submit">Ô×ò Ajouter l'Agent</button>
-                    <button type="button" class="secondary" onclick="resetAgentForm()">­ƒöä R├®initialiser</button>
+                    <button type="submit">+ Ajouter l'Agent</button>
+                    <button type="button" class="secondary" onclick="resetAgentForm()">Réinitialiser</button>
                 </div>
             </form>
             
@@ -1016,14 +1016,14 @@
         
         <!-- Onglet Data Analyst -->
         <div id="analyst-tab" class="tab-content">
-            <h2>­ƒôè Data Analyst</h2>
-            <p style="color: #64748b; margin-bottom: 24px;">Rentr├®es, sorties, CA, d├®penses et r├®partition par builder/manager.</p>
+            <h2>Data Analyst</h2>
+            <p style="color: #64748b; margin-bottom: 24px;">Rentrées, sorties, CA, dépenses et répartition par builder/manager.</p>
             <div id="analystKpis" class="analyst-kpi-grid"></div>
             <div class="analyst-section">
-                <h3>D├®penses</h3>
+                <h3>Dépenses</h3>
                 <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px;">
                     <div class="form-group" style="margin-bottom: 0; min-width: 180px;">
-                        <label for="expenseLabel">Libell├®</label>
+                        <label for="expenseLabel">Libellé</label>
                         <input type="text" id="expenseLabel" placeholder="ex: Axiom" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
                     </div>
                     <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
@@ -1033,7 +1033,7 @@
                     <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
                         <label for="expenseCurrency">Devise</label>
                         <select id="expenseCurrency" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
-                            <option value="EUR">Ôé¼ EUR</option>
+                            <option value="EUR">€ EUR</option>
                             <option value="USD">$ USD</option>
                         </select>
                     </div>
@@ -1041,19 +1041,19 @@
                         <label for="expenseDate">Date</label>
                         <input type="date" id="expenseDate" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
                     </div>
-                    <button type="button" onclick="addExpense()" style="padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Ô×ò Ajouter</button>
+                    <button type="button" onclick="addExpense()" style="padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">+ Ajouter</button>
                 </div>
                 <div id="analystExpensesList" style="margin-top: 12px;"></div>
             </div>
             <div class="analyst-section">
                 <h3>Toutes les transactions</h3>
-                <p style="color: #64748b; font-size: 13px; margin-bottom: 12px;">Entr├®es et sorties. Tri par type ci-dessous.</p>
+                <p style="color: #64748b; font-size: 13px; margin-bottom: 12px;">Entrées et sorties. Tri par type ci-dessous.</p>
                 <div style="margin-bottom: 16px;">
                     <label for="transactionFilter" style="margin-right: 8px; font-weight: 500;">Filtrer :</label>
                     <select id="transactionFilter" onchange="renderTransactionsList()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; min-width: 180px;">
                         <option value="all">Tout</option>
-                        <option value="commission">Commissions (entr├®es)</option>
-                        <option value="expense">D├®penses</option>
+                        <option value="commission">Commissions (entrées)</option>
+                        <option value="expense">Dépenses</option>
                         <option value="builder">Builders (paiements)</option>
                         <option value="manager">Managers (paiements)</option>
                         <option value="client">Par client</option>
@@ -1077,27 +1077,27 @@
                 </div>
             </div>
             <div class="analyst-section">
-                <h3>D├®tail par agent (builders & managers)</h3>
+                <h3>Détail par agent (builders & managers)</h3>
                 <div id="analystTableWrap"></div>
             </div>
         </div>
         
-        <!-- Onglet Gestion des Donn├®es -->
+        <!-- Onglet Gestion des Données -->
         <div id="data-tab" class="tab-content">
-            <h2>Gestion des Donn├®es</h2>
+            <h2>Gestion des Données</h2>
             
             <div class="form-section">
-                <h2>­ƒôì O├╣ sont stock├®es les donn├®es ?</h2>
+                <h2>Où sont stockées les données ?</h2>
                 <div class="alert info" style="background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <p><strong>Les donn├®es sont stock├®es dans le localStorage de votre navigateur.</strong></p>
+                    <p><strong>Les données sont stockées dans le localStorage de votre navigateur.</strong></p>
                     <p style="margin-top: 10px;">Cela signifie que :</p>
                     <ul style="margin-left: 20px; margin-top: 10px;">
-                        <li>Les donn├®es sont stock├®es localement sur votre ordinateur</li>
-                        <li>Elles sont sp├®cifiques ├á ce navigateur (Chrome, Firefox, Edge, etc.)</li>
-                        <li>Elles persistent m├¬me apr├¿s la fermeture du navigateur</li>
-                        <li>Si vous supprimez les donn├®es du navigateur, vous perdrez toutes les donn├®es</li>
+                        <li>Les données sont stockées localement sur votre ordinateur</li>
+                        <li>Elles sont spécifiques à ce navigateur (Chrome, Firefox, Edge, etc.)</li>
+                        <li>Elles persistent m├¬me aprùs la fermeture du navigateur</li>
+                        <li>Si vous supprimez les données du navigateur, vous perdrez toutes les données</li>
                     </ul>
-                    <p style="margin-top: 10px;"><strong>ÔÜá´©Å Important :</strong> Pour ne pas perdre vos donn├®es, utilisez les fonctions d'export ci-dessous pour cr├®er une sauvegarde.</p>
+                    <p style="margin-top: 10px;"><strong>Important :</strong> Pour ne pas perdre vos données, utilisez les fonctions d'export ci-dessous pour créer une sauvegarde.</p>
                 </div>
                 
                 <div class="form-group">
@@ -1105,31 +1105,31 @@
                     <div id="dataStats" style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
                         <p><strong>Agents :</strong> <span id="agentCount">0</span></p>
                         <p><strong>Commissions :</strong> <span id="commissionCount">0</span></p>
-                        <p><strong>Espace utilis├® :</strong> <span id="storageSize">0 KB</span></p>
+                        <p><strong>Espace utilisé :</strong> <span id="storageSize">0 KB</span></p>
                     </div>
                 </div>
             </div>
             
             <div class="form-section">
-                <h2>­ƒÆ¥ Export des Donn├®es</h2>
-                <p style="margin-bottom: 15px;">T├®l├®chargez toutes vos donn├®es dans un fichier JSON pour les sauvegarder.</p>
+                <h2>Export des Données</h2>
+                <p style="margin-bottom: 15px;">Téléchargez toutes vos données dans un fichier JSON pour les sauvegarder.</p>
                 <div class="button-group">
-                    <button type="button" onclick="exportData()">­ƒôÑ Exporter toutes les donn├®es</button>
-                    <button type="button" class="secondary" onclick="exportAgents()">­ƒæÑ Exporter uniquement les agents</button>
-                    <button type="button" class="secondary" onclick="exportCommissions()">­ƒôï Exporter uniquement les commissions</button>
+                    <button type="button" onclick="exportData()">Exporter toutes les données</button>
+                    <button type="button" class="secondary" onclick="exportAgents()">Exporter uniquement les agents</button>
+                    <button type="button" class="secondary" onclick="exportCommissions()">Exporter uniquement les commissions</button>
                 </div>
             </div>
             
             <div class="form-section">
-                <h2>­ƒôñ Import des Donn├®es</h2>
-                <p style="margin-bottom: 15px;">Importez des donn├®es depuis un fichier JSON pr├®c├®demment export├®.</p>
+                <h2>Import des Données</h2>
+                <p style="margin-bottom: 15px;">Importez des données depuis un fichier JSON précédemment exporté.</p>
                 <div class="form-group">
-                    <label for="importFile">S├®lectionner un fichier JSON :</label>
+                    <label for="importFile">Sélectionner un fichier JSON :</label>
                     <input type="file" id="importFile" accept=".json" style="margin-top: 10px;">
                 </div>
                 <div class="button-group">
-                    <button type="button" onclick="importData()">­ƒôñ Importer les donn├®es</button>
-                    <button type="button" class="danger" onclick="clearAllData()" style="background: #dc3545;">­ƒùæ´©Å Supprimer toutes les donn├®es</button>
+                    <button type="button" onclick="importData()">Importer les données</button>
+                    <button type="button" class="danger" onclick="clearAllData()" style="background: #dc3545;">Supprimer toutes les données</button>
                 </div>
             </div>
         </div>
@@ -1164,8 +1164,8 @@
             var emailEl = document.getElementById('userEmail');
             if (user.photoURL) { photo.src = user.photoURL; photo.alt = user.displayName || ''; photo.style.display = ''; }
             else photo.style.display = 'none';
-            emailEl.textContent = user.email || user.displayName || 'Connect├®';
-            // Attendre que le token auth soit pr├¬t avant d'acc├®der ├á la Realtime Database
+            emailEl.textContent = user.email || user.displayName || 'Connecté';
+            // Attendre que le token auth soit pr├¬t avant d'accéder à la Realtime Database
             user.getIdToken().then(function () {
                 loadFromFirebase();
             }).catch(function () {
@@ -1199,7 +1199,7 @@
             auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
                 // onAuthStateChanged va appeler showApp
             }).catch(function (err) {
-                setLoginError(err.message || 'Erreur de connexion. R├®essaie.');
+                setLoginError(err.message || 'Erreur de connexion. Réessaie.');
             });
         }
 
@@ -1229,7 +1229,7 @@
             });
         });
 
-        // Caches synchronis├®s avec Firebase Realtime Database
+        // Caches synchronisés avec Firebase Realtime Database
         let agentsCache = [];
         let commissionsCache = [];
         let expensesCache = [];
@@ -1253,7 +1253,7 @@
                 agentsCache = results[0].val() || [];
                 commissionsCache = results[1].val() || [];
                 expensesCache = results[2].val() || [];
-                // Migration : si la DB est vide et qu'il y a des donn├®es en localStorage
+                // Migration : si la DB est vide et qu'il y a des données en localStorage
                 if (agentsCache.length === 0 && commissionsCache.length === 0 && expensesCache.length === 0) {
                     var localAgents = localStorage.getItem('agents');
                     var localCommissions = localStorage.getItem('commissions');
@@ -1269,7 +1269,7 @@
                     setTimeout(function () { loadFromFirebase(1); }, 800);
                     return;
                 }
-                console.error('Erreur chargement Firebase (v├®rifiez les r├¿gles Realtime Database):', err);
+                console.error('Erreur chargement Firebase (vérifiez les rùgles Realtime Database):', err);
                 agentsCache = (localStorage.getItem('agents') && JSON.parse(localStorage.getItem('agents'))) || [];
                 commissionsCache = (localStorage.getItem('commissions') && JSON.parse(localStorage.getItem('commissions'))) || [];
                 expensesCache = (localStorage.getItem('analystExpenses') && JSON.parse(localStorage.getItem('analystExpenses'))) || [];
@@ -1285,7 +1285,7 @@
             if (element) {
                 element.classList.add('active');
             } else {
-                const labels = { agents: 'G├®rer les Agents', list: 'Liste des Commissions', analyst: 'Data Analyst', data: 'Gestion des Donn├®es' };
+                const labels = { agents: 'Gérer les Agents', list: 'Liste des Commissions', analyst: 'Data Analyst', data: 'Gestion des Données' };
                 document.querySelectorAll('.tab').forEach(tab => {
                     if (labels[tabName] && tab.textContent.includes(labels[tabName])) tab.classList.add('active');
                 });
@@ -1304,7 +1304,7 @@
             }
         }
         
-        // Lecture / ├®criture (Firebase Realtime Database + cache)
+        // Lecture / écriture (Firebase Realtime Database + cache)
         function getAgents() {
             return agentsCache;
         }
@@ -1338,7 +1338,7 @@
             const currency = document.getElementById('expenseCurrency').value;
             const date = document.getElementById('expenseDate').value || new Date().toISOString().slice(0, 10);
             if (!label) {
-                alert('Veuillez saisir un libell├®.');
+                alert('Veuillez saisir un libellé.');
                 return;
             }
             if (isNaN(amount) || amount <= 0) {
@@ -1378,23 +1378,23 @@
                     <div class="form-group">
                         <label>Type de paiement :</label>
                         <select class="payment-type-select" onchange="updatePaymentFields('${id}', this.value)" required>
-                            <option value="">S├®lectionner</option>
+                            <option value="">Sélectionner</option>
                             <option value="virement" ${paymentType === 'virement' ? 'selected' : ''}>Virement bancaire</option>
                             <option value="paypal" ${paymentType === 'paypal' ? 'selected' : ''}>PayPal</option>
                             <option value="autre" ${paymentType === 'autre' ? 'selected' : ''}>Autre</option>
                         </select>
                     </div>
                     <div class="form-group payment-details-field">
-                        <label class="payment-details-label">D├®tails :</label>
-                        <input type="text" class="payment-details-input" value="${paymentDetails || ''}" placeholder="S├®lectionnez d'abord un type">
+                        <label class="payment-details-label">Détails :</label>
+                        <input type="text" class="payment-details-input" value="${paymentDetails || ''}" placeholder="Sélectionnez d'abord un type">
                     </div>
                 </div>
-                <button type="button" class="remove-payment danger" onclick="removePaymentMethod('${id}')">­ƒùæ´©Å Supprimer</button>
+                <button type="button" class="remove-payment danger" onclick="removePaymentMethod('${id}')">Supprimer</button>
             `;
             
             list.appendChild(div);
             
-            // Si un type est d├®j├á s├®lectionn├®, mettre ├á jour les champs
+            // Si un type est déjà sélectionné, mettre à jour les champs
             if (paymentType) {
                 updatePaymentFields(id, paymentType);
             }
@@ -1410,7 +1410,7 @@
             switch(paymentType) {
                 case 'virement':
                     label.textContent = 'Type de banque (ex: Revolut, BNP, etc.) :';
-                    input.placeholder = 'Revolut, BNP, Cr├®dit Agricole, etc.';
+                    input.placeholder = 'Revolut, BNP, Crédit Agricole, etc.';
                     input.type = 'text';
                     break;
                 case 'paypal':
@@ -1419,13 +1419,13 @@
                     input.type = 'email';
                     break;
                 case 'autre':
-                    label.textContent = 'D├®tails :';
-                    input.placeholder = 'Pr├®cisez le moyen de paiement';
+                    label.textContent = 'Détails :';
+                    input.placeholder = 'Précisez le moyen de paiement';
                     input.type = 'text';
                     break;
                 default:
-                    label.textContent = 'D├®tails :';
-                    input.placeholder = 'S├®lectionnez d\'abord un type';
+                    label.textContent = 'Détails :';
+                    input.placeholder = 'Sélectionnez d\'abord un type';
                     input.type = 'text';
             }
         }
@@ -1480,7 +1480,7 @@
             }
             const agents = getAgents();
             if (agents.some(a => a.pseudo.toLowerCase() === pseudo.toLowerCase())) {
-                alert('Un client avec ce pseudo existe d├®j├á.');
+                alert('Un client avec ce pseudo existe déjà.');
                 return;
             }
             const newClient = {
@@ -1509,7 +1509,7 @@
         function loadAgentsIntoSelects() {
             const agents = getAgents();
             const clientNameSelect = document.getElementById('clientName');
-            clientNameSelect.innerHTML = '<option value="">S├®lectionner un client</option>';
+            clientNameSelect.innerHTML = '<option value="">Sélectionner un client</option>';
             agents.forEach(agent => {
                 if (agent.category === 'client') {
                     const option = new Option(agent.pseudo, agent.pseudo);
@@ -1561,14 +1561,14 @@
                 if (index !== -1) {
                     agents[index] = agent;
                     saveAgents(agents);
-                    alert('Agent modifi├® avec succ├¿s !');
+                    alert('Agent modifié avec succùs !');
                 }
                 editingAgentId = null;
             } else {
-                // Cr├®ation
+                // Création
                 agents.push(agent);
                 saveAgents(agents);
-                alert('Agent ajout├® avec succ├¿s !');
+                alert('Agent ajouté avec succùs !');
             }
             
             loadAgentsIntoSelects();
@@ -1638,8 +1638,8 @@
                         <span class="badge ${agent.category}">${agent.category}</span>
                         ${agent.isCompany ? `<p><strong>Entreprise:</strong> ${agent.companyName}</p>` : ''}
                         <div style="margin-top: 15px; display: flex; gap: 10px;">
-                            <button type="button" onclick="editAgent('${agent.id}')" style="flex: 1;">Ô£Å´©Å Modifier</button>
-                            <button type="button" onclick="deleteAgent('${agent.id}')" class="danger" style="flex: 1;">­ƒùæ´©Å Supprimer</button>
+                            <button type="button" onclick="editAgent('${agent.id}')" style="flex: 1;">Modifier</button>
+                            <button type="button" onclick="deleteAgent('${agent.id}')" class="danger" style="flex: 1;">Supprimer</button>
                         </div>
                     </div>
                 `;
@@ -1666,7 +1666,7 @@
             }
             
             if (agents.length === 0) {
-                list.innerHTML = '<p style="color: #64748b; padding: 24px;">Aucun agent enregistr├®.</p>';
+                list.innerHTML = '<p style="color: #64748b; padding: 24px;">Aucun agent enregistré.</p>';
             }
         }
         
@@ -1679,7 +1679,7 @@
             
             editingAgentId = agentId;
             
-            // Pr├®-remplir le formulaire
+            // Pré-remplir le formulaire
             document.getElementById('agentPseudo').value = agent.pseudo;
             document.getElementById('agentDiscord').value = agent.discord;
             document.getElementById('agentPF').value = agent.pf || '';
@@ -1696,7 +1696,7 @@
                     addPaymentMethod(pm);
                 });
             } else if (agent.payment) {
-                // Compatibilit├® avec les anciennes donn├®es - convertir en nouveau format
+                // Compatibilité avec les anciennes données - convertir en nouveau format
                 addPaymentMethod({
                     id: `payment_${Date.now()}`,
                     type: 'autre',
@@ -1704,7 +1704,7 @@
                 });
             }
             
-            // G├®rer les champs conditionnels
+            // Gérer les champs conditionnels
             if (agent.category === 'client') {
                 document.getElementById('clientFields').classList.remove('hidden');
                 document.getElementById('isCompany').checked = agent.isCompany || false;
@@ -1723,10 +1723,10 @@
             // Changer le texte du bouton
             const submitBtn = document.querySelector('#agentForm button[type="submit"]');
             if (submitBtn) {
-                submitBtn.textContent = '­ƒÆ¥ Modifier l\'Agent';
+                submitBtn.textContent = 'Modifier l'Agent';
             }
             
-            // Aller ├á l'onglet agents
+            // Aller à l'onglet agents
             const agentsTab = document.querySelector('.tab[onclick*="agents"]');
             if (agentsTab) {
                 showTab('agents', agentsTab);
@@ -1739,7 +1739,7 @@
             const agent = agents.find(a => a.id === agentId);
             if (!agent) return;
             
-            // V├®rifier si l'agent est utilis├® dans des commissions
+            // Vérifier si l'agent est utilisé dans des commissions
             const commissions = getCommissions();
             const usedInCommissions = commissions.filter(c => {
                 const realizedBy = Array.isArray(c.realizedBy) ? c.realizedBy : [c.realizedBy];
@@ -1749,11 +1749,11 @@
             });
             
             if (usedInCommissions.length > 0) {
-                if (!confirm(`ÔÜá´©Å Cet agent est utilis├® dans ${usedInCommissions.length} commission(s). Voulez-vous vraiment le supprimer ?`)) {
+                if (!confirm(`Cet agent est utilisé dans ${usedInCommissions.length} commission(s). Voulez-vous vraiment le supprimer ?`)) {
                     return;
                 }
             } else {
-                if (!confirm(`├ètes-vous s├╗r de vouloir supprimer l'agent "${agent.pseudo}" ?`)) {
+                if (!confirm(`├ètes-vous s»r de vouloir supprimer l'agent "${agent.pseudo}" ?`)) {
                     return;
                 }
             }
@@ -1766,7 +1766,7 @@
             loadAgentsIntoSelector();
             displayAgents();
             
-            alert('Agent supprim├® avec succ├¿s !');
+            alert('Agent supprimé avec succùs !');
         }
         
         function resetAgentForm() {
@@ -1781,7 +1781,7 @@
             // Remettre le texte du bouton
             const submitBtn = document.querySelector('#agentForm button[type="submit"]');
             if (submitBtn) {
-                submitBtn.textContent = 'Ô×ò Ajouter l\'Agent';
+                submitBtn.textContent = '+ Ajouter l\'Agent';
             }
         }
         
@@ -1798,10 +1798,10 @@
             });
         });
         
-        // Stockage de la r├®partition actuelle
+        // Stockage de la répartition actuelle
         let currentDistribution = {};
         
-        // Gestion de la r├®partition des prix (montants en Ôé¼ par agent) ÔÇö les agents s├®lectionn├®s = "r├®alis├® par"
+        // Gestion de la répartition des prix (montants en € par agent)  -  les agents sélectionnés = "réalisé par"
         function updatePriceDistribution() {
             const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
@@ -1812,7 +1812,7 @@
                 return;
             }
             
-            // currentDistribution[agent] = { amount, percent } ÔÇö par d├®faut percent = taux commission de l'agent
+            // currentDistribution[agent] = { amount, percent }  -  par défaut percent = taux commission de l'agent
             const agents = getAgents();
             selectedAgents.forEach(agentPseudo => {
                 if (currentDistribution[agentPseudo] === undefined || typeof currentDistribution[agentPseudo] === 'number') {
@@ -1843,7 +1843,7 @@
                     <label>Agent ${index + 1} - ${agent}</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 6px; align-items: end;">
                         <div>
-                            <label style="font-size: 12px; color: #666;">R├®partition (Ôé¼)</label>
+                            <label style="font-size: 12px; color: #666;">Répartition (€)</label>
                             <input type="number" id="amount_${agent}" min="0" step="0.01" value="${amountVal}" placeholder="0.00" oninput="updateDistributionForAgent('${agent}', 'amount', this.value)" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
                         </div>
                         <div>
@@ -1852,7 +1852,7 @@
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 2px;">
                             <input type="checkbox" id="paid_${agent}" ${paidVal ? 'checked' : ''} onchange="updateDistributionForAgent('${agent}', 'paid', this.checked)" style="width: 18px; height: 18px; cursor: pointer;">
-                            <label for="paid_${agent}" style="font-size: 13px; color: #666; margin: 0; cursor: pointer; white-space: nowrap;">Pay├® ?</label>
+                            <label for="paid_${agent}" style="font-size: 13px; color: #666; margin: 0; cursor: pointer; white-space: nowrap;">Payé ?</label>
                         </div>
                     </div>
                 `;
@@ -1887,7 +1887,7 @@
             updateWhoTookWhat();
         }
         
-        // Prix total = somme des r├®partitions (la taxe n'est pas incluse dans le total)
+        // Prix total = somme des répartitions (la taxe n'est pas incluse dans le total)
         function getCalculatedPrice() {
             const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
@@ -1921,7 +1921,7 @@
             const calculatedPrice = getCalculatedPrice();
             const totalDiv = document.getElementById('totalAmount');
             if (totalDiv) {
-                totalDiv.textContent = `Prix total (calcul├®) : ${calculatedPrice.toFixed(2)} Ôé¼`;
+                totalDiv.textContent = `Prix total (calculé) : ${calculatedPrice.toFixed(2)} €`;
                 totalDiv.className = 'total-percentage valid';
             }
             const depositEl = document.getElementById('depositAmount');
@@ -1935,7 +1935,7 @@
                 .map(cb => cb.value);
             const whoTookWhat = document.getElementById('whoTookWhat');
             
-            // Prix total = somme des r├®partitions
+            // Prix total = somme des répartitions
             const totalPrice = getCalculatedPrice();
             
             whoTookWhat.innerHTML = '';
@@ -1944,7 +1944,7 @@
                 return;
             }
             
-            // Taxe Lusciana = ╬ú (r├®partition ├ù %/100) ÔÇö ce que chaque agent paie
+            // Taxe Lusciana = ╬ú (répartition ├ù %/100)  -  ce que chaque agent paie
             let luscianaCommission = 0;
             const agentDetails = [];
             selectedAgents.forEach(agent => {
@@ -1963,17 +1963,17 @@
                 }
             });
             
-            // Cr├®er l'affichage
+            // Créer l'affichage
             const container = document.createElement('div');
             container.style.cssText = 'padding: 15px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e0e0e0;';
             
-            let html = '<h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">­ƒÆ░ R├®partition des gains</h3>';
+            let html = '<h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">Répartition des gains</h3>';
             
-            // Afficher Lusciana (taxe per├ºue = ce que les agents paient)
+            // Afficher Lusciana (taxe perçue = ce que les agents paient)
             html += `
                 <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #667eea;">
-                    <p style="margin: 0; font-weight: 600; color: #667eea; font-size: 16px;">­ƒÅó Lusciana (taxe per├ºue)</p>
-                    <p style="margin: 5px 0 0 0; font-size: 18px; color: #333;"><strong>${luscianaCommission.toFixed(2)}Ôé¼</strong></p>
+                    <p style="margin: 0; font-weight: 600; color: #667eea; font-size: 16px;">Lusciana (taxe perçue)</p>
+                    <p style="margin: 5px 0 0 0; font-size: 18px; color: #333;"><strong>${luscianaCommission.toFixed(2)}€</strong></p>
                 </div>
             `;
             
@@ -1984,7 +1984,7 @@
                     html += `
                         <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #28a745;">
                             <p style="margin: 0; font-weight: 600; color: #28a745;">${agent.name} (${agent.percent}%)</p>
-                            <p style="margin: 5px 0 0 0; font-size: 16px; color: #333;"><strong>${agent.amount.toFixed(2)}Ôé¼</strong></p>
+                            <p style="margin: 5px 0 0 0; font-size: 16px; color: #333;"><strong>${agent.amount.toFixed(2)}€</strong></p>
                         </div>
                     `;
                 });
@@ -2009,12 +2009,12 @@
             });
         });
         
-        // G├®n├®ration du texte showcase
+        // Génération du texte showcase
         function generateShowcaseText(commission) {
             const size = commission.buildSize.includes('x') ? commission.buildSize : `${commission.buildSize}x${commission.buildSize}`;
             const buildName = commission.buildName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
             
-            // G├®rer plusieurs builders
+            // Gérer plusieurs builders
             let realizedBy = commission.realizedBy;
             if (Array.isArray(realizedBy)) {
                 const builders = realizedBy.map(b => b.charAt(0).toUpperCase() + b.slice(1).toLowerCase());
@@ -2026,7 +2026,7 @@
                     realizedBy = builders.slice(0, -1).join(', ') + ` & ${builders[builders.length - 1]}`;
                 }
             } else if (typeof realizedBy === 'string') {
-                // Compatibilit├® avec les anciennes donn├®es
+                // Compatibilité avec les anciennes données
                 realizedBy = realizedBy.charAt(0).toUpperCase() + realizedBy.slice(1).toLowerCase();
             }
             
@@ -2062,7 +2062,7 @@ Version : ${version}`;
             
             const worldNameVal = (document.getElementById('worldName').value || '').trim();
             if (!worldNameVal.toLowerCase().startsWith('c-')) {
-                alert('ÔÜá´©Å Le nom du monde doit commencer par ┬½ c- ┬╗.');
+                alert('Le nom du monde doit commencer par « c- ».');
                 document.getElementById('worldName').focus();
                 return;
             }
@@ -2097,7 +2097,7 @@ Version : ${version}`;
                 createdAt: new Date().toISOString()
             };
             
-            // R├®cup├®rer la r├®partition (montant + % + pay├® par agent)
+            // Récupérer la répartition (montant + % + payé par agent)
             commission.selectedAgents.forEach(agent => {
                 const d = currentDistribution[agent];
                 const amount = (d && typeof d === 'object' ? d.amount : d) || 0;
@@ -2110,7 +2110,7 @@ Version : ${version}`;
                 };
             });
             
-            // G├®n├®rer le texte showcase
+            // Générer le texte showcase
             commission.showcaseText = generateShowcaseText(commission);
             
             // Sauvegarder
@@ -2120,20 +2120,20 @@ Version : ${version}`;
                 // Modification
                 const index = commissions.findIndex(c => c.id === editingCommissionId);
                 if (index !== -1) {
-                    commission.createdAt = commissions[index].createdAt; // Garder la date de cr├®ation
+                    commission.createdAt = commissions[index].createdAt; // Garder la date de création
                     commissions[index] = commission;
                     saveCommissions(commissions);
-                    alert(`Commission modifi├®e avec succ├¿s !\n\nPrix total : ${calculatedPrice.toFixed(2)} Ôé¼`);
+                    alert(`Commission modifiée avec succùs !\n\nPrix total : ${calculatedPrice.toFixed(2)} €`);
                 }
                 editingCommissionId = null;
             } else {
-                // Cr├®ation
+                // Création
                 commissions.push(commission);
                 saveCommissions(commissions);
                 
                 // Copier le texte dans le presse-papiers
                 navigator.clipboard.writeText(commission.showcaseText);
-                alert(`Commission enregistr├®e avec succ├¿s !\n\nPrix total (calcul├®) : ${calculatedPrice.toFixed(2)} Ôé¼\n\nLe texte showcase a ├®t├® copi├® dans le presse-papiers.`);
+                alert(`Commission enregistrée avec succùs !\n\nPrix total (calculé) : ${calculatedPrice.toFixed(2)} €\n\nLe texte showcase a été copié dans le presse-papiers.`);
             }
             
             showCommissionList();
@@ -2150,7 +2150,7 @@ Version : ${version}`;
             currentDistribution = {};
             document.getElementById('newClientForm').classList.add('hidden');
             
-            // R├®initialiser les boutons oui/non
+            // Réinitialiser les boutons oui/non
             document.querySelectorAll('.yes-no-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -2167,7 +2167,7 @@ Version : ${version}`;
             // Remettre le texte du bouton
             const submitBtn = document.querySelector('#commissionForm button[type="submit"]');
             if (submitBtn) {
-                submitBtn.textContent = '­ƒÆ¥ Enregistrer la Commission';
+                submitBtn.textContent = 'Enregistrer la Commission';
             }
             
             loadAgentsIntoSelector();
@@ -2179,7 +2179,7 @@ Version : ${version}`;
             list.innerHTML = '';
             
             if (commissions.length === 0) {
-                list.innerHTML = '<p style="text-align: center; color: #64748b; padding: 48px 24px; font-size: 15px;">Aucune commission enregistr├®e.</p>';
+                list.innerHTML = '<p style="text-align: center; color: #64748b; padding: 48px 24px; font-size: 15px;">Aucune commission enregistrée.</p>';
                 return;
             }
             
@@ -2189,8 +2189,8 @@ Version : ${version}`;
                 div.textContent = s;
                 return div.innerHTML;
             };
-            const realizedByStr = (c) => Array.isArray(c.realizedBy) ? c.realizedBy.join(', ') : (c.realizedBy || 'ÔÇö');
-            const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'ÔÇö';
+            const realizedByStr = (c) => Array.isArray(c.realizedBy) ? c.realizedBy.join(', ') : (c.realizedBy || ' - ');
+            const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ' - ';
             
             const isCommissionFinished = (c) => {
                 if (!c.priceDistribution || Object.keys(c.priceDistribution).length === 0) return false;
@@ -2208,12 +2208,12 @@ Version : ${version}`;
                 card.className = 'commission-card ' + (finished ? 'finished' : 'in-progress');
                 const price = commission.price != null ? Number(commission.price).toFixed(2) : '0.00';
                 const statusBadge = finished
-                    ? '<span class="commission-card-badge finished">Ô£ô Termin├®e</span>'
+                    ? '<span class="commission-card-badge finished"> Terminée</span>'
                     : '<span class="commission-card-badge in-progress">En cours</span>';
                 card.innerHTML = `
                     <div class="commission-card-header">
                         <h3>${escapeHtml(commission.buildName)} ${statusBadge}</h3>
-                        <span class="commission-card-price">${price} Ôé¼</span>
+                        <span class="commission-card-price">${price} €</span>
                     </div>
                     <div class="commission-card-body">
                         <div class="info-grid">
@@ -2223,22 +2223,22 @@ Version : ${version}`;
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Monde</span>
-                                <span class="info-value">${escapeHtml(commission.worldName || 'ÔÇö')}</span>
+                                <span class="info-value">${escapeHtml(commission.worldName || ' - ')}</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Client</span>
                                 <span class="info-value">${escapeHtml(commission.clientName)}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">R├®alis├® par</span>
+                                <span class="info-label">Réalisé par</span>
                                 <span class="info-value">${escapeHtml(realizedByStr(commission))}</span>
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Version</span>
-                                <span class="info-value">${escapeHtml(commission.version || 'ÔÇö')}</span>
+                                <span class="info-value">${escapeHtml(commission.version || ' - ')}</span>
                             </div>
                             <div class="info-row">
-                                <span class="info-label">D├®but</span>
+                                <span class="info-label">Début</span>
                                 <span class="info-value">${formatDate(commission.buildStart)}</span>
                             </div>
                             <div class="info-row">
@@ -2247,9 +2247,9 @@ Version : ${version}`;
                             </div>
                         </div>
                         <div class="commission-card-actions">
-                            <button type="button" onclick="copyShowcaseText('${commission.id}')">­ƒôï Copier showcase</button>
-                            <button type="button" onclick="editCommission('${commission.id}')">Ô£Å´©Å Modifier</button>
-                            <button type="button" onclick="deleteCommission('${commission.id}')" class="danger">­ƒùæ´©Å Supprimer</button>
+                            <button type="button" onclick="copyShowcaseText('${commission.id}')">Copier showcase</button>
+                            <button type="button" onclick="editCommission('${commission.id}')">Modifier</button>
+                            <button type="button" onclick="deleteCommission('${commission.id}')" class="danger">Supprimer</button>
                         </div>
                     </div>
                 `;
@@ -2266,7 +2266,7 @@ Version : ${version}`;
             
             editingCommissionId = commissionId;
             
-            // Pr├®-remplir le formulaire
+            // Pré-remplir le formulaire
             document.getElementById('buildSize').value = commission.buildSize;
             document.getElementById('buildName').value = commission.buildName;
             document.getElementById('worldName').value = commission.worldName || 'c-';
@@ -2297,7 +2297,7 @@ Version : ${version}`;
                 document.getElementById('clientFeedbackText').value = commission.clientFeedback || '';
             }
             
-            // S├®lectionner les agents et restaurer r├®partition + % par agent
+            // Sélectionner les agents et restaurer répartition + % par agent
             loadAgentsIntoSelector();
             setTimeout(() => {
                 if (commission.selectedAgents) {
@@ -2322,7 +2322,7 @@ Version : ${version}`;
             // Changer le texte du bouton
             const submitBtn = document.querySelector('#commissionForm button[type="submit"]');
             if (submitBtn) {
-                submitBtn.textContent = '­ƒÆ¥ Modifier la Commission';
+                submitBtn.textContent = 'Modifier la Commission';
             }
             
             showTab('list');
@@ -2362,7 +2362,7 @@ Version : ${version}`;
         }
         
         function deleteCommission(commissionId) {
-            if (!confirm('├ètes-vous s├╗r de vouloir supprimer cette commission ?')) {
+            if (!confirm('├ètes-vous s»r de vouloir supprimer cette commission ?')) {
                 return;
             }
             
@@ -2371,7 +2371,7 @@ Version : ${version}`;
             saveCommissions(updatedCommissions);
             
             displayCommissions();
-            alert('Commission supprim├®e avec succ├¿s !');
+            alert('Commission supprimée avec succùs !');
         }
         
         function copyShowcaseText(commissionId) {
@@ -2379,11 +2379,11 @@ Version : ${version}`;
             const commission = commissions.find(c => c.id === commissionId);
             if (commission && commission.showcaseText) {
                 navigator.clipboard.writeText(commission.showcaseText);
-                alert('Texte showcase copi├® !');
+                alert('Texte showcase copié !');
             }
         }
         
-        // Gestion des donn├®es
+        // Gestion des données
         function updateDataStats() {
             const agents = getAgents();
             const commissions = getCommissions();
@@ -2410,7 +2410,7 @@ Version : ${version}`;
             return Object.keys(c.priceDistribution).every(agent => c.priceDistribution[agent].paid === true);
         }
         
-        /** Pour le Data Analyst : commission termin├®e = prix total ; commission en cours = uniquement l'acompte per├ºu (pas le prix total). */
+        /** Pour le Data Analyst : commission terminée = prix total ; commission en cours = uniquement l'acompte perçu (pas le prix total). */
         function getCommissionAmountForAnalyst(c) {
             if (isCommissionFinished(c)) return Number(c.price) || 0;
             return Number(c.depositAmount) || 0;
@@ -2448,7 +2448,7 @@ Version : ${version}`;
                             date: dateStr,
                             dateSort,
                             type: category,
-                            label: `Paiement ├á ${agentPseudo}`,
+                            label: `Paiement à ${agentPseudo}`,
                             amount: -net,
                             currency: 'EUR',
                             agentPseudo,
@@ -2495,8 +2495,8 @@ Version : ${version}`;
             }
             const wrap = document.getElementById('transactionsListWrap');
             if (!wrap) return;
-            const formatDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'ÔÇö';
-            const typeLabels = { commission: 'Commission', expense: 'D├®pense', builder: 'Builder', manager: 'Manager' };
+            const formatDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ' - ';
+            const typeLabels = { commission: 'Commission', expense: 'Dépense', builder: 'Builder', manager: 'Manager' };
             if (filtered.length === 0) {
                 wrap.innerHTML = '<p style="color: #94a3b8; padding: 24px;">Aucune transaction.</p>';
                 return;
@@ -2504,12 +2504,12 @@ Version : ${version}`;
             wrap.innerHTML = `
                 <table class="analyst-table">
                     <thead>
-                        <tr><th>Date</th><th>Type</th><th>Libell├®</th><th>Montant</th></tr>
+                        <tr><th>Date</th><th>Type</th><th>Libellé</th><th>Montant</th></tr>
                     </thead>
                     <tbody>
                         ${filtered.map(t => {
                             const isPos = t.amount >= 0;
-                            const sym = t.currency === 'USD' ? '$' : 'Ôé¼';
+                            const sym = t.currency === 'USD' ? '$' : '€';
                             const amountStr = (isPos ? '+' : '') + Number(t.amount).toFixed(2) + ' ' + sym;
                             return `<tr>
                                 <td>${formatDate(t.date)}</td>
@@ -2575,27 +2575,27 @@ Version : ${version}`;
             let expensesKpi = '';
             if (totalExpensesEUR > 0 || totalExpensesUSD > 0) {
                 const parts = [];
-                if (totalExpensesEUR > 0) parts.push(`${totalExpensesEUR.toFixed(2)} Ôé¼`);
+                if (totalExpensesEUR > 0) parts.push(`${totalExpensesEUR.toFixed(2)} €`);
                 if (totalExpensesUSD > 0) parts.push(`${totalExpensesUSD.toFixed(2)} $`);
                 expensesKpi = `
                 <div class="analyst-kpi-card outflow">
-                    <h4>D├®penses</h4>
+                    <h4>Dépenses</h4>
                     <div class="value">${parts.join(' ┬À ')}</div>
                 </div>`;
             }
             kpiContainer.innerHTML = `
                 <div class="analyst-kpi-card">
-                    <h4>Rentr├®es (CA total)</h4>
-                    <div class="value">${totalCA.toFixed(2)} Ôé¼</div>
+                    <h4>Rentrées (CA total)</h4>
+                    <div class="value">${totalCA.toFixed(2)} €</div>
                     <p style="font-size: 11px; color: #64748b; margin-top: 4px;">En cours = acompte uniquement</p>
                 </div>
                 <div class="analyst-kpi-card lusciana">
                     <h4>Taxe Lusciana</h4>
-                    <div class="value">${totalLuscianaTax.toFixed(2)} Ôé¼</div>
+                    <div class="value">${totalLuscianaTax.toFixed(2)} €</div>
                 </div>
                 <div class="analyst-kpi-card team">
                     <h4>Part team (builders/managers)</h4>
-                    <div class="value">${totalTeamNet.toFixed(2)} Ôé¼</div>
+                    <div class="value">${totalTeamNet.toFixed(2)} €</div>
                 </div>
                 ${expensesKpi}
             `;
@@ -2607,19 +2607,19 @@ Version : ${version}`;
             const expensesListEl = document.getElementById('analystExpensesList');
             if (expensesListEl) {
                 if (expenses.length === 0) {
-                    expensesListEl.innerHTML = '<p style="color: #94a3b8; font-size: 14px;">Aucune d├®pense enregistr├®e.</p>';
+                    expensesListEl.innerHTML = '<p style="color: #94a3b8; font-size: 14px;">Aucune dépense enregistrée.</p>';
                 } else {
-                    const formatExpenseDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'ÔÇö';
+                    const formatExpenseDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ' - ';
                     expensesListEl.innerHTML = `
                         <table class="analyst-table">
-                            <thead><tr><th>Date</th><th>Libell├®</th><th>Montant</th><th></th></tr></thead>
+                            <thead><tr><th>Date</th><th>Libellé</th><th>Montant</th><th></th></tr></thead>
                             <tbody>
                                 ${expenses.map(e => `
                                     <tr>
                                         <td>${formatExpenseDate(e.date)}</td>
                                         <td>${e.label}</td>
-                                        <td><strong>${Number(e.amount).toFixed(2)} ${e.currency === 'USD' ? '$' : 'Ôé¼'}</strong></td>
-                                        <td><button type="button" onclick="deleteExpense('${e.id}')" class="danger" style="padding: 6px 12px; font-size: 12px;">­ƒùæ´©Å</button></td>
+                                        <td><strong>${Number(e.amount).toFixed(2)} ${e.currency === 'USD' ? '$' : '€'}</strong></td>
+                                        <td><button type="button" onclick="deleteExpense('${e.id}')" class="danger" style="padding: 6px 12px; font-size: 12px;">Supprimer</button></td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -2642,9 +2642,9 @@ Version : ${version}`;
                 analystChartMonthly = new Chart(ctxMonthly, {
                     type: 'bar',
                     data: {
-                        labels: monthNames.length ? monthNames : ['Aucune donn├®e'],
+                        labels: monthNames.length ? monthNames : ['Aucune donnée'],
                         datasets: [{
-                            label: 'CA (Ôé¼)',
+                            label: 'CA (€)',
                             data: monthValues.length ? monthValues : [0],
                             backgroundColor: 'rgba(102, 126, 234, 0.7)',
                             borderColor: 'rgba(102, 126, 234, 1)',
@@ -2656,7 +2656,7 @@ Version : ${version}`;
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            y: { beginAtZero: true, ticks: { callback: v => v + ' Ôé¼' } }
+                            y: { beginAtZero: true, ticks: { callback: v => v + ' €' } }
                         }
                     }
                 });
@@ -2673,7 +2673,7 @@ Version : ${version}`;
                     data: {
                         labels: agentNames.length ? agentNames : ['Aucun'],
                         datasets: [{
-                            label: 'CA net (Ôé¼)',
+                            label: 'CA net (€)',
                             data: agentAmounts.length ? agentAmounts : [0],
                             backgroundColor: 'rgba(16, 185, 129, 0.7)',
                             borderColor: 'rgba(16, 185, 129, 1)',
@@ -2686,7 +2686,7 @@ Version : ${version}`;
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { beginAtZero: true, ticks: { callback: v => v + ' Ôé¼' } }
+                            x: { beginAtZero: true, ticks: { callback: v => v + ' €' } }
                         }
                     }
                 });
@@ -2704,14 +2704,14 @@ Version : ${version}`;
             tableWrap.innerHTML = `
                 <table class="analyst-table">
                     <thead>
-                        <tr><th>Agent</th><th>Cat├®gorie</th><th>CA net (Ôé¼)</th></tr>
+                        <tr><th>Agent</th><th>Catégorie</th><th>CA net (€)</th></tr>
                     </thead>
                     <tbody>
                         ${tableRows.length ? tableRows.map(r => `
                             <tr>
                                 <td>${r.pseudo}</td>
                                 <td><span class="badge ${r.category}">${r.category}</span></td>
-                                <td><strong>${r.net.toFixed(2)} Ôé¼</strong></td>
+                                <td><strong>${r.net.toFixed(2)} €</strong></td>
                             </tr>
                         `).join('') : '<tr><td colspan="3">Aucun builder/manager ou aucune commission.</td></tr>'}
                     </tbody>
@@ -2740,7 +2740,7 @@ Version : ${version}`;
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            alert('Donn├®es export├®es avec succ├¿s !');
+            alert('Données exportées avec succùs !');
         }
         
         function exportAgents() {
@@ -2759,7 +2759,7 @@ Version : ${version}`;
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            alert('Agents export├®s avec succ├¿s !');
+            alert('Agents exportés avec succùs !');
         }
         
         function exportCommissions() {
@@ -2778,7 +2778,7 @@ Version : ${version}`;
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            alert('Commissions export├®es avec succ├¿s !');
+            alert('Commissions exportées avec succùs !');
         }
         
         function importData() {
@@ -2786,7 +2786,7 @@ Version : ${version}`;
             const file = fileInput.files[0];
             
             if (!file) {
-                alert('Veuillez s├®lectionner un fichier JSON');
+                alert('Veuillez sélectionner un fichier JSON');
                 return;
             }
             
@@ -2795,7 +2795,7 @@ Version : ${version}`;
                 try {
                     const data = JSON.parse(e.target.result);
                     
-                    if (confirm('Voulez-vous remplacer toutes les donn├®es existantes par celles du fichier ?')) {
+                    if (confirm('Voulez-vous remplacer toutes les données existantes par celles du fichier ?')) {
                         if (data.agents) {
                             saveAgents(data.agents);
                         }
@@ -2810,7 +2810,7 @@ Version : ${version}`;
                         loadAgentsIntoSelector();
                         updateDataStats();
                         
-                        alert('Donn├®es import├®es avec succ├¿s !');
+                        alert('Données importées avec succùs !');
                     }
                 } catch (error) {
                     alert('Erreur lors de l\'import : ' + error.message);
@@ -2820,8 +2820,8 @@ Version : ${version}`;
         }
         
         function clearAllData() {
-            if (confirm('ÔÜá´©Å ├ètes-vous s├╗r de vouloir supprimer TOUTES les donn├®es ? Cette action est irr├®versible !')) {
-                if (confirm('Derni├¿re confirmation : supprimer toutes les donn├®es ?')) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer TOUTES les données ? Cette action est irréversible !')) {
+                if (confirm('Derniùre confirmation : supprimer toutes les données ?')) {
                     agentsCache = [];
                     commissionsCache = [];
                     expensesCache = [];
@@ -2838,18 +2838,18 @@ Version : ${version}`;
                     displayCommissions();
                     displayAgents();
                     
-                    alert('Toutes les donn├®es ont ├®t├® supprim├®es.');
+                    alert('Toutes les données ont été supprimées.');
                 }
             }
         }
         
         
-        // G├®n├®ration de la liste des versions Minecraft
+        // Génération de la liste des versions Minecraft
         function loadMinecraftVersions() {
             const versionSelect = document.getElementById('version');
             const versions = [];
             
-            // Liste compl├¿te des versions Minecraft de 1.6.4 ├á 1.21.11
+            // Liste complùte des versions Minecraft de 1.6.4 à 1.21.11
             // 1.6.x
             versions.push('1.6.4');
             
@@ -2904,7 +2904,7 @@ Version : ${version}`;
             });
         }
         
-        // Mettre ├á jour la r├®partition quand le % commission change
+        // Mettre à jour la répartition quand le % commission change
         document.addEventListener('DOMContentLoaded', function() {
             const commissionInput = document.getElementById('commissionPercent');
             if (commissionInput) {
@@ -2913,7 +2913,7 @@ Version : ${version}`;
             }
         });
         
-        // Initialisation (donn├®es charg├®es apr├¿s connexion Google dans showApp)
+        // Initialisation (données chargées aprùs connexion Google dans showApp)
         loadMinecraftVersions();
         
         setTimeout(function() {
