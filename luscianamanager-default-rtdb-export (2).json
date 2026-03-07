@@ -1,11 +1,4 @@
 {
-  "adminEmails": {
-    "luscianabuilds@gmail,com": true
-  },
-  "adminUids": {},
-  "allowedEmails": {
-    "luscianabuilds@gmail,com": true
-  },
   "agents": [
     {
       "address": "",
@@ -346,7 +339,7 @@
       "worldName": "c-Caerwynn2"
     }
   ],
-  "analystExpenses": [
+  "expenses": [
     {
       "amount": 24.99,
       "currency": "USD",
@@ -354,5 +347,6 @@
       "id": "1772369836852",
       "label": "Axiom"
     }
-  ]
+  ],
+  "exportDate": "2026-03-07T14:10:52.594Z"
 }
