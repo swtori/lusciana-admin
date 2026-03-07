@@ -1245,30 +1245,39 @@
 
         auth.onAuthStateChanged(function (user) {
             if (user) {
-                if (intentAdmin) {
-                    var email = (user.email || '').toLowerCase();
-                    getAdminEmails(function (adminEmails) {
-                        if (adminEmails.indexOf(email) !== -1) {
-                            window.location.href = 'admin/';
-                            return;
-                        }
-                        intentAdmin = false;
-                        auth.signOut();
-                        showLoginScreen();
-                        setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
-                    });
-                    return;
-                }
-                getAllowedEmails(function (allowed) {
-                    var email = (user.email || '').toLowerCase();
-                    var isAllowed = allowed.some(function (e) { return e.toLowerCase() === email; });
-                    if (isAllowed) {
-                        showApp(user);
-                    } else {
-                        auth.signOut();
-                        showLoginScreen();
-                        setLoginError('Accès refusé. Seuls les comptes autorisés peuvent accéder à ce site.');
+                user.getIdToken().then(function () {
+                    if (intentAdmin) {
+                        var email = (user.email || '').toLowerCase();
+                        getAdminEmails(function (adminEmails) {
+                            if (adminEmails.indexOf(email) !== -1) {
+                                window.location.href = 'admin/';
+                                return;
+                            }
+                            intentAdmin = false;
+                            auth.signOut();
+                            showLoginScreen();
+                            setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
+                        });
+                        return;
                     }
+                    getAllowedEmails(function (allowed) {
+                        var email = (user.email || '').toLowerCase();
+                        var isAllowed = allowed.some(function (e) { return e.toLowerCase() === email; });
+                        if (isAllowed) {
+                            showApp(user);
+                        } else {
+                            auth.signOut();
+                            showLoginScreen();
+                            setLoginError(allowed.length === 0
+                                ? 'Aucun email autorisé dans la base. Importez le JSON avec config/adminEmails et config/allowedEmails dans Firebase.'
+                                : 'Accès refusé. Seuls les comptes autorisés peuvent accéder à ce site.');
+                        }
+                    });
+                }).catch(function () {
+                    intentAdmin = false;
+                    auth.signOut();
+                    showLoginScreen();
+                    setLoginError('Erreur de vérification. Réessaie.');
                 });
             } else {
                 intentAdmin = false;
