@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Lusciana Commission Manager</title>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 32px;
+        }
+        h1 { color: #333; margin-bottom: 8px; font-size: 24px; }
+        p.sub { color: #666; margin-bottom: 24px; font-size: 14px; }
+        .back { display: inline-block; margin-bottom: 20px; color: #667eea; font-weight: 600; text-decoration: none; }
+        .back:hover { text-decoration: underline; }
+        .form-row { display: flex; gap: 10px; margin-bottom: 24px; }
+        .form-row input {
+            flex: 1;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        .form-row input:focus { outline: none; border-color: #667eea; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #667eea; color: #fff; }
+        .btn-primary:hover { background: #5a67d8; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .email-list { list-style: none; }
+        .email-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .email-list li.bootstrap { color: #64748b; font-style: italic; }
+        .email-list .remove { color: #dc2626; background: none; border: none; cursor: pointer; font-size: 14px; padding: 4px 8px; font-weight: 600; }
+        .email-list .remove:hover { text-decoration: underline; }
+        .email-list li.bootstrap .remove { display: none; }
+        .error { color: #dc2626; font-size: 14px; margin-top: 12px; }
+        .login-card { text-align: center; padding: 48px 32px; }
+        .btn-google { display: inline-flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 28px; background: #fff; color: #333; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .btn-google:hover { background: #f8f8f8; border-color: #667eea; color: #667eea; }
+        .btn-google img { width: 24px; height: 24px; }
+        .user-badge { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .user-badge span { font-size: 14px; color: #555; }
+    </style>
+</head>
+<body>
+    <div id="app" class="container" style="display: none;">
+        <a href="../" class="back">← Retour au Commission Manager</a>
+        <div class="user-badge">
+            <h1>🔐 Admin</h1>
+            <span id="userInfo"></span>
+            <button type="button" class="btn btn-secondary" onclick="logout()">Déconnexion</button>
+        </div>
+        <p class="sub">Emails autorisés à accéder au site. Les deux premiers (bootstrap) ne peuvent pas être supprimés.</p>
+        <div class="form-row">
+            <input type="email" id="newEmail" placeholder="nouveau@email.com">
+            <button type="button" class="btn btn-primary" onclick="addEmail()">Ajouter</button>
+        </div>
+        <p id="adminError" class="error" style="display: none;"></p>
+        <ul id="emailList" class="email-list"></ul>
+    </div>
+
+    <div id="loginScreen" class="container">
+        <div class="login-card">
+            <a href="../" class="back" style="display: block; margin-bottom: 24px;">← Retour</a>
+            <h1>🔐 Admin</h1>
+            <p class="sub">Connecte-toi avec un compte admin pour gérer les accès.</p>
+            <button type="button" class="btn-google" onclick="loginWithGoogle()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
+                Se connecter avec Google
+            </button>
+            <p id="loginError" class="error" style="display: none; margin-top: 16px;"></p>
+        </div>
+    </div>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyAGNnVNpRPRYc7ggMTG4dESxwdn3A-luaI",
+            authDomain: "luscianamanager.firebaseapp.com",
+            databaseURL: "https://luscianamanager-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "luscianamanager",
+            storageBucket: "luscianamanager.firebasestorage.app",
+            messagingSenderId: "375459557861",
+            appId: "1:375459557861:web:4d6234200624416816ff0c",
+            measurementId: "G-LQ5HYX18L8"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.database();
+        var auth = firebase.auth();
+
+        var ADMIN_EMAILS = ['luscianabuilds@gmail.com', '0xxxsv@gmail.com'];
+        var allowedEmails = [];
+
+        function setError(msg) {
+            var el = document.getElementById('adminError');
+            el.style.display = msg ? 'block' : 'none';
+            el.textContent = msg || '';
+        }
+
+        function setLoginError(msg) {
+            var el = document.getElementById('loginError');
+            el.style.display = msg ? 'block' : 'none';
+            el.textContent = msg || '';
+        }
+
+        function loadEmails() {
+            db.ref('config/allowedEmails').once('value').then(function (snap) {
+                var val = snap.val();
+                allowedEmails = Array.isArray(val) ? val.slice() : [];
+                renderList();
+            }).catch(function () {
+                allowedEmails = [];
+                renderList();
+            });
+        }
+
+        function renderList() {
+            var ul = document.getElementById('emailList');
+            var all = ADMIN_EMAILS.slice();
+            allowedEmails.forEach(function (e) {
+                var lower = (e || '').toLowerCase().trim();
+                if (lower && all.indexOf(lower) === -1 && !ADMIN_EMAILS.some(function (b) { return b.toLowerCase() === lower; })) {
+                    all.push(lower);
+                }
+            });
+            ul.innerHTML = '';
+            all.forEach(function (email, i) {
+                var li = document.createElement('li');
+                li.className = ADMIN_EMAILS.some(function (b) { return b.toLowerCase() === email.toLowerCase(); }) ? 'bootstrap' : '';
+                li.innerHTML = '<span>' + email + '</span>' + (li.className ? '' : '<button type="button" class="remove" onclick="removeEmail(\'' + email.replace(/'/g, "\\'") + '\')">Supprimer</button>');
+                ul.appendChild(li);
+            });
+        }
+
+        function addEmail() {
+            var input = document.getElementById('newEmail');
+            var email = (input.value || '').trim().toLowerCase();
+            setError('');
+            if (!email) {
+                setError('Saisis une adresse email.');
+                return;
+            }
+            if (ADMIN_EMAILS.some(function (b) { return b.toLowerCase() === email; })) {
+                setError('Cet email est déjà dans la liste bootstrap.');
+                return;
+            }
+            if (allowedEmails.some(function (e) { return e.toLowerCase() === email; })) {
+                setError('Cet email est déjà autorisé.');
+                return;
+            }
+            allowedEmails.push(email);
+            db.ref('config/allowedEmails').set(allowedEmails).then(function () {
+                input.value = '';
+                loadEmails();
+            }).catch(function (err) {
+                allowedEmails.pop();
+                setError(err.message || 'Erreur lors de l\'ajout.');
+            });
+        }
+
+        function removeEmail(email) {
+            var lower = email.toLowerCase();
+            allowedEmails = allowedEmails.filter(function (e) { return e.toLowerCase() !== lower; });
+            db.ref('config/allowedEmails').set(allowedEmails).then(loadEmails).catch(function (err) {
+                loadEmails();
+                setError(err.message || 'Erreur lors de la suppression.');
+            });
+        }
+
+        function loginWithGoogle() {
+            setLoginError('');
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function (err) {
+                setLoginError(err.message || 'Erreur de connexion.');
+            });
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        auth.onAuthStateChanged(function (user) {
+            if (user) {
+                var email = (user.email || '').toLowerCase();
+                var isAdmin = ADMIN_EMAILS.some(function (e) { return e.toLowerCase() === email; });
+                if (isAdmin) {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('app').style.display = 'block';
+                    document.getElementById('userInfo').textContent = user.email || user.displayName || '';
+                    loadEmails();
+                } else {
+                    auth.signOut();
+                    setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
+                }
+            } else {
+                document.getElementById('loginScreen').style.display = 'block';
+                document.getElementById('app').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

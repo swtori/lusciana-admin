@@ -734,6 +734,7 @@
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
                     Se connecter avec Google
                 </button>
+                <p class="login-toggle" style="margin-top: 20px;"><a href="admin/" style="color: #667eea; font-weight: 600; text-decoration: none;">Admin</a> — Gérer les accès</p>
             </div>
             <p id="loginError" class="login-error" style="display: none;"></p>
             <p id="loginSuccess" class="login-success" style="display: none;"></p>
@@ -1200,19 +1201,38 @@
             auth.signOut();
         }
 
-        var ALLOWED_EMAILS = ['luscianabuilds@gmail.com', '0xxxsv@gmail.com'];
+        var BOOTSTRAP_EMAILS = ['luscianabuilds@gmail.com', '0xxxsv@gmail.com'];
+
+        function getAllowedEmails(callback) {
+            db.ref('config/allowedEmails').once('value').then(function (snap) {
+                var fromDb = snap.val();
+                var list = Array.isArray(fromDb) ? fromDb : [];
+                var merged = BOOTSTRAP_EMAILS.slice();
+                list.forEach(function (e) {
+                    var lower = (e || '').toLowerCase().trim();
+                    if (lower && merged.indexOf(lower) === -1 && !BOOTSTRAP_EMAILS.some(function (b) { return b.toLowerCase() === lower; })) {
+                        merged.push(lower);
+                    }
+                });
+                callback(merged);
+            }).catch(function () {
+                callback(BOOTSTRAP_EMAILS.slice());
+            });
+        }
 
         auth.onAuthStateChanged(function (user) {
             if (user) {
-                var email = (user.email || '').toLowerCase();
-                var isAllowed = ALLOWED_EMAILS.some(function (e) { return e.toLowerCase() === email; });
-                if (isAllowed) {
-                    showApp(user);
-                } else {
-                    auth.signOut();
-                    showLoginScreen();
-                    setLoginError('Accès refusé. Seuls les comptes autorisés peuvent accéder à ce site.');
-                }
+                getAllowedEmails(function (allowed) {
+                    var email = (user.email || '').toLowerCase();
+                    var isAllowed = allowed.some(function (e) { return e.toLowerCase() === email; });
+                    if (isAllowed) {
+                        showApp(user);
+                    } else {
+                        auth.signOut();
+                        showLoginScreen();
+                        setLoginError('Accès refusé. Seuls les comptes autorisés peuvent accéder à ce site.');
+                    }
+                });
             } else {
                 showLoginScreen();
             }
