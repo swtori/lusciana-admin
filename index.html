@@ -1209,48 +1209,59 @@
             auth.signOut();
         }
 
+        var FALLBACK_EMAILS = ['luscianabuilds@gmail.com', '0xxxsv@gmail.com'];
+
         function getAllowedEmails(callback, retryCount) {
             retryCount = retryCount || 0;
-            Promise.all([
-                db.ref('config/adminEmails').once('value'),
-                db.ref('config/allowedEmails').once('value')
-            ]).then(function (results) {
-                var admin = results[0].val();
-                var allowed = results[1].val();
-                console.log('[Auth] config/adminEmails =', admin);
-                console.log('[Auth] config/allowedEmails =', allowed);
+            db.ref('config').once('value').then(function (snap) {
+                var config = snap.val() || {};
+                var admin = config.adminEmails;
+                var allowed = config.allowedEmails;
+                console.log('[Auth] config =', config);
                 var seen = {};
                 var merged = [];
                 [].concat(Array.isArray(admin) ? admin : [], Array.isArray(allowed) ? allowed : []).forEach(function (e) {
                     var lower = (e || '').toLowerCase().trim();
                     if (lower && !seen[lower]) { seen[lower] = 1; merged.push(lower); }
                 });
-                console.log('[Auth] merged allowed list =', merged);
+                if (merged.length === 0) {
+                    merged = FALLBACK_EMAILS.map(function (e) { return e.toLowerCase(); });
+                    console.log('[Auth] DB vide, fallback =', merged);
+                } else {
+                    console.log('[Auth] merged =', merged);
+                }
                 callback(merged);
             }).catch(function (err) {
                 console.error('[Auth] Erreur lecture config (retry ' + retryCount + '):', err);
-                if (retryCount < 1 && err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission') !== -1))) {
-                    setTimeout(function () { getAllowedEmails(callback, 1); }, 600);
+                if (retryCount < 2 && err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission') !== -1))) {
+                    setTimeout(function () { getAllowedEmails(callback, retryCount + 1); }, 800);
                     return;
                 }
-                callback([]);
+                console.log('[Auth] Fallback après erreur');
+                callback(FALLBACK_EMAILS.map(function (e) { return e.toLowerCase(); }));
             });
         }
 
         function getAdminEmails(callback, retryCount) {
             retryCount = retryCount || 0;
-            db.ref('config/adminEmails').once('value').then(function (snap) {
-                var list = snap.val();
+            db.ref('config').once('value').then(function (snap) {
+                var config = snap.val() || {};
+                var list = config.adminEmails;
                 var arr = Array.isArray(list) ? list.map(function (e) { return (e || '').toLowerCase().trim(); }).filter(Boolean) : [];
-                console.log('[Auth Admin] config/adminEmails =', list, '->', arr);
+                if (arr.length === 0) {
+                    arr = FALLBACK_EMAILS.map(function (e) { return e.toLowerCase(); });
+                    console.log('[Auth Admin] DB vide, fallback =', arr);
+                } else {
+                    console.log('[Auth Admin] adminEmails =', arr);
+                }
                 callback(arr);
             }).catch(function (err) {
-                console.error('[Auth Admin] Erreur lecture config (retry ' + retryCount + '):', err);
-                if (retryCount < 1 && err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission') !== -1))) {
-                    setTimeout(function () { getAdminEmails(callback, 1); }, 600);
+                console.error('[Auth Admin] Erreur config (retry ' + retryCount + '):', err);
+                if (retryCount < 2 && err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission') !== -1))) {
+                    setTimeout(function () { getAdminEmails(callback, retryCount + 1); }, 800);
                     return;
                 }
-                callback([]);
+                callback(FALLBACK_EMAILS.map(function (e) { return e.toLowerCase(); }));
             });
         }
 
