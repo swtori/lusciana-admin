@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana - Admin</title>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 32px;
+        }
+        h1 { color: #333; margin-bottom: 8px; font-size: 24px; }
+        .sub { color: #666; margin-bottom: 24px; font-size: 14px; }
+        .back { margin-bottom: 20px; }
+        .back a { color: #667eea; font-weight: 600; text-decoration: none; font-size: 14px; }
+        .back a:hover { text-decoration: underline; }
+        .form-row { display: flex; gap: 12px; margin-bottom: 20px; }
+        .form-row input { flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; }
+        .form-row input:focus { outline: none; border-color: #667eea; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #667eea; color: #fff; }
+        .btn-primary:hover { background: #5a67d8; }
+        .btn-danger { background: #dc2626; color: #fff; font-size: 12px; padding: 8px 12px; }
+        .btn-danger:hover { background: #b91c1c; }
+        .email-list { list-style: none; }
+        .email-list li {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 15px;
+        }
+        .email-list li:hover { background: #f8f8f8; }
+        .error { color: #dc2626; font-size: 14px; margin-top: 8px; }
+        .login-screen { text-align: center; padding: 40px 0; }
+        .btn-google { display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; background: #fff; color: #333; border: 2px solid #ddd; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .btn-google:hover { background: #f8f8f8; border-color: #667eea; color: #667eea; }
+        .admin-content { display: none; }
+        .admin-content.visible { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginScreen" class="login-screen">
+            <h1>Espace admin</h1>
+            <p class="sub">Connexion Google uniquement (luscianabuilds@gmail.com).</p>
+            <button type="button" class="btn-google" onclick="loginAdmin()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" width="20" height="20" onerror="this.style.display='none'">
+                Se connecter avec Google
+            </button>
+            <p id="adminLoginError" class="error" style="display: none; margin-top: 16px;"></p>
+        </div>
+
+        <div id="adminContent" class="admin-content">
+            <p class="back"><a href="index.html">← Retour à l'accueil</a></p>
+            <h1>Gestion des accès</h1>
+            <p class="sub">Les adresses email ci-dessous peuvent accéder au site de la team. Ajoute ou supprime des adresses.</p>
+            <div class="form-row">
+                <input type="email" id="newEmail" placeholder="email@exemple.com">
+                <button type="button" class="btn btn-primary" onclick="addEmail()">Ajouter</button>
+            </div>
+            <p id="addError" class="error" style="display: none;"></p>
+            <ul id="emailList" class="email-list"></ul>
+            <p style="margin-top: 16px;"><button type="button" class="btn" onclick="logoutAdmin()" style="background: #f0f0f0;">Déconnexion</button></p>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAGNnVNpRPRYc7ggMTG4dESxwdn3A-luaI",
+            authDomain: "luscianamanager.firebaseapp.com",
+            databaseURL: "https://luscianamanager-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "luscianamanager",
+            storageBucket: "luscianamanager.firebasestorage.app",
+            messagingSenderId: "375459557861",
+            appId: "1:375459557861:web:4d6234200624416816ff0c",
+            measurementId: "G-LQ5HYX18L8"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        const ADMIN_EMAIL = 'luscianabuilds@gmail.com';
+
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('adminContent').classList.remove('visible');
+        }
+
+        function showAdmin() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminContent').classList.add('visible');
+            loadEmailList();
+        }
+
+        function setLoginError(msg) {
+            var el = document.getElementById('adminLoginError');
+            el.textContent = msg || '';
+            el.style.display = msg ? 'block' : 'none';
+        }
+
+        function loginAdmin() {
+            setLoginError('');
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function (result) {
+                var email = (result.user && result.user.email) ? result.user.email.trim().toLowerCase() : '';
+                if (email === ADMIN_EMAIL.toLowerCase()) {
+                    showAdmin();
+                } else {
+                    auth.signOut();
+                    setLoginError('Accès réservé à l\'administrateur (luscianabuilds@gmail.com).');
+                }
+            }).catch(function (err) {
+                setLoginError(err.message || 'Erreur de connexion.');
+            });
+        }
+
+        function logoutAdmin() {
+            auth.signOut();
+            window.location.href = 'index.html';
+        }
+
+        function keyToEmail(key) {
+            return (key || '').replace(/_/g, '.');
+        }
+
+        function loadEmailList() {
+            db.ref('allowedEmails').once('value').then(function (snap) {
+                var list = snap.val() || {};
+                var ul = document.getElementById('emailList');
+                ul.innerHTML = '';
+                var emails = Object.keys(list).filter(function (k) { return list[k]; }).map(keyToEmail).sort();
+                if (emails.length === 0) {
+                    ul.innerHTML = '<li style="color: #999;">Aucune adresse autorisée pour l\'instant.</li>';
+                    return;
+                }
+                emails.forEach(function (email) {
+                    var li = document.createElement('li');
+                    li.innerHTML = '<span>' + email + '</span><button type="button" class="btn btn-danger" onclick="removeEmail(\'' + email.replace(/'/g, "\\'") + '\')">Supprimer</button>';
+                    ul.appendChild(li);
+                });
+            });
+        }
+
+        function addEmail() {
+            var input = document.getElementById('newEmail');
+            var email = (input.value || '').trim().toLowerCase();
+            var errEl = document.getElementById('addError');
+            errEl.style.display = 'none';
+            if (!email) {
+                errEl.textContent = 'Saisis une adresse email.';
+                errEl.style.display = 'block';
+                return;
+            }
+            if (email.indexOf('@') === -1 || email.indexOf('.') === -1) {
+                errEl.textContent = 'Adresse email invalide.';
+                errEl.style.display = 'block';
+                return;
+            }
+            var key = email.replace(/\./g, '_');
+            db.ref('allowedEmails').child(key).set(true).then(function () {
+                input.value = '';
+                loadEmailList();
+            }).catch(function (err) {
+                errEl.textContent = err.message || 'Erreur lors de l\'ajout.';
+                errEl.style.display = 'block';
+            });
+        }
+
+        function removeEmail(email) {
+            var key = email.replace(/\./g, '_');
+            db.ref('allowedEmails').child(key).remove().then(function () {
+                loadEmailList();
+            });
+        }
+
+        auth.onAuthStateChanged(function (user) {
+            if (!user) {
+                showLogin();
+                return;
+            }
+            var email = (user.email || '').trim().toLowerCase();
+            if (email !== ADMIN_EMAIL.toLowerCase()) {
+                auth.signOut();
+                showLogin();
+                setLoginError('Accès réservé à l\'administrateur.');
+                return;
+            }
+            showAdmin();
+        });
+    </script>
+</body>
+</html>

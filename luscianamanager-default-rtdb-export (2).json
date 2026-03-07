@@ -348,5 +348,8 @@
       "label": "Axiom"
     }
   ],
+  "allowedEmails": {
+    "luscianabuilds_gmail_com": true
+  },
   "exportDate": "2026-03-07T14:10:52.594Z"
 }
