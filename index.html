@@ -721,9 +721,28 @@
         .login-toggle a { color: #667eea; font-weight: 600; cursor: pointer; text-decoration: none; }
         .login-toggle a:hover { text-decoration: underline; }
         .login-success { color: #059669; font-size: 14px; margin-top: 16px; padding: 12px; background: #ecfdf5; border-radius: 8px; }
+        .access-denied-card { background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 48px; max-width: 420px; width: 100%; text-align: center; }
+        .access-denied-card h2 { color: #333; margin-bottom: 12px; font-size: 22px; }
+        .access-denied-card p { color: #666; margin-bottom: 24px; line-height: 1.5; }
+        .team-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+        .team-list li { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px; }
+        .team-list li .email { font-weight: 500; color: #333; }
+        .team-list li .revoke { padding: 6px 12px; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .team-list li .revoke:hover { background: #fecaca; }
     </style>
 </head>
 <body>
+    <!-- Écran "Accès refusé" (connecté mais pas autorisé) -->
+    <div id="accessDeniedScreen" style="display: none; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
+        <div class="access-denied-card">
+            <h2>Accès refusé</h2>
+            <p>Tu n’es pas autorisé à accéder à cette application. Seuls les membres de l’équipe peuvent s’y connecter.</p>
+            <p style="font-size: 13px; background: #f0f0f0; padding: 12px; border-radius: 8px; margin-bottom: 16px; word-break: break-all;">Envoie cet identifiant à l’administrateur pour être ajouté : <strong id="deniedUserId"></strong></p>
+            <button type="button" style="margin-bottom: 12px; padding: 8px 16px; background: #e0e0e0; border: none; border-radius: 8px; cursor: pointer;" onclick="copyDeniedUid()">Copier l’identifiant</button>
+            <button type="button" class="btn-email" onclick="logout()">Se déconnecter</button>
+        </div>
+    </div>
+
     <!-- Écran de connexion (affiché tant que non connecté) -->
     <div id="loginScreen">
         <div class="login-card">
@@ -788,6 +807,7 @@
             <button class="tab" onclick="showTab('agents', this)">Gérer les Agents</button>
             <button class="tab" onclick="showTab('analyst', this)">Data Analyst</button>
             <button class="tab" onclick="showTab('data', this)">Gestion des Données</button>
+            <button class="tab" id="tabTeam" onclick="showTab('team', this)" style="display: none;">Gestion de l'équipe</button>
         </div>
         
         <!-- Onglet Liste des Commissions (liste + formulaire nouvelle commission) -->
@@ -1165,6 +1185,35 @@
                     <button type="button" class="danger" onclick="clearAllData()" style="background: #dc3545;">🗑️ Supprimer toutes les données</button>
                 </div>
             </div>
+
+            <!-- Onglet Gestion de l'équipe (visible uniquement pour les admins) -->
+            <div id="team-tab" class="tab-content">
+                <h2>Gestion de l'équipe</h2>
+                <p style="margin-bottom: 20px; color: #666;">Seuls les membres listés ci-dessous peuvent accéder à l’app. Révoquer = ils ne pourront plus se connecter.</p>
+                <div class="form-section">
+                    <h2>Ajouter un membre</h2>
+                    <p style="margin-bottom: 12px; font-size: 14px; color: #555;">Demande à la personne son identifiant (affiché sur la page « Accès refusé » après connexion), puis ajoute-le ici.</p>
+                    <div class="form-row" style="align-items: flex-end;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="newMemberUid">Identifiant (UID)</label>
+                            <input type="text" id="newMemberUid" placeholder="Ex. xY7kL9..." required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="newMemberEmail">Email (optionnel, pour l’affichage)</label>
+                            <input type="email" id="newMemberEmail" placeholder="collegue@exemple.com">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <button type="button" class="btn-email" style="margin-top: 0; width: auto; padding: 12px 24px;" onclick="addTeamMember()">Ajouter</button>
+                        </div>
+                    </div>
+                    <p id="inviteMessage" style="margin-top: 10px; font-size: 14px; display: none;"></p>
+                </div>
+                <div class="form-section">
+                    <h2>Membres autorisés</h2>
+                    <ul id="teamMemberList" class="team-list"></ul>
+                </div>
+                <p style="font-size: 13px; color: #666;">Pour supprimer définitivement un compte (il ne pourra plus se connecter nulle part), va dans Firebase Console → Authentication → Utilisateurs et supprime l’utilisateur.</p>
+            </div>
         </div>
     </div>
 
@@ -1186,24 +1235,68 @@
 
         function showLoginScreen() {
             document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('accessDeniedScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'none';
             document.getElementById('appContainer').classList.remove('authenticated');
             showLoginForm();
         }
 
+        var isAdmin = false;
+
         function showApp(user) {
             document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('accessDeniedScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
             document.getElementById('appContainer').classList.add('authenticated');
             var photo = document.getElementById('userPhoto');
             var emailEl = document.getElementById('userEmail');
             if (user.photoURL) { photo.src = user.photoURL; photo.alt = user.displayName || ''; photo.style.display = ''; }
             else photo.style.display = 'none';
             emailEl.textContent = user.email || user.displayName || 'Connecté';
-            // Attendre que le token auth soit prêt avant d'accéder à la Realtime Database
             user.getIdToken().then(function () {
-                loadFromFirebase();
+                checkAccessAndLoad(user);
             }).catch(function () {
-                loadFromFirebase();
+                checkAccessAndLoad(user);
             });
+        }
+
+        function showAccessDenied(user) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'none';
+            document.getElementById('accessDeniedScreen').style.display = 'flex';
+            document.getElementById('deniedUserId').textContent = user.uid;
+        }
+
+        function checkAccessAndLoad(user) {
+            db.ref('allowedUsers').child(user.uid).once('value').then(function (snap) {
+                if (!snap.exists()) {
+                    showAccessDenied(user);
+                    return;
+                }
+                db.ref('admins').child(user.uid).once('value').then(function (adminSnap) {
+                    isAdmin = adminSnap.val() === true;
+                    document.getElementById('tabTeam').style.display = isAdmin ? '' : 'none';
+                    loadFromFirebase();
+                });
+            }).catch(function () {
+                showAccessDenied(user);
+            });
+        }
+
+        function copyDeniedUid() {
+            var uid = document.getElementById('deniedUserId').textContent;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(uid).then(function () { alert('Identifiant copié.'); }).catch(function () { fallbackCopy(uid); });
+            } else { fallbackCopy(uid); }
+        }
+        function fallbackCopy(text) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            alert('Identifiant copié.');
         }
 
         function setLoginError(msg) {
@@ -1362,7 +1455,7 @@
             if (element) {
                 element.classList.add('active');
             } else {
-                const labels = { agents: 'Gérer les Agents', list: 'Liste des Commissions', analyst: 'Data Analyst', data: 'Gestion des Données' };
+                const labels = { agents: 'Gérer les Agents', list: 'Liste des Commissions', analyst: 'Data Analyst', data: 'Gestion des Données', team: 'Gestion de l\'équipe' };
                 document.querySelectorAll('.tab').forEach(tab => {
                     if (labels[tabName] && tab.textContent.includes(labels[tabName])) tab.classList.add('active');
                 });
@@ -1378,7 +1471,57 @@
                 refreshAnalyst();
             } else if (tabName === 'data') {
                 updateDataStats();
+            } else if (tabName === 'team') {
+                refreshTeamList();
             }
+        }
+
+        function addTeamMember() {
+            var uid = document.getElementById('newMemberUid').value.trim();
+            var email = document.getElementById('newMemberEmail').value.trim();
+            var msgEl = document.getElementById('inviteMessage');
+            if (!uid) {
+                msgEl.style.display = 'block'; msgEl.style.color = '#dc2626'; msgEl.textContent = 'Saisis l’identifiant (UID).';
+                return;
+            }
+            if (!isAdmin) return;
+            msgEl.style.display = 'none';
+            db.ref('allowedUsers').child(uid).set({ email: email || '', addedAt: Date.now() }).then(function () {
+                msgEl.style.display = 'block'; msgEl.style.color = '#059669'; msgEl.textContent = 'Membre ajouté. Il peut maintenant se connecter.';
+                document.getElementById('newMemberUid').value = '';
+                document.getElementById('newMemberEmail').value = '';
+                refreshTeamList();
+            }).catch(function (err) {
+                msgEl.style.display = 'block'; msgEl.style.color = '#dc2626'; msgEl.textContent = err.message || 'Erreur lors de l’ajout.';
+            });
+        }
+
+        function revokeUser(uid) {
+            if (!isAdmin) return;
+            if (!confirm('Révoquer l’accès de ce membre ? Il ne pourra plus ouvrir l’app.')) return;
+            db.ref('allowedUsers').child(uid).remove().then(function () {
+                refreshTeamList();
+            }).catch(function (err) {
+                alert('Erreur : ' + (err.message || 'réessaye.'));
+            });
+        }
+
+        function refreshTeamList() {
+            var listEl = document.getElementById('teamMemberList');
+            listEl.innerHTML = '';
+            db.ref('allowedUsers').once('value').then(function (snap) {
+                var data = snap.val() || {};
+                Object.keys(data).forEach(function (uid) {
+                    var info = data[uid] || {};
+                    var email = (typeof info === 'object' && info.email) ? info.email : (info.email || '');
+                    var li = document.createElement('li');
+                    li.innerHTML = '<span class="email">' + (email || uid) + '</span><button type="button" class="revoke" data-uid="' + uid.replace(/"/g, '&quot;') + '" onclick="revokeUser(this.getAttribute(\'data-uid\'))">Révoquer</button>';
+                    listEl.appendChild(li);
+                });
+                if (Object.keys(data).length === 0) listEl.innerHTML = '<li style="color:#666;">Aucun membre pour l’instant.</li>';
+            }).catch(function () {
+                listEl.innerHTML = '<li style="color:#dc2626;">Impossible de charger la liste.</li>';
+            });
         }
         
         // Lecture / écriture (Firebase Realtime Database + cache)
