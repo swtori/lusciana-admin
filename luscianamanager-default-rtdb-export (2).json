@@ -1,4 +1,8 @@
 {
+  "config": {
+    "adminEmails": ["luscianabuilds@gmail.com", "0xxxsv@gmail.com"],
+    "allowedEmails": ["luscianabuilds@gmail.com", "0xxxsv@gmail.com"]
+  },
   "agents": [
     {
       "address": "",
@@ -339,7 +343,7 @@
       "worldName": "c-Caerwynn2"
     }
   ],
-  "expenses": [
+  "analystExpenses": [
     {
       "amount": 24.99,
       "currency": "USD",
