@@ -1098,6 +1098,48 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // Caches synchronisés avec Firebase Realtime Database
+        let agentsCache = [];
+        let commissionsCache = [];
+        let expensesCache = [];
+
+        function refreshUIAfterLoad() {
+            loadAgentsIntoSelects();
+            loadAgentsIntoSelector();
+            updateDataStats();
+            displayCommissions();
+            displayAgents();
+            if (typeof refreshAnalyst === 'function') refreshAnalyst();
+        }
+
+        function loadFromFirebase() {
+            Promise.all([
+                db.ref('agents').once('value'),
+                db.ref('commissions').once('value'),
+                db.ref('analystExpenses').once('value')
+            ]).then(function (results) {
+                agentsCache = results[0].val() || [];
+                commissionsCache = results[1].val() || [];
+                expensesCache = results[2].val() || [];
+                // Migration : si la DB est vide et qu'il y a des données en localStorage
+                if (agentsCache.length === 0 && commissionsCache.length === 0 && expensesCache.length === 0) {
+                    var localAgents = localStorage.getItem('agents');
+                    var localCommissions = localStorage.getItem('commissions');
+                    var localExpenses = localStorage.getItem('analystExpenses');
+                    if (localAgents) { agentsCache = JSON.parse(localAgents); db.ref('agents').set(agentsCache); }
+                    if (localCommissions) { commissionsCache = JSON.parse(localCommissions); db.ref('commissions').set(commissionsCache); }
+                    if (localExpenses) { expensesCache = JSON.parse(localExpenses); db.ref('analystExpenses').set(expensesCache); }
+                }
+                refreshUIAfterLoad();
+            }).catch(function (err) {
+                console.error('Erreur chargement Firebase (vérifiez les règles Realtime Database):', err);
+                agentsCache = (localStorage.getItem('agents') && JSON.parse(localStorage.getItem('agents'))) || [];
+                commissionsCache = (localStorage.getItem('commissions') && JSON.parse(localStorage.getItem('commissions'))) || [];
+                expensesCache = (localStorage.getItem('analystExpenses') && JSON.parse(localStorage.getItem('analystExpenses'))) || [];
+                refreshUIAfterLoad();
+            });
+        }
+
         // Gestion des onglets
         function showTab(tabName, element) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -1125,32 +1167,32 @@
             }
         }
         
-        // Stockage Local
+        // Lecture / écriture (Firebase Realtime Database + cache)
         function getAgents() {
-            const agents = localStorage.getItem('agents');
-            return agents ? JSON.parse(agents) : [];
+            return agentsCache;
         }
         
         function saveAgents(agents) {
-            localStorage.setItem('agents', JSON.stringify(agents));
+            agentsCache = agents;
+            db.ref('agents').set(agents);
         }
         
         function getCommissions() {
-            const commissions = localStorage.getItem('commissions');
-            return commissions ? JSON.parse(commissions) : [];
+            return commissionsCache;
         }
         
         function saveCommissions(commissions) {
-            localStorage.setItem('commissions', JSON.stringify(commissions));
+            commissionsCache = commissions;
+            db.ref('commissions').set(commissions);
         }
         
         function getExpenses() {
-            const data = localStorage.getItem('analystExpenses');
-            return data ? JSON.parse(data) : [];
+            return expensesCache;
         }
         
         function saveExpenses(expenses) {
-            localStorage.setItem('analystExpenses', JSON.stringify(expenses));
+            expensesCache = expenses;
+            db.ref('analystExpenses').set(expenses);
         }
         
         function addExpense() {
@@ -2643,6 +2685,12 @@ Version : ${version}`;
         function clearAllData() {
             if (confirm('⚠️ Êtes-vous sûr de vouloir supprimer TOUTES les données ? Cette action est irréversible !')) {
                 if (confirm('Dernière confirmation : supprimer toutes les données ?')) {
+                    agentsCache = [];
+                    commissionsCache = [];
+                    expensesCache = [];
+                    db.ref('agents').set([]);
+                    db.ref('commissions').set([]);
+                    db.ref('analystExpenses').set([]);
                     localStorage.removeItem('agents');
                     localStorage.removeItem('commissions');
                     localStorage.removeItem('analystExpenses');
@@ -2728,11 +2776,9 @@ Version : ${version}`;
             }
         });
         
-        // Initialisation
+        // Initialisation (données chargées depuis Firebase)
         loadMinecraftVersions();
-        loadAgentsIntoSelects();
-        loadAgentsIntoSelector();
-        updateDataStats();
+        loadFromFirebase();
         
         setTimeout(function() {
             const commissionInput = document.getElementById('commissionPercent');
