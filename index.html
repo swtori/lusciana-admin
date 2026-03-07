@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lusciana - Commission Manager</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1083,57 +1081,6 @@
     </div>
 
     <script>
-        // Firebase Realtime Database (remplace localStorage quand configuré)
-        // Récupère ta config : Firebase Console > Paramètres du projet > Mes applications > Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-            authDomain: "luscianamanager.firebaseapp.com",
-            databaseURL: "https://luscianamanager-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "luscianamanager",
-            storageBucket: "luscianamanager.firebasestorage.app",
-            messagingSenderId: "000000000000",
-            appId: "1:000000000000:web:xxxxxxxxxxxxxxxx"
-        };
-        let firebaseDb = null;
-        if (typeof firebase !== 'undefined' && firebaseConfig.databaseURL) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                firebaseDb = firebase.database();
-            } catch (e) { console.warn('Firebase init:', e); }
-        }
-        let _agentsCache = [];
-        let _commissionsCache = [];
-        let _expensesCache = [];
-        let _firebaseReady = false;
-        function loadFromFirebase() {
-            if (!firebaseDb) return Promise.resolve();
-            return firebaseDb.ref().once('value').then(function(snap) {
-                const d = snap.val();
-                if (d && typeof d === 'object') {
-                    _agentsCache = Array.isArray(d.agents) ? d.agents : (d.agents ? Object.values(d.agents) : []);
-                    _commissionsCache = Array.isArray(d.commissions) ? d.commissions : (d.commissions ? Object.values(d.commissions) : []);
-                    _expensesCache = Array.isArray(d.expenses) ? d.expenses : (d.expenses ? Object.values(d.expenses) : []);
-                }
-                _firebaseReady = true;
-            }).catch(function(err) {
-                console.warn('Firebase load:', err);
-                _agentsCache = localStorage.getItem('agents') ? JSON.parse(localStorage.getItem('agents')) : [];
-                _commissionsCache = localStorage.getItem('commissions') ? JSON.parse(localStorage.getItem('commissions')) : [];
-                _expensesCache = localStorage.getItem('analystExpenses') ? JSON.parse(localStorage.getItem('analystExpenses')) : [];
-                _firebaseReady = true;
-            });
-        }
-        function saveToFirebase() {
-            if (!firebaseDb || !_firebaseReady) return;
-            try {
-                firebaseDb.ref().set({
-                    agents: _agentsCache,
-                    commissions: _commissionsCache,
-                    expenses: _expensesCache
-                });
-            } catch (e) { console.warn('Firebase save:', e); }
-        }
-        
         // Gestion des onglets
         function showTab(tabName, element) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -1161,49 +1108,31 @@
             }
         }
         
-        // Stockage : Firebase Realtime DB (si configuré) + cache local
+        // Stockage Local
         function getAgents() {
-            if (firebaseDb && _firebaseReady) return _agentsCache;
             const agents = localStorage.getItem('agents');
             return agents ? JSON.parse(agents) : [];
         }
         
         function saveAgents(agents) {
-            agents = agents || [];
-            if (firebaseDb && _firebaseReady) {
-                _agentsCache = agents;
-                saveToFirebase();
-            }
             localStorage.setItem('agents', JSON.stringify(agents));
         }
         
         function getCommissions() {
-            if (firebaseDb && _firebaseReady) return _commissionsCache;
             const commissions = localStorage.getItem('commissions');
             return commissions ? JSON.parse(commissions) : [];
         }
         
         function saveCommissions(commissions) {
-            commissions = commissions || [];
-            if (firebaseDb && _firebaseReady) {
-                _commissionsCache = commissions;
-                saveToFirebase();
-            }
             localStorage.setItem('commissions', JSON.stringify(commissions));
         }
         
         function getExpenses() {
-            if (firebaseDb && _firebaseReady) return _expensesCache;
             const data = localStorage.getItem('analystExpenses');
             return data ? JSON.parse(data) : [];
         }
         
         function saveExpenses(expenses) {
-            expenses = expenses || [];
-            if (firebaseDb && _firebaseReady) {
-                _expensesCache = expenses;
-                saveToFirebase();
-            }
             localStorage.setItem('analystExpenses', JSON.stringify(expenses));
         }
         
@@ -2697,10 +2626,6 @@ Version : ${version}`;
         function clearAllData() {
             if (confirm('⚠️ Êtes-vous sûr de vouloir supprimer TOUTES les données ? Cette action est irréversible !')) {
                 if (confirm('Dernière confirmation : supprimer toutes les données ?')) {
-                    _agentsCache = [];
-                    _commissionsCache = [];
-                    _expensesCache = [];
-                    if (firebaseDb && _firebaseReady) saveToFirebase();
                     localStorage.removeItem('agents');
                     localStorage.removeItem('commissions');
                     localStorage.removeItem('analystExpenses');
@@ -2786,27 +2711,19 @@ Version : ${version}`;
             }
         });
         
-        // Initialisation (charge Firebase puis démarre l'app)
-        function runAppInit() {
-            loadMinecraftVersions();
-            loadAgentsIntoSelects();
-            loadAgentsIntoSelector();
-            updateDataStats();
-            displayCommissions();
-            displayAgents();
-            setTimeout(function() {
-                const commissionInput = document.getElementById('commissionPercent');
-                if (commissionInput) {
-                    commissionInput.addEventListener('input', updateWhoTookWhat);
-                    commissionInput.addEventListener('input', updateTotalAmount);
-                }
-            }, 100);
-        }
-        if (firebaseDb) {
-            loadFromFirebase().then(runAppInit).catch(runAppInit);
-        } else {
-            runAppInit();
-        }
+        // Initialisation
+        loadMinecraftVersions();
+        loadAgentsIntoSelects();
+        loadAgentsIntoSelector();
+        updateDataStats();
+        
+        setTimeout(function() {
+            const commissionInput = document.getElementById('commissionPercent');
+            if (commissionInput) {
+                commissionInput.addEventListener('input', updateWhoTookWhat);
+                commissionInput.addEventListener('input', updateTotalAmount);
+            }
+        }, 100);
     </script>
 </body>
 </html>
