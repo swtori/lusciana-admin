@@ -1260,7 +1260,8 @@
             }
             db.ref('allowedEmails').once('value').then(function (snap) {
                 var allowed = snap.val() || {};
-                if (!allowed[email]) {
+                var emailKey = (email || '').replace(/\./g, ',');
+                if (!allowed[emailKey] && !allowed[email]) {
                     setLoginError('Cette adresse n\'est pas autorisée à créer un compte. Contacte un administrateur.');
                     return Promise.reject(new Error('not_allowed'));
                 }
@@ -1375,7 +1376,9 @@
             if (!user || !user.email) return;
             db.ref('allowedEmails').once('value').then(function (snap) {
                 var allowed = snap.val() || {};
-                if (!allowed[user.email]) {
+                var email = user.email || '';
+                var emailKey = email.replace(/\./g, ',');
+                if (!allowed[emailKey] && !allowed[email]) {
                     sessionStorage.setItem('accessRevoked', '1');
                     auth.signOut();
                     return;
@@ -1384,7 +1387,9 @@
             }).then(function (snap) {
                 if (!snap) return;
                 var adminEmails = snap.val() || {};
-                document.getElementById('adminLink').style.display = adminEmails[auth.currentUser.email] ? '' : 'none';
+                var email = (auth.currentUser && auth.currentUser.email) || '';
+                var emailKey = email.replace(/\./g, ',');
+                document.getElementById('adminLink').style.display = (adminEmails[emailKey] || adminEmails[email]) ? '' : 'none';
             }).catch(function () {});
         }
 

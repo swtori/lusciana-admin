@@ -93,15 +93,19 @@
             el.textContent = msg || '';
         }
 
+        function emailToKey(email) { return (email || '').replace(/\./g, ','); }
+        function keyToEmail(key) { return (key || '').replace(/,/g, '.'); }
+
         function renderAllowedList(data) {
             var list = document.getElementById('allowedList');
-            var emails = data ? Object.keys(data).filter(function (k) { return data[k]; }) : [];
-            if (emails.length === 0) {
+            var keys = data ? Object.keys(data).filter(function (k) { return data[k]; }) : [];
+            if (keys.length === 0) {
                 list.innerHTML = '<li class="empty">Aucune adresse autorisée. Ajoute des emails pour donner accès.</li>';
                 return;
             }
-            list.innerHTML = emails.sort().map(function (email) {
-                return '<li><span class="email-key">' + escapeHtml(email) + '</span><button type="button" class="btn btn-danger" data-email="' + escapeHtml(email) + '" onclick="removeAllowedEmail(this.dataset.email)">Retirer</button></li>';
+            list.innerHTML = keys.sort().map(function (key) {
+                var displayEmail = keyToEmail(key);
+                return '<li><span class="email-key">' + escapeHtml(displayEmail) + '</span><button type="button" class="btn btn-danger" data-email="' + escapeHtml(key) + '" onclick="removeAllowedEmail(this.dataset.email)">Retirer</button></li>';
             }).join('');
         }
 
@@ -114,6 +118,7 @@
         function addAllowedEmail() {
             var input = document.getElementById('newEmail');
             var email = (input.value || '').trim().toLowerCase();
+            var key = emailToKey(email);
             setAllowedError('');
             if (!email) {
                 setAllowedError('Saisis une adresse email.');
@@ -121,11 +126,11 @@
             }
             db.ref('allowedEmails').once('value').then(function (snap) {
                 var data = snap.val() || {};
-                if (data[email]) {
+                if (data[key] || data[email]) {
                     setAllowedError('Cette adresse est déjà dans la liste.');
                     return;
                 }
-                data[email] = true;
+                data[key] = true;
                 return db.ref('allowedEmails').set(data);
             }).then(function () {
                 input.value = '';
@@ -135,11 +140,12 @@
             });
         }
 
-        function removeAllowedEmail(email) {
-            if (!confirm('Retirer l\'accès pour ' + email + ' ? Cette personne ne pourra plus se connecter.')) return;
+        function removeAllowedEmail(key) {
+            var displayEmail = keyToEmail(key);
+            if (!confirm('Retirer l\'accès pour ' + displayEmail + ' ? Cette personne ne pourra plus se connecter.')) return;
             db.ref('allowedEmails').once('value').then(function (snap) {
                 var data = snap.val() || {};
-                delete data[email];
+                delete data[key];
                 return db.ref('allowedEmails').set(data);
             }).then(function () {
                 db.ref('allowedEmails').once('value').then(function (s) { renderAllowedList(s.val()); });
@@ -157,7 +163,8 @@
                 return db.ref('adminEmails').once('value');
             }).then(function (snap) {
                 var adminEmails = snap.val() || {};
-                if (!adminEmails[user.email]) {
+                var emailKey = (user.email || '').replace(/\./g, ',');
+                if (!adminEmails[emailKey] && !adminEmails[user.email]) {
                     showView('deniedView');
                     return;
                 }

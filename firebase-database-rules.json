@@ -2,23 +2,27 @@
   "rules": {
     "allowedEmails": {
       ".read": true,
-      ".write": "auth != null && root.child('adminEmails').child(auth.token.email).exists()"
+      ".write": "auth != null && root.child('adminUids').child(auth.uid).exists()"
     },
     "adminEmails": {
       ".read": "auth != null",
-      ".write": "auth != null && root.child('adminEmails').child(auth.token.email).exists()"
+      ".write": "auth != null && root.child('adminUids').child(auth.uid).exists()"
+    },
+    "adminUids": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('adminUids').child(auth.uid).exists()"
     },
     "agents": {
-      ".read": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()",
-      ".write": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()"
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     "commissions": {
-      ".read": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()",
-      ".write": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()"
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
     "analystExpenses": {
-      ".read": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()",
-      ".write": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()"
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }
