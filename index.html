@@ -1209,29 +1209,49 @@
             auth.signOut();
         }
 
-        function getAllowedEmails(callback) {
+        function getAllowedEmails(callback, retryCount) {
+            retryCount = retryCount || 0;
             Promise.all([
                 db.ref('config/adminEmails').once('value'),
                 db.ref('config/allowedEmails').once('value')
             ]).then(function (results) {
                 var admin = results[0].val();
                 var allowed = results[1].val();
+                console.log('[Auth] config/adminEmails =', admin);
+                console.log('[Auth] config/allowedEmails =', allowed);
                 var seen = {};
                 var merged = [];
                 [].concat(Array.isArray(admin) ? admin : [], Array.isArray(allowed) ? allowed : []).forEach(function (e) {
                     var lower = (e || '').toLowerCase().trim();
                     if (lower && !seen[lower]) { seen[lower] = 1; merged.push(lower); }
                 });
+                console.log('[Auth] merged allowed list =', merged);
                 callback(merged);
-            }).catch(function () { callback([]); });
+            }).catch(function (err) {
+                console.error('[Auth] Erreur lecture config (retry ' + retryCount + '):', err);
+                if (retryCount < 1 && err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission') !== -1))) {
+                    setTimeout(function () { getAllowedEmails(callback, 1); }, 600);
+                    return;
+                }
+                callback([]);
+            });
         }
 
-        function getAdminEmails(callback) {
+        function getAdminEmails(callback, retryCount) {
+            retryCount = retryCount || 0;
             db.ref('config/adminEmails').once('value').then(function (snap) {
                 var list = snap.val();
                 var arr = Array.isArray(list) ? list.map(function (e) { return (e || '').toLowerCase().trim(); }).filter(Boolean) : [];
+                console.log('[Auth Admin] config/adminEmails =', list, '->', arr);
                 callback(arr);
-            }).catch(function () { callback([]); });
+            }).catch(function (err) {
+                console.error('[Auth Admin] Erreur lecture config (retry ' + retryCount + '):', err);
+                if (retryCount < 1 && err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission') !== -1))) {
+                    setTimeout(function () { getAdminEmails(callback, 1); }, 600);
+                    return;
+                }
+                callback([]);
+            });
         }
 
         function handleUserLogin(user, isAdminIntent) {
