@@ -778,7 +778,7 @@
         <div class="header-auth">
             <h1>🏗️ Commission Manager</h1>
             <div class="user-badge">
-                <a href="admin.html" style="margin-right: 12px; color: #667eea; font-weight: 600; text-decoration: none;">Admin</a>
+                <a id="adminLink" href="admin.html" style="display: none; margin-right: 8px; color: #667eea; font-weight: 600;">Admin</a>
                 <img id="userPhoto" src="" alt="" style="display: none;">
                 <span id="userEmail"></span>
                 <button type="button" class="btn-logout" onclick="logout()">Déconnexion</button>
@@ -1199,6 +1199,8 @@
             if (user.photoURL) { photo.src = user.photoURL; photo.alt = user.displayName || ''; photo.style.display = ''; }
             else photo.style.display = 'none';
             emailEl.textContent = user.email || user.displayName || 'Connecté';
+            var adminLink = document.getElementById('adminLink');
+            if (adminLink) adminLink.style.display = (user.email && user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) ? '' : 'none';
             // Attendre que le token auth soit prêt avant d'accéder à la Realtime Database
             user.getIdToken().then(function () {
                 loadFromFirebase();
@@ -1235,8 +1237,22 @@
             setLoginSuccess('');
         }
 
+        var SUPER_ADMIN_EMAIL = 'luscianabuilds@gmail.com';
+        function canCreateAccount(email) {
+            if (!email) return false;
+            var e = email.trim().toLowerCase();
+            if (e === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
+            return window._allowedEmailsList && window._allowedEmailsList.indexOf(e) !== -1;
+        }
+        function refreshAllowedEmailsList() {
+            return db.ref('allowedEmails').once('value').then(function (snap) {
+                var list = snap.val();
+                window._allowedEmailsList = Array.isArray(list) ? list.map(function (e) { return (e || '').toLowerCase(); }) : [];
+                return window._allowedEmailsList;
+            });
+        }
         function register() {
-            var email = document.getElementById('registerEmail').value.trim().toLowerCase();
+            var email = document.getElementById('registerEmail').value.trim();
             var password = document.getElementById('registerPassword').value;
             var passwordConfirm = document.getElementById('registerPasswordConfirm').value;
             setLoginError('');
@@ -1253,16 +1269,18 @@
                 setLoginError('Les deux mots de passe ne correspondent pas.');
                 return;
             }
-            db.ref('allowedEmails').once('value').then(function (snap) {
-                var allowed = snap.val() || {};
-                var key = email.replace(/\./g, '%2E');
-                if (!allowed[key]) {
-                    setLoginError('Cette adresse email n\'est pas autorisée à créer un compte. Demande l\'accès à un administrateur.');
+            refreshAllowedEmailsList().then(function () {
+                if (!canCreateAccount(email)) {
+                    setLoginError('Cette adresse email n\'est pas autorisée à créer un compte. Demande à un administrateur de l\'ajouter.');
                     return;
                 }
-                return auth.createUserWithEmailAndPassword(email, password);
-            }).then(function (userCredential) {
-                if (!userCredential) return;
+                doRegister(email, password);
+            }).catch(function () {
+                setLoginError('Impossible de vérifier les accès. Réessaie.');
+            });
+        }
+        function doRegister(email, password) {
+            auth.createUserWithEmailAndPassword(email, password).then(function (userCredential) {
                 userCredential.user.sendEmailVerification().catch(function () {});
                 showApp(userCredential.user);
                 setLoginSuccess('Compte créé ! Tu es connecté. Un email de vérification a été envoyé si tu veux vérifier ton adresse.');

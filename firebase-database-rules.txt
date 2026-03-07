@@ -1,0 +1,29 @@
+Règles à coller dans Firebase Console → Realtime Database → Règles (Rules).
+
+Cela permet :
+- à tout le monde de LIRE allowedEmails (pour vérifier qui peut créer un compte),
+- à luscianabuilds@gmail.com uniquement d'ÉCRIRE allowedEmails (page Admin),
+- aux utilisateurs connectés de lire/écrire agents, commissions, analystExpenses.
+
+{
+  "rules": {
+    "agents": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "commissions": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "analystExpenses": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "allowedEmails": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email === 'luscianabuilds@gmail.com'"
+    }
+  }
+}
+
+Si tu avais déjà des règles plus simples (tout en auth != null), remplace tout le bloc "rules" par celui-ci.
