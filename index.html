@@ -734,7 +734,10 @@
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
                     Se connecter avec Google
                 </button>
-                <p class="login-toggle" style="margin-top: 20px;"><a href="admin/" style="color: #667eea; font-weight: 600; text-decoration: none;">Admin</a> — Gérer les accès</p>
+                <button type="button" class="btn-google" style="margin-top: 12px;" onclick="loginForAdmin()">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
+                    Admin — Gérer les accès
+                </button>
             </div>
             <p id="loginError" class="login-error" style="display: none;"></p>
             <p id="loginSuccess" class="login-success" style="display: none;"></p>
@@ -1188,11 +1191,25 @@
             setLoginError('');
         }
 
+        var intentAdmin = false;
+
         function loginWithGoogle() {
+            intentAdmin = false;
             setLoginError('');
             auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
                 // onAuthStateChanged va appeler showApp
             }).catch(function (err) {
+                setLoginError(err.message || 'Erreur de connexion. Réessaie.');
+            });
+        }
+
+        function loginForAdmin() {
+            intentAdmin = true;
+            setLoginError('');
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
+                // onAuthStateChanged va gérer la redirection
+            }).catch(function (err) {
+                intentAdmin = false;
                 setLoginError(err.message || 'Erreur de connexion. Réessaie.');
             });
         }
@@ -1222,6 +1239,18 @@
 
         auth.onAuthStateChanged(function (user) {
             if (user) {
+                if (intentAdmin) {
+                    var email = (user.email || '').toLowerCase();
+                    if (email === 'luscianabuilds@gmail.com') {
+                        window.location.href = 'admin/';
+                        return;
+                    }
+                    intentAdmin = false;
+                    auth.signOut();
+                    showLoginScreen();
+                    setLoginError('Accès refusé. Seul luscianabuilds@gmail.com peut accéder à l\'admin.');
+                    return;
+                }
                 getAllowedEmails(function (allowed) {
                     var email = (user.email || '').toLowerCase();
                     var isAllowed = allowed.some(function (e) { return e.toLowerCase() === email; });
@@ -1234,6 +1263,7 @@
                     }
                 });
             } else {
+                intentAdmin = false;
                 showLoginScreen();
             }
         });
