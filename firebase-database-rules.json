@@ -1,24 +1,24 @@
 {
   "rules": {
-    "admins": {
-      ".read": "auth != null",
-      ".write": "root.child('admins').child(auth.uid).exists()"
+    "allowedEmails": {
+      ".read": true,
+      ".write": "auth != null && root.child('adminEmails').child(auth.token.email).exists()"
     },
-    "allowedUsers": {
+    "adminEmails": {
       ".read": "auth != null",
-      ".write": "root.child('admins').child(auth.uid).exists()"
+      ".write": "auth != null && root.child('adminEmails').child(auth.token.email).exists()"
     },
     "agents": {
-      ".read": "auth != null && root.child('allowedUsers').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('allowedUsers').child(auth.uid).exists()"
+      ".read": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()",
+      ".write": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()"
     },
     "commissions": {
-      ".read": "auth != null && root.child('allowedUsers').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('allowedUsers').child(auth.uid).exists()"
+      ".read": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()",
+      ".write": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()"
     },
     "analystExpenses": {
-      ".read": "auth != null && root.child('allowedUsers').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('allowedUsers').child(auth.uid).exists()"
+      ".read": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()",
+      ".write": "auth != null && root.child('allowedEmails').child(auth.token.email).exists()"
     }
   }
 }

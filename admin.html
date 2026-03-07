@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Lusciana Commission Manager</title>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 30px; }
+        h1 { color: #333; margin-bottom: 10px; font-size: 24px; }
+        .subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
+        .denied { text-align: center; padding: 40px 20px; }
+        .denied h2 { color: #dc2626; margin-bottom: 16px; }
+        .denied a { color: #667eea; font-weight: 600; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+        .header-row a { color: #667eea; font-weight: 600; text-decoration: none; }
+        .header-row a:hover { text-decoration: underline; }
+        section { margin-bottom: 32px; }
+        section h2 { color: #333; margin-bottom: 16px; font-size: 18px; border-left: 4px solid #667eea; padding-left: 12px; }
+        .form-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .form-row input { flex: 1; min-width: 200px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+        .form-row input:focus { outline: none; border-color: #667eea; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #667eea; color: #fff; }
+        .btn-primary:hover { background: #5a67d8; }
+        .btn-danger { background: #dc2626; color: #fff; padding: 8px 14px; font-size: 13px; }
+        .btn-danger:hover { background: #b91c1c; }
+        ul { list-style: none; }
+        ul li { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; }
+        ul li:hover { background: #f8f8f8; }
+        .empty { color: #999; font-style: italic; padding: 12px; }
+        .email-key { font-family: monospace; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div id="deniedView" class="container denied" style="display: none;">
+        <h2>Accès refusé</h2>
+        <p>Tu n'as pas les droits pour accéder à cette page.</p>
+        <p style="margin-top: 16px;"><a href="index.html">← Retour à l'app</a></p>
+    </div>
+    <div id="adminView" class="container" style="display: none;">
+        <div class="header-row">
+            <div>
+                <h1>🔐 Admin</h1>
+                <p class="subtitle">Gestion des accès au Commission Manager</p>
+            </div>
+            <a href="index.html">← Retour à l'app</a>
+        </div>
+        <section>
+            <h2>Emails autorisés à créer un compte / se connecter</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 12px;">Seules les adresses dans cette liste peuvent s'inscrire et utiliser le site. Retirer une adresse révoque l'accès immédiatement.</p>
+            <div class="form-row">
+                <input type="email" id="newEmail" placeholder="adresse@exemple.com">
+                <button type="button" class="btn btn-primary" onclick="addAllowedEmail()">Ajouter l'email</button>
+            </div>
+            <p id="allowedError" style="color: #dc2626; font-size: 14px; margin-top: 8px; display: none;"></p>
+            <ul id="allowedList"></ul>
+        </section>
+    </div>
+    <div id="loadingView" class="container" style="text-align: center; padding: 40px;">
+        <p>Vérification des droits...</p>
+    </div>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyAGNnVNpRPRYc7ggMTG4dESxwdn3A-luaI",
+            authDomain: "luscianamanager.firebaseapp.com",
+            databaseURL: "https://luscianamanager-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "luscianamanager",
+            storageBucket: "luscianamanager.firebasestorage.app",
+            messagingSenderId: "375459557861",
+            appId: "1:375459557861:web:4d6234200624416816ff0c",
+            measurementId: "G-LQ5HYX18L8"
+        };
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.database();
+        var auth = firebase.auth();
+
+        function showView(id) {
+            document.getElementById('deniedView').style.display = 'none';
+            document.getElementById('adminView').style.display = 'none';
+            document.getElementById('loadingView').style.display = 'none';
+            if (id) document.getElementById(id).style.display = 'block';
+        }
+
+        function setAllowedError(msg) {
+            var el = document.getElementById('allowedError');
+            el.style.display = msg ? 'block' : 'none';
+            el.textContent = msg || '';
+        }
+
+        function renderAllowedList(data) {
+            var list = document.getElementById('allowedList');
+            var emails = data ? Object.keys(data).filter(function (k) { return data[k]; }) : [];
+            if (emails.length === 0) {
+                list.innerHTML = '<li class="empty">Aucune adresse autorisée. Ajoute des emails pour donner accès.</li>';
+                return;
+            }
+            list.innerHTML = emails.sort().map(function (email) {
+                return '<li><span class="email-key">' + escapeHtml(email) + '</span><button type="button" class="btn btn-danger" data-email="' + escapeHtml(email) + '" onclick="removeAllowedEmail(this.dataset.email)">Retirer</button></li>';
+            }).join('');
+        }
+
+        function escapeHtml(s) {
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function addAllowedEmail() {
+            var input = document.getElementById('newEmail');
+            var email = (input.value || '').trim().toLowerCase();
+            setAllowedError('');
+            if (!email) {
+                setAllowedError('Saisis une adresse email.');
+                return;
+            }
+            db.ref('allowedEmails').once('value').then(function (snap) {
+                var data = snap.val() || {};
+                if (data[email]) {
+                    setAllowedError('Cette adresse est déjà dans la liste.');
+                    return;
+                }
+                data[email] = true;
+                return db.ref('allowedEmails').set(data);
+            }).then(function () {
+                input.value = '';
+                db.ref('allowedEmails').once('value').then(function (s) { renderAllowedList(s.val()); });
+            }).catch(function (err) {
+                setAllowedError(err.message || 'Erreur lors de l\'ajout.');
+            });
+        }
+
+        function removeAllowedEmail(email) {
+            if (!confirm('Retirer l\'accès pour ' + email + ' ? Cette personne ne pourra plus se connecter.')) return;
+            db.ref('allowedEmails').once('value').then(function (snap) {
+                var data = snap.val() || {};
+                delete data[email];
+                return db.ref('allowedEmails').set(data);
+            }).then(function () {
+                db.ref('allowedEmails').once('value').then(function (s) { renderAllowedList(s.val()); });
+            }).catch(function (err) {
+                setAllowedError(err.message || 'Erreur.');
+            });
+        }
+
+        auth.onAuthStateChanged(function (user) {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            user.getIdToken().then(function () {
+                return db.ref('adminEmails').once('value');
+            }).then(function (snap) {
+                var adminEmails = snap.val() || {};
+                if (!adminEmails[user.email]) {
+                    showView('deniedView');
+                    return;
+                }
+                showView('adminView');
+                return db.ref('allowedEmails').once('value');
+            }).then(function (snap) {
+                if (snap) renderAllowedList(snap.val());
+            }).catch(function () {
+                showView('deniedView');
+            });
+        });
+    </script>
+</body>
+</html>
