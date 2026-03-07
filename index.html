@@ -1194,24 +1194,15 @@
         var intentAdmin = false;
 
         function loginWithGoogle() {
-            intentAdmin = false;
+            sessionStorage.removeItem('intentAdmin');
             setLoginError('');
-            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
-                // onAuthStateChanged va appeler showApp
-            }).catch(function (err) {
-                setLoginError(err.message || 'Erreur de connexion. Réessaie.');
-            });
+            auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
         }
 
         function loginForAdmin() {
-            intentAdmin = true;
+            sessionStorage.setItem('intentAdmin', '1');
             setLoginError('');
-            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
-                // onAuthStateChanged va gérer la redirection
-            }).catch(function (err) {
-                intentAdmin = false;
-                setLoginError(err.message || 'Erreur de connexion. Réessaie.');
-            });
+            auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
         }
 
         function logout() {
@@ -1243,46 +1234,72 @@
             }).catch(function () { callback([]); });
         }
 
-        auth.onAuthStateChanged(function (user) {
-            if (user) {
-                user.getIdToken().then(function () {
-                    if (intentAdmin) {
-                        var email = (user.email || '').toLowerCase();
-                        getAdminEmails(function (adminEmails) {
-                            if (adminEmails.indexOf(email) !== -1) {
-                                window.location.href = 'admin/';
-                                return;
-                            }
-                            intentAdmin = false;
-                            auth.signOut();
-                            showLoginScreen();
-                            setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
-                        });
-                        return;
-                    }
-                    getAllowedEmails(function (allowed) {
-                        var email = (user.email || '').toLowerCase();
-                        var isAllowed = allowed.some(function (e) { return e.toLowerCase() === email; });
-                        if (isAllowed) {
-                            showApp(user);
-                        } else {
-                            auth.signOut();
-                            showLoginScreen();
-                            setLoginError(allowed.length === 0
-                                ? 'Aucun email autorisé dans la base. Importez le JSON avec config/adminEmails et config/allowedEmails dans Firebase.'
-                                : 'Accès refusé. Seuls les comptes autorisés peuvent accéder à ce site.');
+        function handleUserLogin(user, isAdminIntent) {
+            user.getIdToken().then(function () {
+                if (isAdminIntent) {
+                    var email = (user.email || '').toLowerCase();
+                    getAdminEmails(function (adminEmails) {
+                        if (adminEmails.indexOf(email) !== -1) {
+                            window.location.href = 'admin/';
+                            return;
                         }
+                        auth.signOut();
+                        showLoginScreen();
+                        setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
                     });
-                }).catch(function () {
-                    intentAdmin = false;
-                    auth.signOut();
-                    showLoginScreen();
-                    setLoginError('Erreur de vérification. Réessaie.');
+                    return;
+                }
+                getAllowedEmails(function (allowed) {
+                    var email = (user.email || '').toLowerCase();
+                    var isAllowed = allowed.some(function (e) { return e.toLowerCase() === email; });
+                    if (isAllowed) {
+                        showApp(user);
+                    } else {
+                        auth.signOut();
+                        showLoginScreen();
+                        setLoginError(allowed.length === 0
+                            ? 'Aucun email autorisé dans la base. Importez le JSON avec config/adminEmails et config/allowedEmails dans Firebase.'
+                            : 'Accès refusé. Seuls les comptes autorisés peuvent accéder à ce site.');
+                    }
                 });
-            } else {
-                intentAdmin = false;
+            }).catch(function () {
+                auth.signOut();
                 showLoginScreen();
+                setLoginError('Erreur de vérification. Réessaie.');
+            });
+        }
+
+        var loginHandled = false;
+
+        auth.getRedirectResult().then(function (result) {
+            if (result.user && !loginHandled) {
+                loginHandled = true;
+                var isAdminIntent = sessionStorage.getItem('intentAdmin') === '1';
+                sessionStorage.removeItem('intentAdmin');
+                handleUserLogin(result.user, isAdminIntent);
+                return;
             }
+            if (!result.user && auth.currentUser && !loginHandled) {
+                loginHandled = true;
+                handleUserLogin(auth.currentUser, false);
+            }
+        }).catch(function (err) {
+            sessionStorage.removeItem('intentAdmin');
+            setLoginError(err.message || 'Erreur de connexion.');
+            showLoginScreen();
+        });
+
+        auth.onAuthStateChanged(function (user) {
+            if (!user) {
+                loginHandled = false;
+                showLoginScreen();
+                return;
+            }
+            if (loginHandled) return;
+            var isAdminIntent = sessionStorage.getItem('intentAdmin') === '1';
+            sessionStorage.removeItem('intentAdmin');
+            loginHandled = true;
+            handleUserLogin(user, isAdminIntent);
         });
 
         // Caches synchronisés avec Firebase Realtime Database

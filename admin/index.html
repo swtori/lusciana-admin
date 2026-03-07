@@ -190,19 +190,16 @@
 
         function loginWithGoogle() {
             setLoginError('');
-            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function (err) {
-                setLoginError(err.message || 'Erreur de connexion.');
-            });
+            auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
         }
 
         function logout() {
             auth.signOut();
         }
 
-        auth.onAuthStateChanged(function (user) {
-            if (user) {
-                var email = (user.email || '').toLowerCase();
-                db.ref('config/adminEmails').once('value').then(function (snap) {
+        function checkAdminAndShow(user) {
+            var email = (user.email || '').toLowerCase();
+            db.ref('config/adminEmails').once('value').then(function (snap) {
                     var list = snap.val();
                     var admins = Array.isArray(list) ? list.map(function (e) { return (e || '').toLowerCase().trim(); }) : [];
                     if (admins.indexOf(email) !== -1) {
@@ -214,14 +211,48 @@
                         auth.signOut();
                         setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
                     }
+            }).catch(function () {
+                auth.signOut();
+                setLoginError('Accès refusé.');
+            });
+        }
+
+        var adminHandled = false;
+        auth.getRedirectResult().then(function (result) {
+            if (result.user) {
+                adminHandled = true;
+                result.user.getIdToken().then(function () {
+                    checkAdminAndShow(result.user);
                 }).catch(function () {
                     auth.signOut();
-                    setLoginError('Accès refusé.');
+                    setLoginError('Erreur de vérification.');
                 });
+                return;
+            }
+            if (auth.currentUser) {
+                adminHandled = true;
+                checkAdminAndShow(auth.currentUser);
             } else {
                 document.getElementById('loginScreen').style.display = 'block';
-                document.getElementById('app').style.display = 'none';
             }
+        }).catch(function (err) {
+            setLoginError(err.message || 'Erreur de connexion.');
+            document.getElementById('loginScreen').style.display = 'block';
+        });
+
+        auth.onAuthStateChanged(function (user) {
+            if (!user) {
+                adminHandled = false;
+                document.getElementById('loginScreen').style.display = 'block';
+                document.getElementById('app').style.display = 'none';
+                return;
+            }
+            if (adminHandled) return;
+            adminHandled = true;
+            user.getIdToken().then(function () { checkAdminAndShow(user); }).catch(function () {
+                auth.signOut();
+                setLoginError('Erreur de vérification.');
+            });
         });
     </script>
 </body>
