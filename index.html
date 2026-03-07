@@ -1260,8 +1260,7 @@
             }
             db.ref('allowedEmails').once('value').then(function (snap) {
                 var allowed = snap.val() || {};
-                var emailKey = (email || '').replace(/\./g, ',');
-                if (!allowed[emailKey] && !allowed[email]) {
+                if (!isEmailAllowed(allowed, email)) {
                     setLoginError('Cette adresse n\'est pas autorisée à créer un compte. Contacte un administrateur.');
                     return Promise.reject(new Error('not_allowed'));
                 }
@@ -1379,14 +1378,27 @@
             });
         }
 
+        function isEmailAllowed(allowed, userEmail) {
+            if (!allowed || !userEmail) return false;
+            var emailLower = userEmail.toLowerCase();
+            var emailKey = emailLower.replace(/\./g, ',');
+            if (allowed[emailKey] || allowed[emailLower] || allowed[userEmail]) return true;
+            var keys = Object.keys(allowed);
+            for (var i = 0; i < keys.length; i++) {
+                if (!allowed[keys[i]]) continue;
+                var keyAsEmail = keys[i].replace(/,/g, '.').toLowerCase();
+                if (keyAsEmail === emailLower) return true;
+            }
+            return false;
+        }
+
         function checkAccessControl() {
             var user = auth.currentUser;
             if (!user || !user.email) return;
             db.ref('allowedEmails').once('value').then(function (snap) {
                 var allowed = snap.val() || {};
-                var email = user.email || '';
-                var emailKey = email.replace(/\./g, ',');
-                if (!allowed[emailKey] && !allowed[email]) {
+                var keys = allowed && Object.keys(allowed);
+                if (keys && keys.length > 0 && !isEmailAllowed(allowed, user.email)) {
                     sessionStorage.setItem('accessRevoked', '1');
                     auth.signOut();
                     return;
@@ -1396,8 +1408,19 @@
                 if (!snap) return;
                 var adminEmails = snap.val() || {};
                 var email = (auth.currentUser && auth.currentUser.email) || '';
-                var emailKey = email.replace(/\./g, ',');
-                document.getElementById('adminLink').style.display = (adminEmails[emailKey] || adminEmails[email]) ? '' : 'none';
+                var emailLower = email.toLowerCase();
+                var emailKey = emailLower.replace(/\./g, ',');
+                var isAdmin = !!(adminEmails[emailKey] || adminEmails[emailLower] || adminEmails[email]);
+                if (!isAdmin) {
+                    var keys = Object.keys(adminEmails || {});
+                    for (var i = 0; i < keys.length; i++) {
+                        if (adminEmails[keys[i]] && keys[i].replace(/,/g, '.').toLowerCase() === emailLower) {
+                            isAdmin = true;
+                            break;
+                        }
+                    }
+                }
+                document.getElementById('adminLink').style.display = isAdmin ? '' : 'none';
             }).catch(function () {});
         }
 
