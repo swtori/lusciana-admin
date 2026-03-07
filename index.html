@@ -1200,16 +1200,18 @@
             auth.signOut();
         }
 
-        var ALLOWED_EMAIL = 'luscianabuilds@gmail.com';
+        var ALLOWED_EMAILS = ['luscianabuilds@gmail.com', '0xxxsv@gmail.com'];
 
         auth.onAuthStateChanged(function (user) {
             if (user) {
-                if ((user.email || '').toLowerCase() === ALLOWED_EMAIL.toLowerCase()) {
+                var email = (user.email || '').toLowerCase();
+                var isAllowed = ALLOWED_EMAILS.some(function (e) { return e.toLowerCase() === email; });
+                if (isAllowed) {
                     showApp(user);
                 } else {
                     auth.signOut();
                     showLoginScreen();
-                    setLoginError('Accès refusé. Seul luscianabuilds@gmail.com peut accéder à ce site.');
+                    setLoginError('Accès refusé. Seuls les comptes autorisés peuvent accéder à ce site.');
                 }
             } else {
                 showLoginScreen();
