@@ -1198,7 +1198,12 @@
             if (user.photoURL) { photo.src = user.photoURL; photo.alt = user.displayName || ''; photo.style.display = ''; }
             else photo.style.display = 'none';
             emailEl.textContent = user.email || user.displayName || 'Connecté';
-            loadFromFirebase();
+            // Attendre que le token auth soit prêt avant d'accéder à la Realtime Database
+            user.getIdToken().then(function () {
+                loadFromFirebase();
+            }).catch(function () {
+                loadFromFirebase();
+            });
         }
 
         function setLoginError(msg) {
@@ -1315,7 +1320,8 @@
             if (typeof refreshAnalyst === 'function') refreshAnalyst();
         }
 
-        function loadFromFirebase() {
+        function loadFromFirebase(retryCount) {
+            retryCount = retryCount || 0;
             Promise.all([
                 db.ref('agents').once('value'),
                 db.ref('commissions').once('value'),
@@ -1335,6 +1341,11 @@
                 }
                 refreshUIAfterLoad();
             }).catch(function (err) {
+                var isPermissionDenied = (err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission_denied') !== -1)));
+                if (isPermissionDenied && retryCount < 1) {
+                    setTimeout(function () { loadFromFirebase(1); }, 800);
+                    return;
+                }
                 console.error('Erreur chargement Firebase (vérifiez les règles Realtime Database):', err);
                 agentsCache = (localStorage.getItem('agents') && JSON.parse(localStorage.getItem('agents'))) || [];
                 commissionsCache = (localStorage.getItem('commissions') && JSON.parse(localStorage.getItem('commissions'))) || [];
