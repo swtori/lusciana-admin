@@ -1200,9 +1200,17 @@
             auth.signOut();
         }
 
+        var ALLOWED_EMAIL = 'luscianabuilds@gmail.com';
+
         auth.onAuthStateChanged(function (user) {
             if (user) {
-                showApp(user);
+                if ((user.email || '').toLowerCase() === ALLOWED_EMAIL.toLowerCase()) {
+                    showApp(user);
+                } else {
+                    auth.signOut();
+                    showLoginScreen();
+                    setLoginError('Accès refusé. Seul luscianabuilds@gmail.com peut accéder à ce site.');
+                }
             } else {
                 showLoginScreen();
             }
