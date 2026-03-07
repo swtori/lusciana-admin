@@ -717,6 +717,10 @@
         .login-form input:focus { outline: none; border-color: #667eea; }
         .btn-email { width: 100%; padding: 14px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
         .btn-email:hover { background: #5a67d8; }
+        .login-toggle { margin-top: 20px; font-size: 14px; color: #666; }
+        .login-toggle a { color: #667eea; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .login-toggle a:hover { text-decoration: underline; }
+        .login-success { color: #059669; font-size: 14px; margin-top: 16px; padding: 12px; background: #ecfdf5; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -724,24 +728,49 @@
     <div id="loginScreen">
         <div class="login-card">
             <h2>🏗️ Commission Manager</h2>
-            <p>Connecte-toi pour accéder aux commissions.</p>
-            <button type="button" class="btn-google" id="btnGoogleLogin" onclick="loginWithGoogle()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
-                Se connecter avec Google
-            </button>
-            <p class="login-divider">— ou —</p>
-            <form class="login-form" onsubmit="loginWithEmail(); return false;">
-                <div class="form-group">
-                    <label for="loginEmail">Adresse email</label>
-                    <input type="email" id="loginEmail" placeholder="toi@exemple.com" required autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Mot de passe</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn-email">Se connecter avec email</button>
-            </form>
+            <!-- Vue Connexion -->
+            <div id="loginView">
+                <p>Connecte-toi pour accéder aux commissions.</p>
+                <button type="button" class="btn-google" id="btnGoogleLogin" onclick="loginWithGoogle()">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
+                    Se connecter avec Google
+                </button>
+                <p class="login-divider">— ou —</p>
+                <form class="login-form" onsubmit="loginWithEmail(); return false;">
+                    <div class="form-group">
+                        <label for="loginEmail">Adresse email</label>
+                        <input type="email" id="loginEmail" placeholder="toi@exemple.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Mot de passe</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-email">Se connecter avec email</button>
+                </form>
+                <p class="login-toggle">Pas de compte ? <a onclick="showRegisterForm()">Créer un compte</a></p>
+            </div>
+            <!-- Vue Créer un compte -->
+            <div id="registerView" style="display: none;">
+                <p>Crée un compte pour accéder aux commissions.</p>
+                <form class="login-form" onsubmit="register(); return false;">
+                    <div class="form-group">
+                        <label for="registerEmail">Adresse email</label>
+                        <input type="email" id="registerEmail" placeholder="toi@exemple.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Mot de passe</label>
+                        <input type="password" id="registerPassword" placeholder="6 caractères min." required autocomplete="new-password" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPasswordConfirm">Confirmer le mot de passe</label>
+                        <input type="password" id="registerPasswordConfirm" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+                    </div>
+                    <button type="submit" class="btn-email">Créer mon compte</button>
+                </form>
+                <p class="login-toggle">Déjà un compte ? <a onclick="showLoginForm()">Se connecter</a></p>
+            </div>
             <p id="loginError" class="login-error" style="display: none;"></p>
+            <p id="loginSuccess" class="login-success" style="display: none;"></p>
         </div>
     </div>
 
@@ -1158,6 +1187,7 @@
         function showLoginScreen() {
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('appContainer').classList.remove('authenticated');
+            showLoginForm();
         }
 
         function showApp(user) {
@@ -1175,6 +1205,61 @@
             var errEl = document.getElementById('loginError');
             errEl.style.display = msg ? 'block' : 'none';
             errEl.textContent = msg || '';
+            document.getElementById('loginSuccess').style.display = 'none';
+        }
+
+        function setLoginSuccess(msg) {
+            var el = document.getElementById('loginSuccess');
+            el.style.display = msg ? 'block' : 'none';
+            el.textContent = msg || '';
+            setLoginError('');
+        }
+
+        function showLoginForm() {
+            document.getElementById('loginView').style.display = 'block';
+            document.getElementById('registerView').style.display = 'none';
+            setLoginError('');
+            setLoginSuccess('');
+        }
+
+        function showRegisterForm() {
+            document.getElementById('loginView').style.display = 'none';
+            document.getElementById('registerView').style.display = 'block';
+            setLoginError('');
+            setLoginSuccess('');
+        }
+
+        function register() {
+            var email = document.getElementById('registerEmail').value.trim();
+            var password = document.getElementById('registerPassword').value;
+            var passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            setLoginError('');
+            setLoginSuccess('');
+            if (!email || !password) {
+                setLoginError('Remplis tous les champs.');
+                return;
+            }
+            if (password.length < 6) {
+                setLoginError('Le mot de passe doit faire au moins 6 caractères.');
+                return;
+            }
+            if (password !== passwordConfirm) {
+                setLoginError('Les deux mots de passe ne correspondent pas.');
+                return;
+            }
+            auth.createUserWithEmailAndPassword(email, password).then(function (userCredential) {
+                return userCredential.user.sendEmailVerification();
+            }).then(function () {
+                auth.signOut();
+                showLoginForm();
+                setLoginSuccess('Compte créé ! Vérifie ton email (et les spams) puis connecte-toi avec ton mot de passe.');
+            }).catch(function (err) {
+                var msg = err.message || 'Erreur lors de la création du compte.';
+                if (err.code === 'auth/email-already-in-use') msg = 'Cette adresse email est déjà utilisée. Connecte-toi ou réinitialise ton mot de passe.';
+                if (err.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
+                if (err.code === 'auth/weak-password') msg = 'Le mot de passe est trop faible (6 caractères min.).';
+                setLoginError(msg);
+            });
         }
 
         function loginWithGoogle() {
