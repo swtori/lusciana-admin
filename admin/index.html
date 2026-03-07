@@ -73,7 +73,7 @@
             <span id="userInfo"></span>
             <button type="button" class="btn btn-secondary" onclick="logout()">Déconnexion</button>
         </div>
-        <p class="sub">Emails autorisés à accéder au site. Les deux premiers (bootstrap) ne peuvent pas être supprimés.</p>
+        <p class="sub">Emails autorisés à accéder au site. Ceux en italique (admin) sont définis dans Firebase config/adminEmails. Les autres peuvent être ajoutés/supprimés ici.</p>
         <div class="form-row">
             <input type="email" id="newEmail" placeholder="nouveau@email.com">
             <button type="button" class="btn btn-primary" onclick="addEmail()">Ajouter</button>
@@ -110,7 +110,7 @@
         var db = firebase.database();
         var auth = firebase.auth();
 
-        var ADMIN_EMAILS = ['luscianabuilds@gmail.com', '0xxxsv@gmail.com'];
+        var adminEmails = [];
         var allowedEmails = [];
 
         function setError(msg) {
@@ -126,11 +126,17 @@
         }
 
         function loadEmails() {
-            db.ref('config/allowedEmails').once('value').then(function (snap) {
-                var val = snap.val();
-                allowedEmails = Array.isArray(val) ? val.slice() : [];
+            Promise.all([
+                db.ref('config/adminEmails').once('value'),
+                db.ref('config/allowedEmails').once('value')
+            ]).then(function (results) {
+                var admin = results[0].val();
+                var allowed = results[1].val();
+                adminEmails = Array.isArray(admin) ? admin.map(function (e) { return (e || '').toLowerCase().trim(); }).filter(Boolean) : [];
+                allowedEmails = Array.isArray(allowed) ? allowed.map(function (e) { return (e || '').toLowerCase().trim(); }).filter(Boolean) : [];
                 renderList();
             }).catch(function () {
+                adminEmails = [];
                 allowedEmails = [];
                 renderList();
             });
@@ -138,18 +144,15 @@
 
         function renderList() {
             var ul = document.getElementById('emailList');
-            var all = ADMIN_EMAILS.slice();
-            allowedEmails.forEach(function (e) {
-                var lower = (e || '').toLowerCase().trim();
-                if (lower && all.indexOf(lower) === -1 && !ADMIN_EMAILS.some(function (b) { return b.toLowerCase() === lower; })) {
-                    all.push(lower);
-                }
-            });
+            var seen = {};
+            var all = [];
+            adminEmails.forEach(function (e) { if (!seen[e]) { seen[e] = 1; all.push({ email: e, isAdmin: true }); } });
+            allowedEmails.forEach(function (e) { if (!seen[e]) { seen[e] = 1; all.push({ email: e, isAdmin: false }); } });
             ul.innerHTML = '';
-            all.forEach(function (email, i) {
+            all.forEach(function (item) {
                 var li = document.createElement('li');
-                li.className = ADMIN_EMAILS.some(function (b) { return b.toLowerCase() === email.toLowerCase(); }) ? 'bootstrap' : '';
-                li.innerHTML = '<span>' + email + '</span>' + (li.className ? '' : '<button type="button" class="remove" onclick="removeEmail(\'' + email.replace(/'/g, "\\'") + '\')">Supprimer</button>');
+                li.className = item.isAdmin ? 'bootstrap' : '';
+                li.innerHTML = '<span>' + item.email + '</span>' + (item.isAdmin ? '' : '<button type="button" class="remove" onclick="removeEmail(\'' + item.email.replace(/'/g, "\\'") + '\')">Supprimer</button>');
                 ul.appendChild(li);
             });
         }
@@ -162,11 +165,7 @@
                 setError('Saisis une adresse email.');
                 return;
             }
-            if (ADMIN_EMAILS.some(function (b) { return b.toLowerCase() === email; })) {
-                setError('Cet email est déjà dans la liste bootstrap.');
-                return;
-            }
-            if (allowedEmails.some(function (e) { return e.toLowerCase() === email; })) {
+            if (adminEmails.indexOf(email) !== -1 || allowedEmails.indexOf(email) !== -1) {
                 setError('Cet email est déjà autorisé.');
                 return;
             }
@@ -203,16 +202,22 @@
         auth.onAuthStateChanged(function (user) {
             if (user) {
                 var email = (user.email || '').toLowerCase();
-                var isAdmin = ADMIN_EMAILS.some(function (e) { return e.toLowerCase() === email; });
-                if (isAdmin) {
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('app').style.display = 'block';
-                    document.getElementById('userInfo').textContent = user.email || user.displayName || '';
-                    loadEmails();
-                } else {
+                db.ref('config/adminEmails').once('value').then(function (snap) {
+                    var list = snap.val();
+                    var admins = Array.isArray(list) ? list.map(function (e) { return (e || '').toLowerCase().trim(); }) : [];
+                    if (admins.indexOf(email) !== -1) {
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.getElementById('app').style.display = 'block';
+                        document.getElementById('userInfo').textContent = user.email || user.displayName || '';
+                        loadEmails();
+                    } else {
+                        auth.signOut();
+                        setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
+                    }
+                }).catch(function () {
                     auth.signOut();
-                    setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
-                }
+                    setLoginError('Accès refusé.');
+                });
             } else {
                 document.getElementById('loginScreen').style.display = 'block';
                 document.getElementById('app').style.display = 'none';

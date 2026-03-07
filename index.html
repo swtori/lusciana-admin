@@ -1218,37 +1218,45 @@
             auth.signOut();
         }
 
-        var BOOTSTRAP_EMAILS = ['luscianabuilds@gmail.com', '0xxxsv@gmail.com'];
-
         function getAllowedEmails(callback) {
-            db.ref('config/allowedEmails').once('value').then(function (snap) {
-                var fromDb = snap.val();
-                var list = Array.isArray(fromDb) ? fromDb : [];
-                var merged = BOOTSTRAP_EMAILS.slice();
-                list.forEach(function (e) {
+            Promise.all([
+                db.ref('config/adminEmails').once('value'),
+                db.ref('config/allowedEmails').once('value')
+            ]).then(function (results) {
+                var admin = results[0].val();
+                var allowed = results[1].val();
+                var seen = {};
+                var merged = [];
+                [].concat(Array.isArray(admin) ? admin : [], Array.isArray(allowed) ? allowed : []).forEach(function (e) {
                     var lower = (e || '').toLowerCase().trim();
-                    if (lower && merged.indexOf(lower) === -1 && !BOOTSTRAP_EMAILS.some(function (b) { return b.toLowerCase() === lower; })) {
-                        merged.push(lower);
-                    }
+                    if (lower && !seen[lower]) { seen[lower] = 1; merged.push(lower); }
                 });
                 callback(merged);
-            }).catch(function () {
-                callback(BOOTSTRAP_EMAILS.slice());
-            });
+            }).catch(function () { callback([]); });
+        }
+
+        function getAdminEmails(callback) {
+            db.ref('config/adminEmails').once('value').then(function (snap) {
+                var list = snap.val();
+                var arr = Array.isArray(list) ? list.map(function (e) { return (e || '').toLowerCase().trim(); }).filter(Boolean) : [];
+                callback(arr);
+            }).catch(function () { callback([]); });
         }
 
         auth.onAuthStateChanged(function (user) {
             if (user) {
                 if (intentAdmin) {
                     var email = (user.email || '').toLowerCase();
-                    if (email === 'luscianabuilds@gmail.com') {
-                        window.location.href = 'admin/';
-                        return;
-                    }
-                    intentAdmin = false;
-                    auth.signOut();
-                    showLoginScreen();
-                    setLoginError('Accès refusé. Seul luscianabuilds@gmail.com peut accéder à l\'admin.');
+                    getAdminEmails(function (adminEmails) {
+                        if (adminEmails.indexOf(email) !== -1) {
+                            window.location.href = 'admin/';
+                            return;
+                        }
+                        intentAdmin = false;
+                        auth.signOut();
+                        showLoginScreen();
+                        setLoginError('Accès refusé. Seuls les comptes admin peuvent accéder.');
+                    });
                     return;
                 }
                 getAllowedEmails(function (allowed) {
