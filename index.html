@@ -728,46 +728,12 @@
     <div id="loginScreen">
         <div class="login-card">
             <h2>🏗️ Commission Manager</h2>
-            <!-- Vue Connexion -->
             <div id="loginView">
-                <p>Connecte-toi pour accéder aux commissions.</p>
+                <p>Connecte-toi avec ton compte Google pour accéder aux commissions.</p>
                 <button type="button" class="btn-google" id="btnGoogleLogin" onclick="loginWithGoogle()">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
                     Se connecter avec Google
                 </button>
-                <p class="login-divider">— ou —</p>
-                <form class="login-form" onsubmit="loginWithEmail(); return false;">
-                    <div class="form-group">
-                        <label for="loginEmail">Adresse email</label>
-                        <input type="email" id="loginEmail" placeholder="toi@exemple.com" required autocomplete="email">
-                    </div>
-                    <div class="form-group">
-                        <label for="loginPassword">Mot de passe</label>
-                        <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
-                    </div>
-                    <button type="submit" class="btn-email">Se connecter avec email</button>
-                </form>
-                <p class="login-toggle">Pas de compte ? <a onclick="showRegisterForm()">Créer un compte</a></p>
-            </div>
-            <!-- Vue Créer un compte -->
-            <div id="registerView" style="display: none;">
-                <p>Crée un compte pour accéder aux commissions.</p>
-                <form class="login-form" onsubmit="register(); return false;">
-                    <div class="form-group">
-                        <label for="registerEmail">Adresse email</label>
-                        <input type="email" id="registerEmail" placeholder="toi@exemple.com" required autocomplete="email">
-                    </div>
-                    <div class="form-group">
-                        <label for="registerPassword">Mot de passe</label>
-                        <input type="password" id="registerPassword" placeholder="6 caractères min." required autocomplete="new-password" minlength="6">
-                    </div>
-                    <div class="form-group">
-                        <label for="registerPasswordConfirm">Confirmer le mot de passe</label>
-                        <input type="password" id="registerPasswordConfirm" placeholder="••••••••" required autocomplete="new-password" minlength="6">
-                    </div>
-                    <button type="submit" class="btn-email">Créer mon compte</button>
-                </form>
-                <p class="login-toggle">Déjà un compte ? <a onclick="showLoginForm()">Se connecter</a></p>
             </div>
             <p id="loginError" class="login-error" style="display: none;"></p>
             <p id="loginSuccess" class="login-success" style="display: none;"></p>
@@ -1187,7 +1153,8 @@
         function showLoginScreen() {
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('appContainer').classList.remove('authenticated');
-            showLoginForm();
+            setLoginError('');
+            setLoginSuccess('');
         }
 
         function showApp(user) {
