@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lusciana - Commission Manager</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -1081,6 +1084,20 @@
     </div>
 
     <script>
+        // Configuration et initialisation Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAGNnVNpRPRYc7ggMTG4dESxwdn3A-luaI",
+            authDomain: "luscianamanager.firebaseapp.com",
+            databaseURL: "https://luscianamanager-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "luscianamanager",
+            storageBucket: "luscianamanager.firebasestorage.app",
+            messagingSenderId: "375459557861",
+            appId: "1:375459557861:web:4d6234200624416816ff0c",
+            measurementId: "G-LQ5HYX18L8"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
         // Gestion des onglets
         function showTab(tabName, element) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
