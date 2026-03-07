@@ -1189,6 +1189,10 @@
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('appContainer').classList.remove('authenticated');
             showLoginForm();
+            if (sessionStorage.getItem('loginAccessDenied')) {
+                setLoginError('Tu n\'as pas accès à cette application. Demande à un administrateur de t\'ajouter à la liste (page Admin).');
+                sessionStorage.removeItem('loginAccessDenied');
+            }
         }
 
         function showApp(user) {
@@ -1238,11 +1242,14 @@
         }
 
         var SUPER_ADMIN_EMAIL = 'luscianabuilds@gmail.com';
-        function canCreateAccount(email) {
+        function canAccessApp(email) {
             if (!email) return false;
-            var e = email.trim().toLowerCase();
+            var e = (email + '').trim().toLowerCase();
             if (e === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
             return window._allowedEmailsList && window._allowedEmailsList.indexOf(e) !== -1;
+        }
+        function canCreateAccount(email) {
+            return canAccessApp(email);
         }
         function refreshAllowedEmailsList() {
             return db.ref('allowedEmails').once('value').then(function (snap) {
@@ -1327,11 +1334,21 @@
         }
 
         auth.onAuthStateChanged(function (user) {
-            if (user) {
-                showApp(user);
-            } else {
+            if (!user) {
                 showLoginScreen();
+                return;
             }
+            refreshAllowedEmailsList().then(function () {
+                if (!canAccessApp(user.email)) {
+                    sessionStorage.setItem('loginAccessDenied', '1');
+                    auth.signOut();
+                    return;
+                }
+                showApp(user);
+            }).catch(function () {
+                sessionStorage.setItem('loginAccessDenied', '1');
+                auth.signOut();
+            });
         });
 
         // Caches synchronisés avec Firebase Realtime Database
