@@ -710,6 +710,13 @@
         .btn-logout { padding: 8px 16px; background: #f0f0f0; color: #555; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
         .btn-logout:hover { background: #e0e0e0; color: #333; }
         .login-error { color: #dc2626; font-size: 14px; margin-top: 16px; }
+        .login-divider { margin: 24px 0; color: #999; font-size: 14px; }
+        .login-form .form-group { margin-bottom: 16px; text-align: left; }
+        .login-form label { display: block; margin-bottom: 6px; color: #555; font-size: 14px; font-weight: 500; }
+        .login-form input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
+        .login-form input:focus { outline: none; border-color: #667eea; }
+        .btn-email { width: 100%; padding: 14px; background: #667eea; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+        .btn-email:hover { background: #5a67d8; }
     </style>
 </head>
 <body>
@@ -717,11 +724,23 @@
     <div id="loginScreen">
         <div class="login-card">
             <h2>🏗️ Commission Manager</h2>
-            <p>Connecte-toi avec ton compte Google pour accéder aux commissions.</p>
+            <p>Connecte-toi pour accéder aux commissions.</p>
             <button type="button" class="btn-google" id="btnGoogleLogin" onclick="loginWithGoogle()">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" onerror="this.style.display='none'">
                 Se connecter avec Google
             </button>
+            <p class="login-divider">— ou —</p>
+            <form class="login-form" onsubmit="loginWithEmail(); return false;">
+                <div class="form-group">
+                    <label for="loginEmail">Adresse email</label>
+                    <input type="email" id="loginEmail" placeholder="toi@exemple.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Mot de passe</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-email">Se connecter avec email</button>
+            </form>
             <p id="loginError" class="login-error" style="display: none;"></p>
         </div>
     </div>
@@ -1152,15 +1171,43 @@
             loadFromFirebase();
         }
 
-        function loginWithGoogle() {
+        function setLoginError(msg) {
             var errEl = document.getElementById('loginError');
-            errEl.style.display = 'none';
-            errEl.textContent = '';
+            errEl.style.display = msg ? 'block' : 'none';
+            errEl.textContent = msg || '';
+        }
+
+        function loginWithGoogle() {
+            setLoginError('');
             auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function () {
                 // onAuthStateChanged va appeler showApp
             }).catch(function (err) {
-                errEl.style.display = 'block';
-                errEl.textContent = err.message || 'Erreur de connexion. Réessaie.';
+                setLoginError(err.message || 'Erreur de connexion. Réessaie.');
+            });
+        }
+
+        function loginWithEmail() {
+            var email = document.getElementById('loginEmail').value.trim();
+            var password = document.getElementById('loginPassword').value;
+            setLoginError('');
+            if (!email || !password) {
+                setLoginError('Saisis ton email et ton mot de passe.');
+                return;
+            }
+            auth.signInWithEmailAndPassword(email, password).then(function (result) {
+                if (!result.user.emailVerified) {
+                    auth.signOut();
+                    setLoginError('Tu dois vérifier ton adresse email avant de te connecter. Vérifie ta boîte mail (et les spams).');
+                    return;
+                }
+                // onAuthStateChanged va appeler showApp
+            }).catch(function (err) {
+                var msg = err.message || 'Erreur de connexion.';
+                if (err.code === 'auth/user-not-found') msg = 'Aucun compte avec cette adresse email.';
+                if (err.code === 'auth/wrong-password') msg = 'Mot de passe incorrect.';
+                if (err.code === 'auth/invalid-email') msg = 'Adresse email invalide.';
+                if (err.code === 'auth/invalid-credential') msg = 'Email ou mot de passe incorrect.';
+                setLoginError(msg);
             });
         }
 
