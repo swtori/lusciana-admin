@@ -348,6 +348,9 @@
       "label": "Axiom"
     }
   ],
+  "config": {
+    "adminEmail": "luscianabuilds@gmail.com"
+  },
   "allowedEmails": {
     "luscianabuilds_gmail_com": true
   },

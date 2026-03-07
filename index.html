@@ -79,23 +79,11 @@
         <div id="teamLoginPanel" class="login-panel">
             <p class="back"><a onclick="showChoice()">← Retour</a></p>
             <h2 style="margin-bottom: 16px; font-size: 20px;">Connexion – Site de la team</h2>
-            <p style="color: #666; font-size: 14px; margin-bottom: 16px;">Connecte-toi avec Google ou email. Ton adresse doit être autorisée par l’admin.</p>
+            <p style="color: #666; font-size: 14px; margin-bottom: 16px;">Authentification Google uniquement. Si ton adresse est sur la whitelist (gérée par l'admin), tu seras accepté. Sinon, accès refusé.</p>
             <button type="button" class="btn-google" onclick="loginTeamGoogle()">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" width="20" height="20" onerror="this.style.display='none'">
                 Se connecter avec Google
             </button>
-            <p class="divider">— ou —</p>
-            <form onsubmit="loginTeamEmail(); return false;">
-                <div class="form-group">
-                    <label for="teamEmail">Email</label>
-                    <input type="email" id="teamEmail" placeholder="toi@exemple.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="teamPassword">Mot de passe</label>
-                    <input type="password" id="teamPassword" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="btn-submit">Se connecter avec email</button>
-            </form>
             <p id="teamError" class="error" style="display: none;"></p>
         </div>
 
@@ -186,26 +174,15 @@
         function loginTeamGoogle() {
             setTeamError('');
             auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(function (result) {
-                checkAllowedAndGoTeam(result.user);
+                var user = result.user;
+                if (!user || !user.providerData || !user.providerData.some(function (p) { return p && p.providerId === 'google.com'; })) {
+                    auth.signOut();
+                    setTeamError('Accès refusé. Authentification Google uniquement.');
+                    return;
+                }
+                checkAllowedAndGoTeam(user);
             }).catch(function (err) {
                 setTeamError(err.message || 'Erreur de connexion.');
-            });
-        }
-
-        function loginTeamEmail() {
-            var email = document.getElementById('teamEmail').value.trim();
-            var password = document.getElementById('teamPassword').value;
-            setTeamError('');
-            if (!email || !password) {
-                setTeamError('Saisis email et mot de passe.');
-                return;
-            }
-            auth.signInWithEmailAndPassword(email, password).then(function (result) {
-                checkAllowedAndGoTeam(result.user);
-            }).catch(function (err) {
-                var msg = err.message || 'Erreur de connexion.';
-                if (err.code === 'auth/invalid-credential') msg = 'Email ou mot de passe incorrect.';
-                setTeamError(msg);
             });
         }
 
