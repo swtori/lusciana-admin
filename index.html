@@ -695,6 +695,11 @@
     </style>
 </head>
 <body>
+    <script>
+        if (localStorage.getItem('auth') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
     <div class="container">
         <h1>🏗️ Commission Manager</h1>
         <div class="tabs">

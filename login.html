@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion — Commission Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 360px;
+            width: 100%;
+        }
+        h1 { color: #333; margin-bottom: 24px; font-size: 22px; text-align: center; }
+        .field { margin-bottom: 16px; }
+        .field label { display: block; margin-bottom: 6px; color: #555; font-weight: 500; }
+        .field input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        .field input:focus { outline: none; border-color: #667eea; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        button:hover { background: #5a67d8; }
+        .error { color: #dc2626; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Connexion</h1>
+        <form id="form" onsubmit="return doLogin();">
+            <div class="field">
+                <label for="pseudo">Pseudo</label>
+                <input type="text" id="pseudo" required autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="code">Code secret</label>
+                <input type="password" id="code" required autocomplete="current-password">
+            </div>
+            <button type="submit">Se connecter</button>
+        </form>
+        <p id="error" class="error">Accès refusé</p>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script>
+        function doLogin() {
+            var pseudo = document.getElementById('pseudo').value.trim();
+            var code = document.getElementById('code').value.trim();
+            var errEl = document.getElementById('error');
+            errEl.style.display = 'none';
+            if (!pseudo || !code) return false;
+
+            db.ref('users').once('value').then(function (snap) {
+                var users = snap.val() || {};
+                var found = false;
+                for (var key in users) {
+                    if (users.hasOwnProperty(key)) {
+                        var u = users[key];
+                        if (u && String(u.pseudo).trim() === pseudo && String(u.code) === code) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (found) {
+                    localStorage.setItem('auth', 'true');
+                    localStorage.setItem('pseudo', pseudo);
+                    window.location.href = 'index.html';
+                } else {
+                    errEl.style.display = 'block';
+                }
+            }).catch(function () {
+                errEl.textContent = 'Erreur de connexion.';
+                errEl.style.display = 'block';
+            });
+            return false;
+        }
+    </script>
+</body>
+</html>

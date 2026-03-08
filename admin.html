@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Commission Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; padding: 20px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 24px; max-width: 640px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 20px; font-size: 22px; }
+        .login-box { margin-bottom: 24px; }
+        .field { margin-bottom: 12px; }
+        .field label { display: block; margin-bottom: 4px; color: #555; font-weight: 500; }
+        .field input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        button { padding: 10px 18px; background: #667eea; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        button:hover { background: #5a67d8; }
+        button.danger { background: #dc2626; }
+        button.danger:hover { background: #b91c1c; }
+        button.secondary { background: #e5e7eb; color: #333; }
+        button.secondary:hover { background: #d1d5db; }
+        .error { color: #dc2626; font-size: 14px; margin-top: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; font-size: 13px; }
+        .add-form { margin-top: 24px; padding-top: 24px; border-top: 1px solid #eee; }
+        .add-form h2 { font-size: 16px; color: #333; margin-bottom: 12px; }
+        .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .row .field { margin-bottom: 0; flex: 1; min-width: 140px; }
+        .row button { flex-shrink: 0; }
+        a { color: #667eea; text-decoration: none; font-size: 14px; }
+        a:hover { text-decoration: underline; }
+        #adminApp { display: none; }
+    </style>
+</head>
+<body>
+    <div id="adminLogin" class="card">
+        <h1>Admin — Connexion</h1>
+        <form onsubmit="return doAdminLogin();">
+            <div class="field">
+                <label for="adminEmail">Email</label>
+                <input type="email" id="adminEmail" required>
+            </div>
+            <div class="field">
+                <label for="adminPassword">Mot de passe</label>
+                <input type="password" id="adminPassword" required>
+            </div>
+            <button type="submit">Connexion admin</button>
+        </form>
+        <p id="adminError" class="error" style="display: none;"></p>
+    </div>
+
+    <div id="adminApp" class="card">
+        <p style="margin-bottom: 16px;"><a href="index.html">← Retour au site</a></p>
+        <h1>Gestion des utilisateurs</h1>
+        <table>
+            <thead>
+                <tr><th>Pseudo</th><th>Code</th><th></th></tr>
+            </thead>
+            <tbody id="userList"></tbody>
+        </table>
+        <div class="add-form">
+            <h2>Ajouter un utilisateur</h2>
+            <div class="row">
+                <div class="field">
+                    <label for="newPseudo">Pseudo</label>
+                    <input type="text" id="newPseudo" placeholder="Pseudo">
+                </div>
+                <div class="field">
+                    <label for="newCode">Code</label>
+                    <input type="text" id="newCode" placeholder="Généré" readonly>
+                </div>
+                <button type="button" class="secondary" onclick="generateCode();">GENERATE CODE</button>
+                <button type="button" onclick="addUser();">ADD USER</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script>
+        var ADMIN_EMAIL = 'luscianabuilds@gmail.com';
+        var ADMIN_PASSWORD = 'miam-miam';
+
+        if (localStorage.getItem('admin') === 'true') {
+            document.getElementById('adminLogin').style.display = 'none';
+            document.getElementById('adminApp').style.display = 'block';
+            loadUsers();
+        }
+
+        function doAdminLogin() {
+            var email = document.getElementById('adminEmail').value.trim();
+            var pwd = document.getElementById('adminPassword').value;
+            var errEl = document.getElementById('adminError');
+            if (email === ADMIN_EMAIL && pwd === ADMIN_PASSWORD) {
+                localStorage.setItem('admin', 'true');
+                document.getElementById('adminLogin').style.display = 'none';
+                document.getElementById('adminApp').style.display = 'block';
+                loadUsers();
+            } else {
+                errEl.textContent = 'Accès refusé.';
+                errEl.style.display = 'block';
+            }
+            return false;
+        }
+
+        function generateCode() {
+            document.getElementById('newCode').value = Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function loadUsers() {
+            db.ref('users').once('value').then(function (snap) {
+                var users = snap.val() || {};
+                var tbody = document.getElementById('userList');
+                tbody.innerHTML = '';
+                for (var key in users) {
+                    if (users.hasOwnProperty(key)) {
+                        var u = users[key];
+                        var tr = document.createElement('tr');
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'danger';
+                        btn.textContent = 'Delete';
+                        btn.onclick = function (k) { return function () { deleteUser(k); }; }(key);
+                        tr.innerHTML = '<td>' + (u.pseudo || '') + '</td><td>' + (u.code || '') + '</td><td></td>';
+                        tr.lastChild.appendChild(btn);
+                        tbody.appendChild(tr);
+                    }
+                }
+            });
+        }
+
+        function addUser() {
+            var pseudo = document.getElementById('newPseudo').value.trim();
+            var code = document.getElementById('newCode').value.trim();
+            if (!pseudo || !code) {
+                alert('Renseigne le pseudo et génère un code.');
+                return;
+            }
+            db.ref('users').push({ pseudo: pseudo, code: code }).then(function () {
+                document.getElementById('newPseudo').value = '';
+                document.getElementById('newCode').value = '';
+                loadUsers();
+            });
+        }
+
+        function deleteUser(key) {
+            if (!confirm('Supprimer cet utilisateur ?')) return;
+            db.ref('users/' + key).remove().then(loadUsers);
+        }
+    </script>
+</body>
+</html>
