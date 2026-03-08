@@ -71,6 +71,16 @@
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
     <script src="firebase.js"></script>
     <script>
+        function generateToken() {
+            var a = typeof crypto !== 'undefined' && crypto.getRandomValues
+                ? crypto.getRandomValues(new Uint8Array(24))
+                : [];
+            if (a.length) {
+                return Array.from(a, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+            }
+            return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+
         function doLogin() {
             var pseudo = document.getElementById('pseudo').value.trim();
             var code = document.getElementById('code').value.trim();
@@ -90,13 +100,17 @@
                         }
                     }
                 }
-                if (found) {
-                    localStorage.setItem('auth', 'true');
+                if (!found) {
+                    errEl.style.display = 'block';
+                    return;
+                }
+                var token = generateToken();
+                var session = { pseudo: pseudo, createdAt: Date.now() };
+                return db.ref('sessions/' + token).set(session).then(function () {
+                    localStorage.setItem('sessionToken', token);
                     localStorage.setItem('pseudo', pseudo);
                     window.location.href = 'index.html';
-                } else {
-                    errEl.style.display = 'block';
-                }
+                });
             }).catch(function () {
                 errEl.textContent = 'Erreur de connexion.';
                 errEl.style.display = 'block';
