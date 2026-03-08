@@ -1102,19 +1102,55 @@
         const db = firebase.database();
         const auth = firebase.auth();
 
+        var SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+
+        function redirectToLogin() {
+            localStorage.removeItem('sessionToken');
+            localStorage.removeItem('pseudo');
+            window.location.replace('login.html');
+        }
+
         function logout() {
+            var token = localStorage.getItem('sessionToken');
+            if (token) db.ref('sessions/' + token).remove().catch(function () {});
+            localStorage.removeItem('sessionToken');
+            localStorage.removeItem('pseudo');
             auth.signOut();
             window.location.replace('login.html');
         }
 
-        auth.onAuthStateChanged(function (user) {
-            if (!user) {
-                window.location.replace('login.html');
+        function verifySession() {
+            var token = localStorage.getItem('sessionToken');
+            if (!token) {
+                redirectToLogin();
                 return;
             }
-            document.getElementById('appContainer').style.display = 'block';
-            loadMinecraftVersions();
-            loadFromFirebase();
+            db.ref('sessions/' + token).once('value').then(function (snap) {
+                var s = snap.val();
+                if (!s || !s.pseudo) {
+                    redirectToLogin();
+                    return;
+                }
+                var age = Date.now() - (s.createdAt || 0);
+                if (age > SESSION_MAX_AGE) {
+                    db.ref('sessions/' + token).remove().catch(function () {});
+                    redirectToLogin();
+                    return;
+                }
+                document.getElementById('appContainer').style.display = 'block';
+                loadMinecraftVersions();
+                loadFromFirebase();
+            }).catch(function () {
+                redirectToLogin();
+            });
+        }
+
+        auth.onAuthStateChanged(function (user) {
+            if (!user) {
+                redirectToLogin();
+                return;
+            }
+            verifySession();
         });
 
         // Caches synchronisés avec Firebase Realtime Database

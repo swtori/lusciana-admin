@@ -12,5 +12,4 @@
     if (typeof firebase === 'undefined') return;
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);
     window.db = firebase.database();
-    if (typeof firebase.auth === 'function') window.auth = firebase.auth();
 })();

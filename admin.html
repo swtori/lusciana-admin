@@ -31,10 +31,24 @@
         a { color: #667eea; text-decoration: none; font-size: 14px; }
         a:hover { text-decoration: underline; }
         #adminApp { display: none; }
+        #googleStep { text-align: center; padding: 40px 24px; }
+        #googleStep p { color: #666; margin-bottom: 20px; }
+        .btn-google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 24px; background: #fff; color: #333; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .btn-google:hover { border-color: #667eea; color: #667eea; }
+        .btn-google img { width: 22px; height: 22px; }
     </style>
 </head>
 <body>
-    <div id="adminLogin" class="card">
+    <div id="googleStep" class="card">
+        <h1>Admin</h1>
+        <p>Connecte-toi avec Google pour continuer.</p>
+        <button type="button" class="btn-google" id="btnGoogle">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" onerror="this.style.display='none'">
+            Se connecter avec Google
+        </button>
+    </div>
+
+    <div id="adminLogin" class="card" style="display: none;">
         <h1>Admin — Connexion</h1>
         <form onsubmit="return doAdminLogin();">
             <div class="field">
@@ -51,7 +65,7 @@
     </div>
 
     <div id="adminApp" class="card">
-        <p style="margin-bottom: 16px;"><a href="index.html">← Retour au site</a></p>
+        <p style="margin-bottom: 16px;"><a href="index.html">← Retour au site</a> — <button type="button" class="secondary" onclick="adminLogout();">Se déconnecter</button></p>
         <h1>Gestion des utilisateurs</h1>
         <table>
             <thead>
@@ -77,16 +91,53 @@
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
     <script src="firebase.js"></script>
     <script>
+        var auth = firebase.auth();
         var ADMIN_EMAIL = 'luscianabuilds@gmail.com';
         var ADMIN_PASSWORD = 'miam-miam';
 
-        if (localStorage.getItem('admin') === 'true') {
+        function showGoogleStep() {
+            document.getElementById('googleStep').style.display = 'block';
+            document.getElementById('adminLogin').style.display = 'none';
+            document.getElementById('adminApp').style.display = 'none';
+        }
+        function showAdminLogin() {
+            document.getElementById('googleStep').style.display = 'none';
+            document.getElementById('adminLogin').style.display = 'block';
+            document.getElementById('adminApp').style.display = 'none';
+        }
+        function showAdminApp() {
+            document.getElementById('googleStep').style.display = 'none';
             document.getElementById('adminLogin').style.display = 'none';
             document.getElementById('adminApp').style.display = 'block';
             loadUsers();
+        }
+
+        document.getElementById('btnGoogle').onclick = function () {
+            auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+        };
+
+        auth.getRedirectResult().then(function (result) {
+            if (result.user || auth.currentUser) {
+                if (localStorage.getItem('admin') === 'true') showAdminApp();
+                else showAdminLogin();
+            } else {
+                showGoogleStep();
+            }
+        }).catch(function () { showGoogleStep(); });
+
+        auth.onAuthStateChanged(function (user) {
+            if (!user) showGoogleStep();
+            else if (localStorage.getItem('admin') === 'true') showAdminApp();
+            else showAdminLogin();
+        });
+
+        function adminLogout() {
+            localStorage.removeItem('admin');
+            auth.signOut();
         }
 
         function doAdminLogin() {
@@ -95,9 +146,7 @@
             var errEl = document.getElementById('adminError');
             if (email === ADMIN_EMAIL && pwd === ADMIN_PASSWORD) {
                 localStorage.setItem('admin', 'true');
-                document.getElementById('adminLogin').style.display = 'none';
-                document.getElementById('adminApp').style.display = 'block';
-                loadUsers();
+                showAdminApp();
             } else {
                 errEl.textContent = 'Accès refusé.';
                 errEl.style.display = 'block';
