@@ -6,6 +6,7 @@
     <title>Lusciana - Commission Manager</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics-compat.js"></script>
     <style>
@@ -695,11 +696,6 @@
     </style>
 </head>
 <body>
-    <script>
-        if (!localStorage.getItem('sessionToken')) {
-            window.location.replace('login.html');
-        }
-    </script>
     <div class="container" id="appContainer" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
             <h1 style="margin: 0;">🏗️ Commission Manager</h1>
@@ -1104,46 +1100,22 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const auth = firebase.auth();
 
-        var SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-
-        function redirectToLogin() {
-            localStorage.removeItem('sessionToken');
-            localStorage.removeItem('pseudo');
+        function logout() {
+            auth.signOut();
             window.location.replace('login.html');
         }
 
-        function logout() {
-            var token = localStorage.getItem('sessionToken');
-            if (token) db.ref('sessions/' + token).remove().catch(function () {});
-            redirectToLogin();
-        }
-
-        (function verifySession() {
-            var token = localStorage.getItem('sessionToken');
-            if (!token) {
-                redirectToLogin();
+        auth.onAuthStateChanged(function (user) {
+            if (!user) {
+                window.location.replace('login.html');
                 return;
             }
-            db.ref('sessions/' + token).once('value').then(function (snap) {
-                var s = snap.val();
-                if (!s || !s.pseudo) {
-                    redirectToLogin();
-                    return;
-                }
-                var age = Date.now() - (s.createdAt || 0);
-                if (age > SESSION_MAX_AGE) {
-                    db.ref('sessions/' + token).remove().catch(function () {});
-                    redirectToLogin();
-                    return;
-                }
-                document.getElementById('appContainer').style.display = 'block';
-                loadMinecraftVersions();
-                loadFromFirebase();
-            }).catch(function () {
-                redirectToLogin();
-            });
-        })();
+            document.getElementById('appContainer').style.display = 'block';
+            loadMinecraftVersions();
+            loadFromFirebase();
+        });
 
         // Caches synchronisés avec Firebase Realtime Database
         let agentsCache = [];

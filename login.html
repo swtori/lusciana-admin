@@ -47,76 +47,85 @@
             margin-top: 8px;
         }
         button:hover { background: #5a67d8; }
+        .btn-google {
+            background: #fff;
+            color: #333;
+            border: 2px solid #ddd;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-google:hover { background: #f8f8f8; border-color: #667eea; color: #667eea; }
+        .divider { margin: 20px 0; color: #999; font-size: 14px; text-align: center; }
         .error { color: #dc2626; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
     </style>
 </head>
 <body>
     <div class="card">
         <h1>Connexion</h1>
-        <form id="form" onsubmit="return doLogin();">
+        <p style="color: #666; margin-bottom: 20px; font-size: 14px; text-align: center;">Connecte-toi pour accéder au Commission Manager.</p>
+        <button type="button" class="btn-google" id="btnGoogle" onclick="loginGoogle();">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" width="20" height="20" onerror="this.style.display='none'">
+            Se connecter avec Google
+        </button>
+        <p class="divider">— ou —</p>
+        <form onsubmit="return loginEmail();">
             <div class="field">
-                <label for="pseudo">Pseudo</label>
-                <input type="text" id="pseudo" required autocomplete="username">
+                <label for="email">Email</label>
+                <input type="email" id="email" required placeholder="toi@exemple.com">
             </div>
             <div class="field">
-                <label for="code">Code secret</label>
-                <input type="password" id="code" required autocomplete="current-password">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" required placeholder="••••••••">
             </div>
-            <button type="submit">Se connecter</button>
+            <button type="submit">Se connecter avec email</button>
         </form>
         <p id="error" class="error">Accès refusé</p>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
     <script src="firebase.js"></script>
     <script>
-        function generateToken() {
-            var a = typeof crypto !== 'undefined' && crypto.getRandomValues
-                ? crypto.getRandomValues(new Uint8Array(24))
-                : [];
-            if (a.length) {
-                return Array.from(a, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
-            }
-            return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        var errEl = document.getElementById('error');
+
+        function showError(msg) {
+            errEl.textContent = msg || 'Accès refusé';
+            errEl.style.display = 'block';
         }
 
-        function doLogin() {
-            var pseudo = document.getElementById('pseudo').value.trim();
-            var code = document.getElementById('code').value.trim();
-            var errEl = document.getElementById('error');
+        function loginGoogle() {
             errEl.style.display = 'none';
-            if (!pseudo || !code) return false;
+            auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+        }
 
-            db.ref('users').once('value').then(function (snap) {
-                var users = snap.val() || {};
-                var found = false;
-                for (var key in users) {
-                    if (users.hasOwnProperty(key)) {
-                        var u = users[key];
-                        if (u && String(u.pseudo).trim() === pseudo && String(u.code) === code) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                if (!found) {
-                    errEl.style.display = 'block';
-                    return;
-                }
-                var token = generateToken();
-                var session = { pseudo: pseudo, createdAt: Date.now() };
-                return db.ref('sessions/' + token).set(session).then(function () {
-                    localStorage.setItem('sessionToken', token);
-                    localStorage.setItem('pseudo', pseudo);
-                    window.location.href = 'index.html';
-                });
-            }).catch(function () {
-                errEl.textContent = 'Erreur de connexion.';
-                errEl.style.display = 'block';
+        function loginEmail() {
+            errEl.style.display = 'none';
+            var email = document.getElementById('email').value.trim();
+            var password = document.getElementById('password').value;
+            if (!email || !password) return false;
+            auth.signInWithEmailAndPassword(email, password).then(function () {
+                window.location.href = 'index.html';
+            }).catch(function (err) {
+                var msg = err.message || 'Erreur de connexion.';
+                if (err.code === 'auth/invalid-credential') msg = 'Email ou mot de passe incorrect.';
+                if (err.code === 'auth/user-not-found') msg = 'Aucun compte avec cet email.';
+                showError(msg);
             });
             return false;
         }
+
+        auth.getRedirectResult().then(function (result) {
+            if (result.user) window.location.href = 'index.html';
+        }).catch(function (err) {
+            showError(err.message || 'Erreur de connexion.');
+        });
+
+        auth.onAuthStateChanged(function (user) {
+            if (user) window.location.href = 'index.html';
+        });
     </script>
 </body>
 </html>
