@@ -6,7 +6,6 @@
     <title>Lusciana - Commission Manager</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics-compat.js"></script>
     <style>
@@ -696,6 +695,11 @@
     </style>
 </head>
 <body>
+    <script>
+        if (!localStorage.getItem('sessionToken')) {
+            window.location.replace('login.html');
+        }
+    </script>
     <div class="container" id="appContainer" style="display: none;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
             <h1 style="margin: 0;">🏗️ Commission Manager</h1>
@@ -1100,7 +1104,6 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const auth = firebase.auth();
 
         var SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
@@ -1113,13 +1116,10 @@
         function logout() {
             var token = localStorage.getItem('sessionToken');
             if (token) db.ref('sessions/' + token).remove().catch(function () {});
-            localStorage.removeItem('sessionToken');
-            localStorage.removeItem('pseudo');
-            auth.signOut();
-            window.location.replace('login.html');
+            redirectToLogin();
         }
 
-        function verifySession() {
+        (function verifySession() {
             var token = localStorage.getItem('sessionToken');
             if (!token) {
                 redirectToLogin();
@@ -1143,15 +1143,7 @@
             }).catch(function () {
                 redirectToLogin();
             });
-        }
-
-        auth.onAuthStateChanged(function (user) {
-            if (!user) {
-                redirectToLogin();
-                return;
-            }
-            verifySession();
-        });
+        })();
 
         // Caches synchronisés avec Firebase Realtime Database
         let agentsCache = [];

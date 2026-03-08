@@ -48,73 +48,29 @@
         }
         button:hover { background: #5a67d8; }
         .error { color: #dc2626; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
-        .btn-google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 24px; background: #fff; color: #333; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
-        .btn-google:hover { border-color: #667eea; color: #667eea; }
-        .btn-google img { width: 22px; height: 22px; }
-        #googleStep { text-align: center; }
-        #googleStep p { color: #666; margin-bottom: 20px; }
-        #formStep { display: none; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div id="googleStep">
-            <h1>Connexion</h1>
-            <p>Connecte-toi avec Google pour continuer.</p>
-            <button type="button" class="btn-google" id="btnGoogle">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" onerror="this.style.display='none'">
-                Se connecter avec Google
-            </button>
-        </div>
-        <div id="formStep">
-            <h1>Connexion</h1>
-            <p style="color:#666;margin-bottom:16px;font-size:14px;">Pseudo et code pour accéder au site.</p>
-            <form id="form" onsubmit="return doLogin();">
-                <div class="field">
-                    <label for="pseudo">Pseudo</label>
-                    <input type="text" id="pseudo" required autocomplete="username">
-                </div>
-                <div class="field">
-                    <label for="code">Code secret</label>
-                    <input type="password" id="code" required autocomplete="current-password">
-                </div>
-                <button type="submit">Se connecter</button>
-            </form>
-            <p id="error" class="error">Accès refusé</p>
-        </div>
+        <h1>Connexion</h1>
+        <form id="form" onsubmit="return doLogin();">
+            <div class="field">
+                <label for="pseudo">Pseudo</label>
+                <input type="text" id="pseudo" required autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="code">Code secret</label>
+                <input type="password" id="code" required autocomplete="current-password">
+            </div>
+            <button type="submit">Se connecter</button>
+        </form>
+        <p id="error" class="error">Accès refusé</p>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
     <script src="firebase.js"></script>
     <script>
-        var auth = firebase.auth();
-
-        function showForm() {
-            document.getElementById('googleStep').style.display = 'none';
-            document.getElementById('formStep').style.display = 'block';
-        }
-        function showGoogle() {
-            document.getElementById('googleStep').style.display = 'block';
-            document.getElementById('formStep').style.display = 'none';
-        }
-
-        document.getElementById('btnGoogle').onclick = function () {
-            auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
-        };
-
-        auth.getRedirectResult().then(function (result) {
-            if (result.user) showForm();
-            else if (auth.currentUser) showForm();
-            else showGoogle();
-        }).catch(function () { showGoogle(); });
-
-        auth.onAuthStateChanged(function (user) {
-            if (user) showForm();
-            else showGoogle();
-        });
-
         function generateToken() {
             var a = typeof crypto !== 'undefined' && crypto.getRandomValues
                 ? crypto.getRandomValues(new Uint8Array(24))
