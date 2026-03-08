@@ -3,6 +3,16 @@
     "adminEmails": ["luscianabuilds@gmail.com", "0xxxsv@gmail.com"],
     "allowedEmails": ["luscianabuilds@gmail.com", "0xxxsv@gmail.com"]
   },
+  "users": {
+    "user1": {
+      "pseudo": "Antoine",
+      "code": "A8F3KD"
+    },
+    "user2": {
+      "pseudo": "BuilderMax",
+      "code": "P2L9QS"
+    }
+  },
   "agents": [
     {
       "address": "",
