@@ -3,120 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion — Commission Manager</title>
+    <title>Connexion retiree</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 24px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         .card {
-            background: white;
+            max-width: 520px;
+            width: 100%;
+            padding: 32px;
             border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 40px;
-            max-width: 360px;
-            width: 100%;
+            background: #fff;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
         }
-        h1 { color: #333; margin-bottom: 24px; font-size: 22px; text-align: center; }
-        .field { margin-bottom: 16px; }
-        .field label { display: block; margin-bottom: 6px; color: #555; font-weight: 500; }
-        .field input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 15px;
-        }
-        .field input:focus { outline: none; border-color: #667eea; }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: #667eea;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
+        h1 { margin-top: 0; color: #222; }
+        p { color: #555; line-height: 1.5; }
+        a {
+            display: inline-block;
+            margin-top: 16px;
+            color: #667eea;
+            text-decoration: none;
             font-weight: 600;
-            cursor: pointer;
-            margin-top: 8px;
         }
-        button:hover { background: #5a67d8; }
-        .error { color: #dc2626; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>Connexion</h1>
-        <form id="form" onsubmit="return doLogin();">
-            <div class="field">
-                <label for="pseudo">Pseudo</label>
-                <input type="text" id="pseudo" required autocomplete="username">
-            </div>
-            <div class="field">
-                <label for="code">Code secret</label>
-                <input type="password" id="code" required autocomplete="current-password">
-            </div>
-            <button type="submit">Se connecter</button>
-        </form>
-        <p id="error" class="error">Accès refusé</p>
+        <h1>Connexion retiree</h1>
+        <p>Cette page utilisait un service externe qui a ete supprime. L'application principale fonctionne maintenant en mode local dans <code>index.html</code>.</p>
+        <a href="index.html">Ouvrir l'application</a>
     </div>
-
-    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
-    <script src="firebase.js"></script>
-    <script>
-        function generateToken() {
-            var a = typeof crypto !== 'undefined' && crypto.getRandomValues
-                ? crypto.getRandomValues(new Uint8Array(24))
-                : [];
-            if (a.length) {
-                return Array.from(a, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
-            }
-            return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Date.now().toString(36);
-        }
-
-        function doLogin() {
-            var pseudo = document.getElementById('pseudo').value.trim();
-            var code = document.getElementById('code').value.trim();
-            var errEl = document.getElementById('error');
-            errEl.style.display = 'none';
-            if (!pseudo || !code) return false;
-
-            db.ref('users').once('value').then(function (snap) {
-                var users = snap.val() || {};
-                var found = false;
-                for (var key in users) {
-                    if (users.hasOwnProperty(key)) {
-                        var u = users[key];
-                        if (u && String(u.pseudo).trim() === pseudo && String(u.code) === code) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                if (!found) {
-                    errEl.style.display = 'block';
-                    return;
-                }
-                var token = generateToken();
-                var session = { pseudo: pseudo, createdAt: Date.now() };
-                return db.ref('sessions/' + token).set(session).then(function () {
-                    localStorage.setItem('sessionToken', token);
-                    localStorage.setItem('pseudo', pseudo);
-                    window.location.href = 'index.html';
-                });
-            }).catch(function () {
-                errEl.textContent = 'Erreur de connexion.';
-                errEl.style.display = 'block';
-            });
-            return false;
-        }
-    </script>
 </body>
 </html>

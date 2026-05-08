@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lusciana - Commission Manager</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -692,18 +689,19 @@
         .transaction-type-badge.expense { background: #fee2e2; color: #991b1b; }
         .transaction-type-badge.builder { background: #dcfce7; color: #166534; }
         .transaction-type-badge.manager { background: #e0e7ff; color: #3730a3; }
+        #appContainer { display: block; }
+        .header-auth { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+        .header-auth h1 { margin: 0; }
+        .header-subtitle { margin-top: 6px; color: #666; font-size: 14px; }
     </style>
 </head>
 <body>
-    <script>
-        if (!localStorage.getItem('sessionToken')) {
-            window.location.replace('login.html');
-        }
-    </script>
-    <div class="container" id="appContainer" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
-            <h1 style="margin: 0;">🏗️ Commission Manager</h1>
-            <button type="button" onclick="logout()" style="padding: 8px 16px; background: #f0f0f0; color: #555; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;">Se déconnecter</button>
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <div>
+                <h1>🏗️ Commission Manager</h1>
+                <p class="header-subtitle">Version locale sans service externe. Les données sont stockées dans ce navigateur.</p>
+            </div>
         </div>
         <div class="tabs">
             <button class="tab active" onclick="showTab('list', this)">Liste des Commissions</button>
@@ -1091,61 +1089,29 @@
     </div>
 
     <script>
-        // Configuration et initialisation Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyAGNnVNpRPRYc7ggMTG4dESxwdn3A-luaI",
-            authDomain: "luscianamanager.firebaseapp.com",
-            databaseURL: "https://luscianamanager-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "luscianamanager",
-            storageBucket: "luscianamanager.firebasestorage.app",
-            messagingSenderId: "375459557861",
-            appId: "1:375459557861:web:4d6234200624416816ff0c",
-            measurementId: "G-LQ5HYX18L8"
+        const STORAGE_KEYS = {
+            agents: 'agents',
+            commissions: 'commissions',
+            expenses: 'analystExpenses'
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
 
-        var SESSION_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-
-        function redirectToLogin() {
-            localStorage.removeItem('sessionToken');
-            localStorage.removeItem('pseudo');
-            window.location.replace('login.html');
-        }
-
-        function logout() {
-            var token = localStorage.getItem('sessionToken');
-            if (token) db.ref('sessions/' + token).remove().catch(function () {});
-            redirectToLogin();
-        }
-
-        (function verifySession() {
-            var token = localStorage.getItem('sessionToken');
-            if (!token) {
-                redirectToLogin();
-                return;
+        function readStoredArray(key) {
+            try {
+                var raw = localStorage.getItem(key);
+                if (!raw) return [];
+                var parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn('Impossible de lire les donnees locales pour la cle ' + key + '.', error);
+                return [];
             }
-            db.ref('sessions/' + token).once('value').then(function (snap) {
-                var s = snap.val();
-                if (!s || !s.pseudo) {
-                    redirectToLogin();
-                    return;
-                }
-                var age = Date.now() - (s.createdAt || 0);
-                if (age > SESSION_MAX_AGE) {
-                    db.ref('sessions/' + token).remove().catch(function () {});
-                    redirectToLogin();
-                    return;
-                }
-                document.getElementById('appContainer').style.display = 'block';
-                loadMinecraftVersions();
-                loadFromFirebase();
-            }).catch(function () {
-                redirectToLogin();
-            });
-        })();
+        }
 
-        // Caches synchronisés avec Firebase Realtime Database
+        function writeStoredArray(key, value) {
+            localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
+        }
+
+        // Caches synchronisés avec le stockage local du navigateur
         let agentsCache = [];
         let commissionsCache = [];
         let expensesCache = [];
@@ -1159,39 +1125,14 @@
             if (typeof refreshAnalyst === 'function') refreshAnalyst();
         }
 
-        function loadFromFirebase(retryCount) {
-            retryCount = retryCount || 0;
-            Promise.all([
-                db.ref('agents').once('value'),
-                db.ref('commissions').once('value'),
-                db.ref('analystExpenses').once('value')
-            ]).then(function (results) {
-                agentsCache = results[0].val() || [];
-                commissionsCache = results[1].val() || [];
-                expensesCache = results[2].val() || [];
-                // Migration : si la DB est vide et qu'il y a des données en localStorage
-                if (agentsCache.length === 0 && commissionsCache.length === 0 && expensesCache.length === 0) {
-                    var localAgents = localStorage.getItem('agents');
-                    var localCommissions = localStorage.getItem('commissions');
-                    var localExpenses = localStorage.getItem('analystExpenses');
-                    if (localAgents) { agentsCache = JSON.parse(localAgents); db.ref('agents').set(agentsCache); }
-                    if (localCommissions) { commissionsCache = JSON.parse(localCommissions); db.ref('commissions').set(commissionsCache); }
-                    if (localExpenses) { expensesCache = JSON.parse(localExpenses); db.ref('analystExpenses').set(expensesCache); }
-                }
-                refreshUIAfterLoad();
-            }).catch(function (err) {
-                var isPermissionDenied = (err && (err.code === 'PERMISSION_DENIED' || (err.message && err.message.indexOf('permission_denied') !== -1)));
-                if (isPermissionDenied && retryCount < 1) {
-                    setTimeout(function () { loadFromFirebase(1); }, 800);
-                    return;
-                }
-                console.error('Erreur chargement Firebase (vérifiez les règles Realtime Database):', err);
-                agentsCache = (localStorage.getItem('agents') && JSON.parse(localStorage.getItem('agents'))) || [];
-                commissionsCache = (localStorage.getItem('commissions') && JSON.parse(localStorage.getItem('commissions'))) || [];
-                expensesCache = (localStorage.getItem('analystExpenses') && JSON.parse(localStorage.getItem('analystExpenses'))) || [];
-                refreshUIAfterLoad();
-            });
+        function loadStoredData() {
+            agentsCache = readStoredArray(STORAGE_KEYS.agents);
+            commissionsCache = readStoredArray(STORAGE_KEYS.commissions);
+            expensesCache = readStoredArray(STORAGE_KEYS.expenses);
+            refreshUIAfterLoad();
         }
+
+        loadStoredData();
 
         // Gestion des onglets
         function showTab(tabName, element) {
@@ -1220,14 +1161,14 @@
             }
         }
         
-        // Lecture / écriture (Firebase Realtime Database + cache)
+        // Lecture / écriture (stockage local + cache)
         function getAgents() {
             return agentsCache;
         }
         
         function saveAgents(agents) {
             agentsCache = agents;
-            db.ref('agents').set(agents);
+            writeStoredArray(STORAGE_KEYS.agents, agents);
         }
         
         function getCommissions() {
@@ -1236,7 +1177,7 @@
         
         function saveCommissions(commissions) {
             commissionsCache = commissions;
-            db.ref('commissions').set(commissions);
+            writeStoredArray(STORAGE_KEYS.commissions, commissions);
         }
         
         function getExpenses() {
@@ -1245,7 +1186,7 @@
         
         function saveExpenses(expenses) {
             expensesCache = expenses;
-            db.ref('analystExpenses').set(expenses);
+            writeStoredArray(STORAGE_KEYS.expenses, expenses);
         }
         
         function addExpense() {
@@ -2741,9 +2682,6 @@ Version : ${version}`;
                     agentsCache = [];
                     commissionsCache = [];
                     expensesCache = [];
-                    db.ref('agents').set([]);
-                    db.ref('commissions').set([]);
-                    db.ref('analystExpenses').set([]);
                     localStorage.removeItem('agents');
                     localStorage.removeItem('commissions');
                     localStorage.removeItem('analystExpenses');
@@ -2829,7 +2767,8 @@ Version : ${version}`;
             }
         });
         
-        // Initialisation : appelée après vérification du session token (voir verifySession ci-dessus)
+        // Initialisation (données chargées après connexion Google dans showApp)
+        loadMinecraftVersions();
         
         setTimeout(function() {
             const commissionInput = document.getElementById('commissionPercent');
