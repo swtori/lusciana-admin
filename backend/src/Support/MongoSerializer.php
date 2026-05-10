@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
 use MongoDB\Model\BSONArray;
 use MongoDB\Model\BSONDocument;
 
@@ -14,6 +15,10 @@ final class MongoSerializer
     {
         if ($value instanceof ObjectId) {
             return (string) $value;
+        }
+
+        if ($value instanceof UTCDateTime) {
+            return $value->toDateTime()->format(\DateTimeInterface::ATOM);
         }
 
         if ($value instanceof BSONDocument || $value instanceof BSONArray) {

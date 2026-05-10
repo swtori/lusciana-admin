@@ -24,7 +24,7 @@ final class ExpensesController
 
     public function list(Request $request, array $params): JsonResponse
     {
-        $this->auth->requireRole($request, Roles::MANAGER);
+        $this->auth->authenticate($request);
 
         return new JsonResponse([
             'items' => array_map(
@@ -74,7 +74,7 @@ final class ExpensesController
 
     public function delete(Request $request, array $params): JsonResponse
     {
-        $this->auth->requireRole($request, Roles::ADMIN);
+        $this->auth->requireRole($request, Roles::MANAGER);
 
         if (!$this->expenses->delete($params['id'])) {
             throw new HttpException('Depense introuvable', 404);

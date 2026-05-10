@@ -144,7 +144,7 @@ final class CommissionsController
 
     public function delete(Request $request, array $params): JsonResponse
     {
-        $this->auth->requireRole($request, Roles::ADMIN);
+        $this->auth->requireRole($request, Roles::MANAGER);
 
         if (!$this->commissions->delete($params['id'])) {
             throw new HttpException('Commission introuvable', 404);

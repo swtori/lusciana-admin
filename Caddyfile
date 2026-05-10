@@ -1,0 +1,13 @@
+admin.lusciana.fr {
+    encode zstd gzip
+
+    handle /api/* {
+        reverse_proxy lusciana-api:4000
+    }
+
+    handle {
+        root * /usr/share/caddy
+        try_files {path} /index.html
+        file_server
+    }
+}

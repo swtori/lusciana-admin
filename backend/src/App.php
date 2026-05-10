@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App;
 
 use App\Controllers\AgentsController;
+use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\CommissionsController;
 use App\Controllers\ExpensesController;
 use App\Controllers\HealthController;
+use App\Controllers\TodosController;
 use App\Controllers\UsersController;
 use App\Exceptions\HttpException;
 use App\Http\JsonResponse;
@@ -18,6 +20,7 @@ use App\Repositories\AgentRepository;
 use App\Repositories\CommissionRepository;
 use App\Repositories\ExpenseRepository;
 use App\Repositories\RefreshTokenRepository;
+use App\Repositories\TodoRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
 use App\Services\JwtService;
@@ -73,6 +76,7 @@ final class App
         $agentRepository = new AgentRepository($this->database);
         $commissionRepository = new CommissionRepository($this->database);
         $expenseRepository = new ExpenseRepository($this->database);
+        $todoRepository = new TodoRepository($this->database);
 
         $jwt = new JwtService($this->config);
         $auth = new AuthService($this->config, $userRepository, $refreshTokenRepository, $jwt);
@@ -80,10 +84,12 @@ final class App
 
         $health = new HealthController();
         $authController = new AuthController($auth);
-        $users = new UsersController($userRepository, $auth);
-        $agents = new AgentsController($agentRepository, $auth);
+        $account = new AccountController($agentRepository, $userRepository, $auth);
+        $users = new UsersController($userRepository, $agentRepository, $auth);
+        $agents = new AgentsController($agentRepository, $userRepository, $auth);
         $commissions = new CommissionsController($commissionRepository, $agentRepository, $auth);
         $expenses = new ExpensesController($expenseRepository, $auth);
+        $todos = new TodosController($todoRepository, $auth);
 
         $this->router->add('GET', '/api/health', $health);
 
@@ -92,6 +98,8 @@ final class App
         $this->router->add('POST', '/api/auth/refresh', [$authController, 'refresh']);
         $this->router->add('POST', '/api/auth/logout', [$authController, 'logout']);
         $this->router->add('POST', '/api/auth/change-password', [$authController, 'changePassword']);
+        $this->router->add('GET', '/api/account', [$account, 'show']);
+        $this->router->add('PATCH', '/api/account', [$account, 'update']);
 
         $this->router->add('GET', '/api/users', [$users, 'list']);
         $this->router->add('POST', '/api/users', [$users, 'create']);
@@ -113,5 +121,10 @@ final class App
         $this->router->add('POST', '/api/expenses', [$expenses, 'create']);
         $this->router->add('PATCH', '/api/expenses/:id', [$expenses, 'update']);
         $this->router->add('DELETE', '/api/expenses/:id', [$expenses, 'delete']);
+
+        $this->router->add('GET', '/api/todos', [$todos, 'list']);
+        $this->router->add('POST', '/api/todos', [$todos, 'create']);
+        $this->router->add('PATCH', '/api/todos/:id', [$todos, 'update']);
+        $this->router->add('DELETE', '/api/todos/:id', [$todos, 'delete']);
     }
 }

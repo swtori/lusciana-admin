@@ -1,11 +1,4 @@
-{
-    frankenphp
-    auto_https off
-}
-
 :4000 {
     root * /app/public
-    encode zstd gzip
     php_server
-    file_server
 }

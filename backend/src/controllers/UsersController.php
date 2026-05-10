@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Exceptions\HttpException;
 use App\Http\JsonResponse;
 use App\Http\Request;
+use App\Repositories\AgentRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
 use App\Support\MongoSerializer;
@@ -18,6 +19,7 @@ final class UsersController
 {
     public function __construct(
         private readonly UserRepository $users,
+        private readonly AgentRepository $agents,
         private readonly AuthService $auth
     ) {
     }
@@ -39,26 +41,34 @@ final class UsersController
         $actor = $this->auth->requireRole($request, Roles::ADMIN);
 
         Validator::requireFields($request->body, ['name', 'email', 'password', 'role']);
-        Validator::ensureEmail((string) $request->body['email']);
         Validator::ensureInArray((string) $request->body['role'], Roles::all(), 'role');
 
-        if ($request->body['role'] === Roles::SUPERADMIN && $actor['role'] !== Roles::SUPERADMIN) {
+        $role = (string) $request->body['role'];
+
+        if ($role === Roles::SUPERADMIN && $actor['role'] !== Roles::SUPERADMIN) {
             throw new HttpException('Seul un superadmin peut creer un superadmin', 403);
         }
 
-        if ($this->users->findByEmail((string) $request->body['email']) !== null) {
+        $accountData = $this->buildAccountData($request->body, $role);
+
+        if ($this->users->findByEmail($accountData['email']) !== null) {
             throw new HttpException('Cet email existe deja', 409);
+        }
+
+        if ($accountData['agentId'] !== null && $this->users->findByAgentId($accountData['agentId']) !== null) {
+            throw new HttpException('Cet agent possede deja un compte', 409);
         }
 
         $now = new UTCDateTime();
         $id = $this->users->insert([
-            'name' => (string) $request->body['name'],
-            'email' => strtolower((string) $request->body['email']),
+            'name' => $accountData['name'],
+            'email' => $accountData['email'],
             'passwordHash' => password_hash((string) $request->body['password'], PASSWORD_BCRYPT),
-            'role' => (string) $request->body['role'],
+            'role' => $role,
             'isActive' => (bool) ($request->body['isActive'] ?? true),
             'tokenVersion' => 0,
-            'assignedAgentIds' => array_values($request->body['assignedAgentIds'] ?? []),
+            'assignedAgentIds' => $accountData['assignedAgentIds'],
+            'agentId' => $accountData['agentId'],
             'lastLoginAt' => null,
             'createdAt' => $now,
             'updatedAt' => $now,
@@ -93,14 +103,28 @@ final class UsersController
             }
         }
 
+        $nextRole = (string) ($request->body['role'] ?? ($normalized['role'] ?? Roles::GUEST));
+        $accountData = $this->buildAccountData($request->body, $nextRole, $normalized);
+
         $payload = [];
 
-        foreach (['name', 'email', 'role', 'isActive', 'assignedAgentIds'] as $field) {
+        foreach (['role', 'isActive'] as $field) {
             if (array_key_exists($field, $request->body)) {
-                $payload[$field] = $field === 'email'
-                    ? strtolower((string) $request->body[$field])
-                    : $request->body[$field];
+                $payload[$field] = $request->body[$field];
             }
+        }
+
+        $payload['name'] = $accountData['name'];
+        $payload['email'] = $accountData['email'];
+        $payload['assignedAgentIds'] = $accountData['assignedAgentIds'];
+        $payload['agentId'] = $accountData['agentId'];
+
+        $existingLinkedUser = $accountData['agentId'] !== null
+            ? $this->users->findByAgentId($accountData['agentId'])
+            : null;
+
+        if ($existingLinkedUser !== null && (string) ($existingLinkedUser['_id'] ?? '') !== (string) ($user['_id'] ?? '')) {
+            throw new HttpException('Cet agent possede deja un compte', 409);
         }
 
         if (!empty($request->body['password'])) {
@@ -123,5 +147,85 @@ final class UsersController
             'message' => 'Utilisateur mis a jour',
             'item' => $this->auth->publicUser($this->users->findById($params['id'])),
         ]);
+    }
+
+    private function buildAccountData(array $body, string $role, ?array $existingUser = null): array
+    {
+        if (in_array($role, [Roles::BUILDER, Roles::MANAGER], true)) {
+            $agentId = $this->resolveAgentId($body, $existingUser);
+            if ($agentId === null) {
+                throw new HttpException('Un agent doit etre selectionne pour ce compte', 422);
+            }
+
+            $agent = $this->agents->findById($agentId);
+            if ($agent === null) {
+                throw new HttpException('Agent introuvable', 404);
+            }
+
+            $normalizedAgent = MongoSerializer::normalize($agent);
+            $expectedCategory = $role === Roles::MANAGER ? Roles::AGENT_MANAGER : Roles::AGENT_BUILDER;
+            if (($normalizedAgent['category'] ?? null) !== $expectedCategory) {
+                throw new HttpException('La categorie de l agent ne correspond pas au role du compte', 422);
+            }
+
+            return [
+                'name' => (string) ($normalizedAgent['pseudo'] ?? ''),
+                'email' => $this->buildAgentEmail((string) ($normalizedAgent['pseudo'] ?? '')),
+                'assignedAgentIds' => [(string) ($normalizedAgent['id'] ?? $agentId)],
+                'agentId' => (string) ($normalizedAgent['id'] ?? $agentId),
+            ];
+        }
+
+        $email = strtolower((string) ($body['email'] ?? ($existingUser['email'] ?? '')));
+        Validator::ensureEmail($email);
+
+        return [
+            'name' => (string) ($body['name'] ?? ($existingUser['name'] ?? '')),
+            'email' => $email,
+            'assignedAgentIds' => array_values($body['assignedAgentIds'] ?? ($existingUser['assignedAgentIds'] ?? [])),
+            'agentId' => null,
+        ];
+    }
+
+    private function resolveAgentId(array $body, ?array $existingUser = null): ?string
+    {
+        if (!empty($body['agentId'])) {
+            return (string) $body['agentId'];
+        }
+
+        $assignedAgentIds = array_values(array_filter(
+            array_map('strval', $body['assignedAgentIds'] ?? []),
+            static fn (string $value): bool => $value !== ''
+        ));
+        if (count($assignedAgentIds) === 1) {
+            return $assignedAgentIds[0];
+        }
+
+        if (!empty($existingUser['agentId'])) {
+            return (string) $existingUser['agentId'];
+        }
+
+        $existingAssignedAgentIds = array_values(array_filter(
+            array_map('strval', $existingUser['assignedAgentIds'] ?? []),
+            static fn (string $value): bool => $value !== ''
+        ));
+
+        return count($existingAssignedAgentIds) === 1 ? $existingAssignedAgentIds[0] : null;
+    }
+
+    private function buildAgentEmail(string $pseudo): string
+    {
+        $localPart = strtolower(trim($pseudo));
+        $localPart = preg_replace('/[^a-z0-9._-]+/i', '.', $localPart) ?? '';
+        $localPart = trim($localPart, '.');
+
+        if ($localPart === '') {
+            throw new HttpException('Le pseudo ne permet pas de generer un email valide', 422);
+        }
+
+        $email = $localPart . '@lusciana.fr';
+        Validator::ensureEmail($email);
+
+        return $email;
     }
 }

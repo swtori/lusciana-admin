@@ -29,6 +29,12 @@ final class UserRepository
         return $user ? (array) $user : null;
     }
 
+    public function findByAgentId(string $agentId): ?array
+    {
+        $user = $this->collection->findOne(['agentId' => $agentId]);
+        return $user ? (array) $user : null;
+    }
+
     public function findAll(): array
     {
         return $this->collection->find([], ['sort' => ['createdAt' => -1]])->toArray();
@@ -48,5 +54,11 @@ final class UserRepository
         );
 
         return $result->getMatchedCount() > 0;
+    }
+
+    public function deleteByAgentId(string $agentId): bool
+    {
+        $result = $this->collection->deleteOne(['agentId' => $agentId]);
+        return $result->getDeletedCount() > 0;
     }
 }
