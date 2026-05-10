@@ -23,6 +23,7 @@ use App\Repositories\RefreshTokenRepository;
 use App\Repositories\TodoRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
+use App\Services\HistoricalImportService;
 use App\Services\JwtService;
 use MongoDB\Database;
 
@@ -80,6 +81,8 @@ final class App
 
         $jwt = new JwtService($this->config);
         $auth = new AuthService($this->config, $userRepository, $refreshTokenRepository, $jwt);
+        $historicalImport = new HistoricalImportService($this->database, dirname(__DIR__));
+        $historicalImport->importIfAvailable();
         $auth->ensureSuperadmin();
 
         $health = new HealthController();

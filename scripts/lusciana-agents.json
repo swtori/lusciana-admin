@@ -1,0 +1,982 @@
+[
+  {
+    "pseudo": "Aleek",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Antoine",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Archibald",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Ced",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Coraline",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Goose",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Jidnesh",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Loper",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Mathis",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Pastry",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Roméo",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Rxverse",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Vorloks",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Yaagats",
+    "category": "builder",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "associate"
+    }
+  },
+  {
+    "pseudo": "Alkazia",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Aly",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Atsuki",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "AxDev",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Dawn",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "DeuxBr",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Dina",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "FilsOurs",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Florian",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Fulzer",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Hesty",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Hichibo",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Hugoxpvp",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Itoka",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Jack",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "JB",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "JusteMoi",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Kamdin",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Kellogs",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Konei",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "MagikViruz",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Maxime",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Muk",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "nuqm",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "o700iq",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Pourtoutix",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Sayame",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Scale",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Shawzer",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Shinlass",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Skye",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "StaSolaire",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "TryIs",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Ved",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  },
+  {
+    "pseudo": "Zosco",
+    "category": "client",
+    "discord": "",
+    "paymentMethods": [],
+    "pf": "",
+    "commissionRate": 0,
+    "memberSince": "",
+    "isCompany": false,
+    "iban": "",
+    "country": "",
+    "address": "",
+    "companyName": "",
+    "createdAt": "2026-05-10T09:32:39Z",
+    "updatedAt": "2026-05-10T09:32:39Z",
+    "legacyImport": {
+      "source": "Comptabilité Lusciana.xlsx",
+      "role": "client"
+    }
+  }
+]
