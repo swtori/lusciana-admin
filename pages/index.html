@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana - Commissions</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <div>
+                <h1 id="headerTitle">🏗️ Commission Manager</h1>
+                <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
+            </div>
+            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
+                <div class="language-switcher">
+                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
+                    <select id="languageSelect">
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
+                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
+                    <button type="submit">Connexion</button>
+                </form>
+                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
+                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
+                </div>
+                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
+            </div>
+        </div>
+        <div class="tabs">
+            <a id="tabListBtn" class="tab active" href="index.html">Liste des Commissions</a>
+            <a id="tabAgentsBtn" class="tab" href="agents.html">Gérer les Agents</a>
+            <a id="tabUsersBtn" class="tab" href="users.html">Utilisateurs</a>
+            <a id="tabTodosBtn" class="tab" href="todos.html">Todo List</a>
+            <a id="tabAccountBtn" class="tab" href="compte.html">Mon compte</a>
+            <a id="tabAnalystBtn" class="tab" href="analyst.html">Data Analyst</a>
+            <a id="tabDataBtn" class="tab" href="data.html">Gestion des Données</a>
+        </div>
+
+<div id="list-tab" class="tab-content active">
+            <div id="commissionListView">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Liste des Commissions</h2>
+                    <button id="newCommissionButton" type="button" onclick="showCommissionForm()" style="padding: 12px 24px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">➕ Nouvelle commission</button>
+                </div>
+                <div id="commissionList" class="commission-list"></div>
+            </div>
+            <div id="commissionFormView" style="display: none;">
+                <div style="margin-bottom: 16px;">
+                    <button type="button" onclick="showCommissionList()" class="secondary" style="padding: 10px 18px;">← Retour à la liste</button>
+                </div>
+            <form id="commissionForm">
+                <div class="form-section">
+                    <h2>Informations du Build</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buildSize">La taille du build :</label>
+                            <input type="text" id="buildSize" name="buildSize" placeholder="600 ou 600x600" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="buildName">Nom du build :</label>
+                            <input type="text" id="buildName" name="buildName" placeholder="Greek Countryside" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="worldName">Nom du monde :</label>
+                            <input type="text" id="worldName" name="worldName" value="c-" placeholder="c-mon-monde" required pattern="c-.*" title="Doit commencer par c-">
+                            <p style="font-size: 12px; color: #666; margin-top: 4px;">Obligatoire, doit commencer par « c- ».</p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientWants">Description de la demande :</label>
+                        <textarea id="clientWants" name="clientWants" placeholder="Décrire la demande"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="version">Version :</label>
+                        <select id="version" name="version" required>
+                            <option value="">Sélectionner une version</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Répartition du Prix</label>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">Répartition (€) = part totale. % = taxe que l'agent paie. Prix total = somme des répartitions. La taxe pré-remplit avec le taux de l'agent.</p>
+                        <div style="margin-top: 10px;">
+                            <label style="font-size: 14px; margin-bottom: 8px; display: block;">Sélectionner les agents :</label>
+                            <div id="agentSelector" class="agent-selector"></div>
+                        </div>
+                        <div id="priceDistribution" class="price-distribution"></div>
+                        <div style="margin-top: 20px;">
+                            <h3 style="font-size: 1rem; color: #333; margin-bottom: 10px;">Qui a pris combien ?</h3>
+                            <div id="whoTookWhat"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Dates</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buildStart">Début build :</label>
+                            <input type="date" id="buildStart" name="buildStart" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="buildEnd">On a fini le build :</label>
+                            <input type="date" id="buildEnd" name="buildEnd" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Paiement</h2>
+                    <div class="form-group">
+                        <label for="depositPaid">Est-ce que l'acompte est versé ?</label>
+                        <div class="yes-no-buttons">
+                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
+                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
+                        </div>
+                        <input type="hidden" id="depositPaid" name="depositPaid" value="no">
+                    </div>
+                    <div class="form-group">
+                        <label for="depositAmount">Acompte perçu (€)</label>
+                        <input type="number" id="depositAmount" name="depositAmount" step="0.01" min="0" placeholder="Prix total / 2" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Par défaut : prix total / 2. Pour les commissions en cours, seul l'acompte est compté dans le Data Analyst.</p>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Type de Build</h2>
+                    <div class="form-group">
+                        <label>Modification/build de base ?</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="buildType" value="base" required checked>
+                                Build de base
+                            </label>
+                            <label>
+                                <input type="radio" name="buildType" value="modification" required>
+                                Modification
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Organiques ?</label>
+                        <div class="yes-no-buttons">
+                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
+                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
+                        </div>
+                        <input type="hidden" id="organics" name="organics" value="no">
+                    </div>
+                </div>
+                
+                <input type="hidden" id="commissionPercent" name="commissionPercent" value="0">
+                <input type="hidden" id="wentWell" name="wentWell" value="yes">
+                <input type="hidden" id="forCustomer" name="forCustomer" value="yes">
+                <div class="form-section">
+                    <h2>Client</h2>
+                    <div class="form-group">
+                        <label for="clientName">Nom du client :</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                            <select id="clientName" name="clientName" required style="flex: 1; min-width: 200px;">
+                                <option value="">Sélectionner un client</option>
+                            </select>
+                            <button type="button" onclick="toggleNewClientForm()" style="padding: 10px 16px; white-space: nowrap;">➕ Créer un client</button>
+                        </div>
+                        <div id="newClientForm" class="hidden" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e0e0e0;">
+                            <p style="font-weight: 600; margin-bottom: 12px;">Nouveau client</p>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="newClientPseudo">Pseudo (IGN) :</label>
+                                    <input type="text" id="newClientPseudo" placeholder="Pseudo du client">
+                                </div>
+                                <div class="form-group">
+                                    <label for="newClientDiscord">Discord :</label>
+                                    <input type="text" id="newClientDiscord" placeholder="Discord du client">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="button" onclick="addClientFromCommission()">Ajouter le client</button>
+                                <button type="button" class="secondary" onclick="toggleNewClientForm()">Annuler</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientFeedback">Clients ont-ils donné un avis ?</label>
+                        <div class="yes-no-buttons">
+                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
+                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
+                        </div>
+                        <input type="hidden" id="hasFeedback" name="hasFeedback" value="no">
+                    </div>
+                    <div class="form-group hidden" id="feedbackGroup">
+                        <label for="clientFeedbackText">Avis du client :</label>
+                        <textarea id="clientFeedbackText" name="clientFeedbackText" placeholder="Avis du client"></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Render</h2>
+                    <div class="form-group">
+                        <label for="render">Render :</label>
+                        <input type="text" id="render" name="render" placeholder="URL ou chemin du render">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit">💾 Enregistrer la Commission</button>
+                    <button type="button" class="secondary" onclick="resetForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+</body>
+</html>

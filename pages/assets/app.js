@@ -1,1934 +1,4 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lusciana - Commission Manager</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 30px;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            text-align: center;
-            font-size: 28px;
-        }
-        
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #e0e0e0;
-        }
-        
-        .tab {
-            padding: 12px 24px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            color: #666;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-        }
-        
-        .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-        }
-        
-        .tab:hover {
-            color: #667eea;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .form-section {
-            margin-bottom: 30px;
-        }
-        
-        .form-section h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 20px;
-            border-left: 4px solid #667eea;
-            padding-left: 15px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-        }
-        
-        input[type="text"],
-        input[type="number"],
-        input[type="date"],
-        input[type="email"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        
-        input:focus,
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .checkbox-group {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
-        }
-        
-        .radio-group {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-        
-        .radio-group label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 0;
-            cursor: pointer;
-        }
-        
-        .radio-group input[type="radio"] {
-            width: auto;
-        }
-        
-        .agent-selector {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-        
-        .agent-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .agent-checkbox:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
-        }
-        
-        .agent-checkbox input[type="checkbox"] {
-            width: auto;
-        }
-        
-        .agent-checkbox.selected {
-            border-color: #667eea;
-            background: #f0f4ff;
-        }
-        
-        .price-distribution {
-            margin-top: 15px;
-        }
-        
-        .price-item {
-            margin-bottom: 15px;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            background: #f8f9fa;
-        }
-        
-        .price-item label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .price-item .percent-display {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            font-size: 14px;
-        }
-        
-        .price-item .percent-display span {
-            font-weight: 600;
-            color: #667eea;
-        }
-        
-        .master-slider-container {
-            padding: 20px;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            background: white;
-            margin-bottom: 20px;
-        }
-        
-        .master-slider-container label {
-            display: block;
-            margin-bottom: 15px;
-            font-weight: 600;
-            color: #333;
-            font-size: 16px;
-        }
-        
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .slider-container input[type="range"] {
-            flex: 1;
-            height: 10px;
-            border-radius: 5px;
-            background: linear-gradient(to right, #e0e0e0 0%, #667eea 100%);
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        
-        .slider-container input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #667eea;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
-        }
-        
-        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
-            background: #764ba2;
-            transform: scale(1.15);
-            box-shadow: 0 3px 8px rgba(102, 126, 234, 0.6);
-        }
-        
-        .slider-container input[type="range"]::-moz-range-thumb {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #667eea;
-            cursor: pointer;
-            border: none;
-            transition: all 0.3s;
-            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
-        }
-        
-        .slider-container input[type="range"]::-moz-range-thumb:hover {
-            background: #764ba2;
-            transform: scale(1.15);
-            box-shadow: 0 3px 8px rgba(102, 126, 234, 0.6);
-        }
-        
-        .slider-value {
-            min-width: 60px;
-            text-align: center;
-            font-weight: 600;
-            color: #667eea;
-            font-size: 18px;
-        }
-        
-        .total-percentage {
-            margin-top: 15px;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 600;
-        }
-        
-        .total-percentage.valid {
-            color: #28a745;
-            border: 2px solid #28a745;
-        }
-        
-        .total-percentage.invalid {
-            color: #dc3545;
-            border: 2px solid #dc3545;
-        }
-        
-        .yes-no-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .yes-no-btn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            background: white;
-            color: #333;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .yes-no-btn.yes.active {
-            background: #28a745;
-            color: white;
-            border-color: #28a745;
-        }
-        
-        .yes-no-btn.no.active {
-            background: #dc3545;
-            color: white;
-            border-color: #dc3545;
-        }
-        
-        .yes-no-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        button {
-            padding: 14px 28px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        button.secondary {
-            background: #6c757d;
-        }
-        
-        button.danger {
-            background: #dc3545;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 30px;
-        }
-        
-        .agent-list {
-            margin-top: 20px;
-        }
-
-        .user-list {
-            margin-top: 20px;
-            display: grid;
-            gap: 16px;
-        }
-
-        @media (min-width: 900px) {
-            .user-list {
-                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            }
-        }
-
-        .user-card {
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 20px;
-            background: #f8f9fa;
-        }
-
-        .user-card h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .user-card p {
-            margin-bottom: 8px;
-            color: #555;
-            font-size: 14px;
-        }
-
-        .user-assignment-list {
-            margin-top: 10px;
-            padding-left: 18px;
-            color: #555;
-            font-size: 14px;
-        }
-
-        .user-assignment-list li {
-            margin-bottom: 4px;
-        }
-
-        .todo-board {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            gap: 12px;
-            align-items: start;
-        }
-
-        .todo-board.readonly-layout {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .todo-board > .form-section {
-            margin-bottom: 0;
-        }
-
-        .todo-form-panel,
-        .todo-panel {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            padding: 14px 16px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-        }
-
-        .todo-form-panel {
-            position: static;
-        }
-
-        .todo-form-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 0;
-            flex-wrap: wrap;
-        }
-
-        .todo-form-header h2 {
-            margin-bottom: 0;
-            font-size: 18px;
-        }
-
-        .todo-form-toggle {
-            white-space: nowrap;
-            padding: 9px 14px;
-            font-size: 13px;
-        }
-
-        .todo-form-summary {
-            margin-top: 8px;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-
-        .todo-form-content {
-            margin-top: 14px;
-        }
-
-        .todo-form-fields {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px 14px;
-            align-items: end;
-        }
-
-        .todo-form-fields .form-group,
-        .todo-form-fields .form-row {
-            margin-bottom: 0;
-        }
-
-        .todo-form-fields .form-row {
-            display: contents;
-        }
-
-        .todo-form-fields .form-group.todo-description-group {
-            grid-column: 1 / -1;
-        }
-
-        .todo-form-fields label {
-            margin-bottom: 6px;
-            font-size: 13px;
-        }
-
-        .todo-form-fields input[type="text"],
-        .todo-form-fields input[type="date"],
-        .todo-form-fields textarea,
-        .todo-form-fields select {
-            padding: 10px 12px;
-            font-size: 13px;
-        }
-
-        .todo-form-fields textarea {
-            min-height: 64px;
-        }
-
-        .todo-form-actions {
-            margin-top: 14px;
-        }
-
-        .todo-form-actions button {
-            padding: 10px 14px;
-            font-size: 13px;
-        }
-
-        .todo-form-panel.is-collapsed .todo-form-content {
-            display: none;
-        }
-
-        .todo-form-panel.is-collapsed {
-            display: grid;
-            grid-template-columns: auto minmax(0, 1fr) auto;
-            align-items: center;
-            gap: 8px 14px;
-        }
-
-        .todo-form-panel.is-collapsed .todo-form-header {
-            display: contents;
-        }
-
-        .todo-form-panel.is-collapsed .todo-form-header h2 {
-            grid-column: 1;
-        }
-
-        .todo-form-panel.is-collapsed .todo-form-summary {
-            grid-column: 2;
-            margin: 0;
-            font-size: 12px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .todo-form-panel.is-collapsed .todo-form-toggle {
-            grid-column: 3;
-        }
-
-        .todo-form-panel.is-collapsed .todo-form-summary {
-            display: block;
-        }
-
-        .todo-form-panel:not(.is-collapsed) .todo-form-summary {
-            display: none;
-        }
-
-        .todo-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .todo-panel-header > div {
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .todo-panel-header h2 {
-            margin-bottom: 0;
-        }
-
-        .todo-panel-subtitle {
-            color: #64748b;
-            margin: 0;
-            max-width: none;
-            font-size: 12px;
-        }
-
-        .todo-clear-filters-btn {
-            white-space: nowrap;
-            padding: 9px 14px;
-            font-size: 13px;
-        }
-
-        .todo-summary {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin: 10px 0 10px;
-        }
-
-        .todo-summary-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 999px;
-            padding: 8px 12px;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .todo-summary-value {
-            display: inline-block;
-            font-size: 16px;
-            font-weight: 700;
-            line-height: 1;
-            color: #0f172a;
-        }
-
-        .todo-summary-label {
-            display: inline-block;
-            margin-top: 0;
-            color: #64748b;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .todo-summary-card.overdue .todo-summary-value {
-            color: #b91c1c;
-        }
-
-        .todo-toolbar {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 8px 10px;
-            padding: 10px;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            background: #f8fafc;
-        }
-
-        .todo-toolbar .form-group {
-            margin-bottom: 0;
-        }
-
-        .todo-toolbar label {
-            margin-bottom: 5px;
-            font-size: 12px;
-        }
-
-        .todo-toolbar input[type="text"],
-        .todo-toolbar select {
-            padding: 9px 11px;
-            font-size: 13px;
-        }
-
-        .todo-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-height: 34px;
-            margin-top: 16px;
-            color: #334155;
-            font-weight: 500;
-            font-size: 13px;
-        }
-
-        .todo-toggle input[type="checkbox"] {
-            width: auto;
-            accent-color: #667eea;
-        }
-
-        .todo-results-meta {
-            margin: 8px 2px 10px;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .todo-list {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 16px;
-            align-items: start;
-            min-width: 0;
-        }
-
-        .todo-column {
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            background: #f8fafc;
-            padding: 16px;
-            min-width: 0;
-        }
-
-        .todo-column-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 14px;
-        }
-
-        .todo-column-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
-        }
-
-        .todo-column-indicator {
-            width: 10px;
-            height: 10px;
-            border-radius: 999px;
-            flex-shrink: 0;
-        }
-
-        .todo-column.todo .todo-column-indicator {
-            background: #94a3b8;
-        }
-
-        .todo-column.in_progress .todo-column-indicator {
-            background: #f59e0b;
-        }
-
-        .todo-column.done .todo-column-indicator {
-            background: #10b981;
-        }
-
-        .todo-column h3 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 16px;
-        }
-
-        .todo-column-count {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 30px;
-            height: 30px;
-            padding: 0 10px;
-            border-radius: 999px;
-            background: #e2e8f0;
-            color: #334155;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .todo-column-body {
-            display: grid;
-            gap: 12px;
-            min-width: 0;
-        }
-
-        .todo-column-empty {
-            margin: 0;
-            padding: 18px 14px;
-            border: 1px dashed #cbd5e1;
-            border-radius: 12px;
-            color: #64748b;
-            font-size: 13px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.7);
-        }
-
-        .todo-card {
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 16px;
-            background: #fff;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-            min-width: 0;
-            overflow: hidden;
-        }
-
-        .todo-card.todo {
-            border-left-color: #94a3b8;
-        }
-
-        .todo-card.in_progress {
-            border-left-color: #f59e0b;
-        }
-
-        .todo-card.done {
-            border-left-color: #10b981;
-            background: #f8fffb;
-        }
-
-        .todo-card.overdue {
-            box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12), 0 6px 18px rgba(220, 38, 38, 0.08);
-        }
-
-        .todo-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .todo-card-header h3 {
-            margin: 0;
-            color: #1e293b;
-            font-size: 17px;
-            line-height: 1.35;
-        }
-
-        .todo-meta {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .todo-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .todo-badge.todo {
-            background: #e2e8f0;
-            color: #475569;
-        }
-
-        .todo-badge.in_progress {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .todo-badge.done {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .todo-badge.overdue {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-
-        .todo-description {
-            color: #475569;
-            margin-bottom: 14px;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
-
-        .todo-footer {
-            display: grid;
-            gap: 6px;
-            font-size: 13px;
-            color: #64748b;
-            margin-bottom: 14px;
-        }
-
-        .todo-actions {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            align-items: center;
-        }
-
-        .todo-actions select,
-        .todo-actions button {
-            width: 100%;
-            min-width: 0;
-        }
-
-        .todo-actions select {
-            grid-column: 1 / -1;
-        }
-
-        .todo-actions button {
-            padding: 10px 14px;
-            font-size: 13px;
-        }
-
-        .todo-empty {
-            color: #64748b;
-            padding: 24px;
-            text-align: center;
-            border: 1px dashed #cbd5e1;
-            border-radius: 16px;
-            background: #f8fafc;
-        }
-
-        @media (max-width: 1180px) {
-            .todo-form-panel.is-collapsed {
-                grid-template-columns: 1fr;
-            }
-
-            .todo-form-panel.is-collapsed .todo-form-header,
-            .todo-form-panel.is-collapsed .todo-form-summary,
-            .todo-form-panel.is-collapsed .todo-form-toggle {
-                grid-column: auto;
-            }
-
-            .todo-form-panel.is-collapsed .todo-form-summary {
-                white-space: normal;
-                overflow: visible;
-                text-overflow: initial;
-            }
-
-            .todo-panel-header > div {
-                display: block;
-            }
-
-            .todo-form-fields {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .todo-toolbar {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .todo-list {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .todo-form-fields,
-            .todo-toolbar {
-                grid-template-columns: 1fr;
-            }
-
-            .todo-panel-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .todo-clear-filters-btn {
-                width: 100%;
-            }
-
-            .todo-actions {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .agent-list-section {
-            margin-bottom: 32px;
-        }
-        
-        .agent-list-section:last-child {
-            margin-bottom: 0;
-        }
-        
-        .agent-list-section h3 {
-            font-size: 1.1rem;
-            color: #475569;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #e2e8f0;
-        }
-        
-        .agent-list-section .agent-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
-        }
-        
-        .agent-card {
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 20px;
-            background: #f8f9fa;
-        }
-        
-        .agent-card h3 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-        
-        .agent-card p {
-            margin-bottom: 8px;
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .agent-card .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-        
-        .badge.manager {
-            background: #667eea;
-            color: white;
-        }
-        
-        .badge.builder {
-            background: #28a745;
-            color: white;
-        }
-        
-        .badge.client {
-            background: #ffc107;
-            color: #333;
-        }
-        
-        .commission-list {
-            display: grid;
-            gap: 24px;
-            margin-top: 24px;
-        }
-        
-        @media (min-width: 900px) {
-            .commission-list {
-                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            }
-        }
-        
-        .commission-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 0;
-            background: #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            overflow: hidden;
-            transition: box-shadow 0.2s, transform 0.2s;
-        }
-        
-        .commission-card:hover {
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-        }
-        
-        .commission-card-header {
-            padding: 18px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .commission-card-header h3 {
-            margin: 0;
-            font-size: 1.15rem;
-            font-weight: 600;
-            letter-spacing: 0.02em;
-        }
-        
-        .commission-card-price {
-            font-size: 1.25rem;
-            font-weight: 700;
-            background: rgba(255,255,255,0.25);
-            padding: 6px 12px;
-            border-radius: 8px;
-        }
-        
-        .commission-card-body {
-            padding: 18px 20px;
-        }
-        
-        .commission-card .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px 20px;
-            font-size: 13px;
-        }
-        
-        .commission-card .info-row {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            margin-bottom: 0;
-        }
-        
-        .commission-card .info-label {
-            font-weight: 600;
-            color: #64748b;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-        
-        .commission-card .info-value {
-            color: #1e293b;
-            font-size: 14px;
-        }
-        
-        .commission-card-status {
-            display: inline-block;
-            margin-top: 12px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .commission-card-status.ok {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .commission-card-status.ko {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .commission-card.finished {
-            border-left: 4px solid #10b981;
-        }
-        .commission-card.in-progress {
-            border-left: 4px solid #f59e0b;
-        }
-        .commission-card-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-        .commission-card-badge.finished {
-            background: #dcfce7;
-            color: #166534;
-        }
-        .commission-card-badge.in-progress {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        
-        .commission-card-actions {
-            margin-top: 18px;
-            padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .commission-card-actions button {
-            flex: 1;
-            min-width: 100px;
-            padding: 10px 14px;
-            font-size: 13px;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: opacity 0.2s;
-        }
-        
-        .commission-card-actions button:hover {
-            opacity: 0.9;
-        }
-        
-        .commission-card-actions button:first-of-type {
-            background: #e0e7ff;
-            color: #3730a3;
-            border: none;
-        }
-        
-        .commission-card-actions button:nth-of-type(2) {
-            background: #667eea;
-            color: #fff;
-            border: none;
-        }
-        
-        .commission-card-actions button.danger {
-            background: #fef2f2;
-            color: #b91c1c;
-            border: 1px solid #fecaca;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .alert.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .alert.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .payment-method-item {
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: #f8f9fa;
-        }
-        
-        .payment-method-item .form-row {
-            margin-bottom: 10px;
-        }
-        
-        .payment-method-item .remove-payment {
-            margin-top: 10px;
-            padding: 8px 16px;
-            font-size: 14px;
-        }
-        
-        .analyst-kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 32px;
-        }
-        .analyst-kpi-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        .analyst-kpi-card.outflow { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
-        .analyst-kpi-card.team { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-        .analyst-kpi-card.lusciana { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
-        .analyst-kpi-card h4 { font-size: 12px; opacity: 0.9; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .analyst-kpi-card .value { font-size: 28px; font-weight: 700; }
-        .analyst-section { margin-bottom: 32px; }
-        .analyst-section h3 { margin-bottom: 16px; color: #333; font-size: 1.1rem; }
-        .analyst-chart-wrap { position: relative; height: 280px; max-width: 100%; }
-        .analyst-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .analyst-table th, .analyst-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        .analyst-table th { background: #f8fafc; color: #475569; font-weight: 600; }
-        .analyst-table tr:hover { background: #f8fafc; }
-        .transaction-amount.positive { color: #059669; font-weight: 600; }
-        .transaction-amount.negative { color: #dc2626; font-weight: 600; }
-        .transaction-type-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-        .transaction-type-badge.commission { background: #dbeafe; color: #1e40af; }
-        .transaction-type-badge.expense { background: #fee2e2; color: #991b1b; }
-        .transaction-type-badge.builder { background: #dcfce7; color: #166534; }
-        .transaction-type-badge.manager { background: #e0e7ff; color: #3730a3; }
-        #appContainer { display: block; }
-        .header-auth { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-        .header-auth h1 { margin: 0; }
-        .header-subtitle { margin-top: 6px; color: #666; font-size: 14px; }
-        .language-switcher {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            justify-content: flex-end;
-        }
-        .language-switcher select {
-            min-width: 150px;
-            padding: 10px 12px;
-        }
-    </style>
-</head>
-<body>
-    <div id="appContainer" class="container">
-        <div class="header-auth">
-            <div>
-                <h1 id="headerTitle">🏗️ Commission Manager</h1>
-                <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
-            </div>
-            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
-                <div class="language-switcher">
-                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
-                    <select id="languageSelect">
-                        <option value="fr">Français</option>
-                        <option value="en">English</option>
-                        <option value="de">Deutsch</option>
-                    </select>
-                </div>
-                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
-                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
-                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
-                    <button type="submit">Connexion</button>
-                </form>
-                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
-                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
-                </div>
-                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
-            </div>
-        </div>
-        <div class="tabs">
-            <button id="tabListBtn" class="tab active" onclick="showTab('list', this)">Liste des Commissions</button>
-            <button id="tabAgentsBtn" class="tab" onclick="showTab('agents', this)">Gérer les Agents</button>
-            <button id="tabUsersBtn" class="tab" onclick="showTab('users', this)">Utilisateurs</button>
-            <button id="tabTodosBtn" class="tab" onclick="showTab('todos', this)">Todo List</button>
-            <button id="tabAccountBtn" class="tab" onclick="showTab('account', this)">Mon compte</button>
-            <button id="tabAnalystBtn" class="tab" onclick="showTab('analyst', this)">Data Analyst</button>
-            <button id="tabDataBtn" class="tab" onclick="showTab('data', this)">Gestion des Données</button>
-        </div>
-        
-        <!-- Onglet Liste des Commissions (liste + formulaire nouvelle commission) -->
-        <div id="list-tab" class="tab-content active">
-            <div id="commissionListView">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
-                    <h2 style="margin: 0;">Liste des Commissions</h2>
-                    <button id="newCommissionButton" type="button" onclick="showCommissionForm()" style="padding: 12px 24px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">➕ Nouvelle commission</button>
-                </div>
-                <div id="commissionList" class="commission-list"></div>
-            </div>
-            <div id="commissionFormView" style="display: none;">
-                <div style="margin-bottom: 16px;">
-                    <button type="button" onclick="showCommissionList()" class="secondary" style="padding: 10px 18px;">← Retour à la liste</button>
-                </div>
-            <form id="commissionForm">
-                <div class="form-section">
-                    <h2>Informations du Build</h2>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="buildSize">La taille du build :</label>
-                            <input type="text" id="buildSize" name="buildSize" placeholder="600 ou 600x600" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="buildName">Nom du build :</label>
-                            <input type="text" id="buildName" name="buildName" placeholder="Greek Countryside" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="worldName">Nom du monde :</label>
-                            <input type="text" id="worldName" name="worldName" value="c-" placeholder="c-mon-monde" required pattern="c-.*" title="Doit commencer par c-">
-                            <p style="font-size: 12px; color: #666; margin-top: 4px;">Obligatoire, doit commencer par « c- ».</p>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="clientWants">Description de la demande :</label>
-                        <textarea id="clientWants" name="clientWants" placeholder="Décrire la demande"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="version">Version :</label>
-                        <select id="version" name="version" required>
-                            <option value="">Sélectionner une version</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Répartition du Prix</label>
-                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">Répartition (€) = part totale. % = taxe que l'agent paie. Prix total = somme des répartitions. La taxe pré-remplit avec le taux de l'agent.</p>
-                        <div style="margin-top: 10px;">
-                            <label style="font-size: 14px; margin-bottom: 8px; display: block;">Sélectionner les agents :</label>
-                            <div id="agentSelector" class="agent-selector"></div>
-                        </div>
-                        <div id="priceDistribution" class="price-distribution"></div>
-                        <div style="margin-top: 20px;">
-                            <h3 style="font-size: 1rem; color: #333; margin-bottom: 10px;">Qui a pris combien ?</h3>
-                            <div id="whoTookWhat"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-section">
-                    <h2>Dates</h2>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="buildStart">Début build :</label>
-                            <input type="date" id="buildStart" name="buildStart" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="buildEnd">On a fini le build :</label>
-                            <input type="date" id="buildEnd" name="buildEnd" required>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-section">
-                    <h2>Paiement</h2>
-                    <div class="form-group">
-                        <label for="depositPaid">Est-ce que l'acompte est versé ?</label>
-                        <div class="yes-no-buttons">
-                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
-                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
-                        </div>
-                        <input type="hidden" id="depositPaid" name="depositPaid" value="no">
-                    </div>
-                    <div class="form-group">
-                        <label for="depositAmount">Acompte perçu (€)</label>
-                        <input type="number" id="depositAmount" name="depositAmount" step="0.01" min="0" placeholder="Prix total / 2" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
-                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Par défaut : prix total / 2. Pour les commissions en cours, seul l'acompte est compté dans le Data Analyst.</p>
-                    </div>
-                </div>
-                
-                <div class="form-section">
-                    <h2>Type de Build</h2>
-                    <div class="form-group">
-                        <label>Modification/build de base ?</label>
-                        <div class="radio-group">
-                            <label>
-                                <input type="radio" name="buildType" value="base" required checked>
-                                Build de base
-                            </label>
-                            <label>
-                                <input type="radio" name="buildType" value="modification" required>
-                                Modification
-                            </label>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Organiques ?</label>
-                        <div class="yes-no-buttons">
-                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
-                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
-                        </div>
-                        <input type="hidden" id="organics" name="organics" value="no">
-                    </div>
-                </div>
-                
-                <input type="hidden" id="commissionPercent" name="commissionPercent" value="0">
-                <input type="hidden" id="wentWell" name="wentWell" value="yes">
-                <input type="hidden" id="forCustomer" name="forCustomer" value="yes">
-                <div class="form-section">
-                    <h2>Client</h2>
-                    <div class="form-group">
-                        <label for="clientName">Nom du client :</label>
-                        <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-                            <select id="clientName" name="clientName" required style="flex: 1; min-width: 200px;">
-                                <option value="">Sélectionner un client</option>
-                            </select>
-                            <button type="button" onclick="toggleNewClientForm()" style="padding: 10px 16px; white-space: nowrap;">➕ Créer un client</button>
-                        </div>
-                        <div id="newClientForm" class="hidden" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e0e0e0;">
-                            <p style="font-weight: 600; margin-bottom: 12px;">Nouveau client</p>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="newClientPseudo">Pseudo (IGN) :</label>
-                                    <input type="text" id="newClientPseudo" placeholder="Pseudo du client">
-                                </div>
-                                <div class="form-group">
-                                    <label for="newClientDiscord">Discord :</label>
-                                    <input type="text" id="newClientDiscord" placeholder="Discord du client">
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                <button type="button" onclick="addClientFromCommission()">Ajouter le client</button>
-                                <button type="button" class="secondary" onclick="toggleNewClientForm()">Annuler</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="clientFeedback">Clients ont-ils donné un avis ?</label>
-                        <div class="yes-no-buttons">
-                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
-                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
-                        </div>
-                        <input type="hidden" id="hasFeedback" name="hasFeedback" value="no">
-                    </div>
-                    <div class="form-group hidden" id="feedbackGroup">
-                        <label for="clientFeedbackText">Avis du client :</label>
-                        <textarea id="clientFeedbackText" name="clientFeedbackText" placeholder="Avis du client"></textarea>
-                    </div>
-                </div>
-                
-                <div class="form-section">
-                    <h2>Render</h2>
-                    <div class="form-group">
-                        <label for="render">Render :</label>
-                        <input type="text" id="render" name="render" placeholder="URL ou chemin du render">
-                    </div>
-                </div>
-                
-                <div class="button-group">
-                    <button type="submit">💾 Enregistrer la Commission</button>
-                    <button type="button" class="secondary" onclick="resetForm()">🔄 Réinitialiser</button>
-                </div>
-            </form>
-            </div>
-        </div>
-        
-        <!-- Onglet Agents -->
-        <div id="agents-tab" class="tab-content">
-            <div id="agentFormSection">
-            <h2 id="agentSectionTitle">Ajouter un Agent</h2>
-            <form id="agentForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="agentPseudo">Pseudo (IGN) :</label>
-                        <input type="text" id="agentPseudo" name="agentPseudo" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="agentDiscord">Discord :</label>
-                        <input type="text" id="agentDiscord" name="agentDiscord" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Moyens de paiement :</label>
-                    <div id="paymentMethodsList"></div>
-                    <button type="button" onclick="addPaymentMethod()" style="margin-top: 10px; padding: 10px 20px; font-size: 14px;">➕ Ajouter un moyen de paiement</button>
-                </div>
-                <div class="form-group">
-                    <label for="agentPF">PF (si dispo) :</label>
-                    <input type="text" id="agentPF" name="agentPF" placeholder="Portfolio">
-                </div>
-                <div class="form-group">
-                    <label for="agentCategory">Catégorie :</label>
-                    <select id="agentCategory" name="agentCategory" required>
-                        <option value="">Sélectionner</option>
-                        <option value="manager">Manager</option>
-                        <option value="builder">Builder</option>
-                        <option value="client">Client</option>
-                    </select>
-                </div>
-                <div id="commissionRateFields" class="hidden">
-                    <div class="form-group">
-                        <label for="agentCommissionRate">Taux de commission (%) :</label>
-                        <input type="number" id="agentCommissionRate" name="agentCommissionRate" min="0" max="100" step="0.01" value="15" placeholder="15.00" required>
-                    </div>
-                </div>
-                <div id="memberSinceFields" class="hidden">
-                    <div class="form-group">
-                        <label for="agentMemberSince">Membre depuis :</label>
-                        <input type="date" id="agentMemberSince" name="agentMemberSince">
-                    </div>
-                </div>
-                <div id="clientFields" class="hidden">
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="isCompany" name="isCompany">
-                            Est-ce une entreprise ?
-                        </label>
-                    </div>
-                    <div id="companyFields" class="hidden">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="companyIBAN">IBAN :</label>
-                                <input type="text" id="companyIBAN" name="companyIBAN">
-                            </div>
-                            <div class="form-group">
-                                <label for="companyCountry">Pays :</label>
-                                <input type="text" id="companyCountry" name="companyCountry">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="companyAddress">Adresse :</label>
-                                <input type="text" id="companyAddress" name="companyAddress">
-                            </div>
-                            <div class="form-group">
-                                <label for="companyName">Nom de l'entreprise :</label>
-                                <input type="text" id="companyName" name="companyName">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="button-group">
-                    <button type="submit">➕ Ajouter l'Agent</button>
-                    <button type="button" class="secondary" onclick="resetAgentForm()">🔄 Réinitialiser</button>
-                </div>
-            </form>
-            </div>
-            
-            <h2 style="margin-top: 40px;">Liste des Agents</h2>
-            <div id="agentList" class="agent-list"></div>
-        </div>
-        
-        <!-- Onglet Data Analyst -->
-        <div id="analyst-tab" class="tab-content">
-            <h2>📊 Data Analyst</h2>
-            <p style="color: #64748b; margin-bottom: 24px;">Rentrées, sorties, CA, dépenses et répartition par builder/manager.</p>
-            <div id="analystKpis" class="analyst-kpi-grid"></div>
-            <div class="analyst-section">
-                <h3>Dépenses</h3>
-                <div id="expenseControls" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px;">
-                    <div class="form-group" style="margin-bottom: 0; min-width: 180px;">
-                        <label for="expenseLabel">Libellé</label>
-                        <input type="text" id="expenseLabel" placeholder="ex: Axiom" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
-                        <label for="expenseAmount">Montant</label>
-                        <input type="number" id="expenseAmount" step="0.01" min="0" placeholder="25" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
-                        <label for="expenseCurrency">Devise</label>
-                        <select id="expenseCurrency" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
-                            <option value="EUR">€ EUR</option>
-                            <option value="USD">$ USD</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
-                        <label for="expenseDate">Date</label>
-                        <input type="date" id="expenseDate" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
-                    </div>
-                    <button type="button" onclick="addExpense()" style="padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">➕ Ajouter</button>
-                </div>
-                <div id="analystExpensesList" style="margin-top: 12px;"></div>
-            </div>
-            <div class="analyst-section">
-                <h3>Toutes les transactions</h3>
-                <p style="color: #64748b; font-size: 13px; margin-bottom: 12px;">Entrées et sorties. Tri par type ci-dessous.</p>
-                <div style="margin-bottom: 16px;">
-                    <label for="transactionFilter" style="margin-right: 8px; font-weight: 500;">Filtrer :</label>
-                    <select id="transactionFilter" onchange="renderTransactionsList()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; min-width: 180px;">
-                        <option value="all">Tout</option>
-                        <option value="commission">Commissions (entrées)</option>
-                        <option value="expense">Dépenses</option>
-                        <option value="builder">Builders (paiements)</option>
-                        <option value="manager">Managers (paiements)</option>
-                        <option value="client">Par client</option>
-                    </select>
-                    <select id="transactionFilterClient" class="hidden" onchange="renderTransactionsList()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; min-width: 180px; margin-left: 8px;">
-                        <option value="">-- Client --</option>
-                    </select>
-                </div>
-                <div id="transactionsListWrap" style="overflow-x: auto;"></div>
-            </div>
-            <div class="analyst-section">
-                <h3>Chiffre d'affaires par mois</h3>
-                <div class="analyst-chart-wrap">
-                    <canvas id="analystChartMonthly"></canvas>
-                </div>
-            </div>
-            <div class="analyst-section">
-                <h3>CA par builder / manager</h3>
-                <div class="analyst-chart-wrap">
-                    <canvas id="analystChartByAgent"></canvas>
-                </div>
-            </div>
-            <div class="analyst-section">
-                <h3>Détail par agent (builders & managers)</h3>
-                <div id="analystTableWrap"></div>
-            </div>
-        </div>
-
-        <!-- Onglet Utilisateurs -->
-        <div id="users-tab" class="tab-content">
-            <div id="userFormSection">
-                <h2 id="userSectionTitle">Créer un utilisateur</h2>
-                <form id="userForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="userName">Nom</label>
-                            <input type="text" id="userName" name="userName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="userEmail">Email</label>
-                            <input type="email" id="userEmail" name="userEmail" required autocomplete="off">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="userPassword">Mot de passe</label>
-                            <input type="password" id="userPassword" name="userPassword" required autocomplete="new-password">
-                            <p id="userPasswordHelp" style="font-size: 12px; color: #666; margin-top: 4px;">Obligatoire à la création. En modification, laisse vide pour ne pas le changer.</p>
-                        </div>
-                        <div class="form-group">
-                            <label for="userRole">Rôle</label>
-                            <select id="userRole" name="userRole" required>
-                                <option value="guest">Guest</option>
-                                <option value="builder">Builder</option>
-                                <option value="manager">Manager</option>
-                                <option value="admin">Admin</option>
-                                <option value="superadmin">Superadmin</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="userIsActive">Statut</label>
-                        <select id="userIsActive" name="userIsActive">
-                            <option value="true">Compte actif</option>
-                            <option value="false">Compte désactivé</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Agents assignés</label>
-                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">Utile surtout pour les builders: cela limite les agents et commissions visibles.</p>
-                        <div id="userAgentSelector" class="agent-selector"></div>
-                    </div>
-
-                    <div class="button-group">
-                        <button type="submit">➕ Créer l'utilisateur</button>
-                        <button type="button" class="secondary" onclick="resetUserForm()">🔄 Réinitialiser</button>
-                    </div>
-                </form>
-            </div>
-
-            <h2 style="margin-top: 40px;">Liste des utilisateurs</h2>
-            <div id="userList" class="user-list"></div>
-        </div>
-
-        <div id="todos-tab" class="tab-content">
-            <div class="todo-board">
-                <div id="todoFormSection" class="form-section todo-form-panel is-collapsed">
-                    <div class="todo-form-header">
-                        <h2 id="todoSectionTitle">Créer une tâche</h2>
-                        <button id="todoFormToggle" type="button" class="secondary todo-form-toggle" onclick="toggleTodoForm()">
-                            Afficher le formulaire
-                        </button>
-                    </div>
-                    <p id="todoFormSummary" class="todo-form-summary">Ajoute une tâche si besoin, sinon laisse ce panneau replié pour garder plus de place aux cartes.</p>
-                    <div class="todo-form-content">
-                    <form id="todoForm">
-                        <div class="todo-form-fields">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="todoTitle">Titre</label>
-                                <input type="text" id="todoTitle" name="todoTitle" required placeholder="Ex: Finaliser les paiements de mars">
-                            </div>
-                            <div class="form-group">
-                                <label for="todoStatus">Statut</label>
-                                <select id="todoStatus" name="todoStatus" required>
-                                    <option value="todo">À faire</option>
-                                    <option value="in_progress">En cours</option>
-                                    <option value="done">Terminé</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="todoAssignedTo">Assigné à</label>
-                                <input type="text" id="todoAssignedTo" name="todoAssignedTo" placeholder="Ex: Antoine / Manager / Builder Team">
-                            </div>
-                            <div class="form-group">
-                                <label for="todoDeadline">Deadline</label>
-                                <input type="date" id="todoDeadline" name="todoDeadline">
-                            </div>
-                        </div>
-                        <div class="form-group todo-description-group">
-                            <label for="todoDescription">Description</label>
-                            <textarea id="todoDescription" name="todoDescription" placeholder="Contexte, blocages, prochaine action..."></textarea>
-                        </div>
-                        </div>
-                        <div class="button-group todo-form-actions">
-                            <button type="submit">➕ Ajouter la tâche</button>
-                            <button type="button" class="secondary" onclick="resetTodoForm()">🔄 Réinitialiser</button>
-                        </div>
-                    </form>
-                    </div>
-                </div>
-
-                <div class="form-section todo-panel">
-                    <div class="todo-panel-header">
-                        <div>
-                            <h2 id="todoTeamTitle">Suivi de l’équipe</h2>
-                            <p id="todoTeamSubtitle" class="todo-panel-subtitle">Un espace partagé pour suivre l’avancement, les deadlines et les blocages.</p>
-                        </div>
-                        <button id="todoClearFilters" type="button" class="secondary todo-clear-filters-btn" onclick="resetTodoFilters()">Effacer les filtres</button>
-                    </div>
-                    <div id="todoSummary" class="todo-summary">
-                        <div class="todo-summary-card">
-                            <span id="todoTotalCount" class="todo-summary-value">0</span>
-                            <span id="todoTotalLabel" class="todo-summary-label">Total</span>
-                        </div>
-                        <div class="todo-summary-card">
-                            <span id="todoTodoCount" class="todo-summary-value">0</span>
-                            <span id="todoTodoLabel" class="todo-summary-label">À faire</span>
-                        </div>
-                        <div class="todo-summary-card">
-                            <span id="todoInProgressCount" class="todo-summary-value">0</span>
-                            <span id="todoInProgressLabel" class="todo-summary-label">En cours</span>
-                        </div>
-                        <div class="todo-summary-card">
-                            <span id="todoDoneCount" class="todo-summary-value">0</span>
-                            <span id="todoDoneLabel" class="todo-summary-label">Terminé</span>
-                        </div>
-                        <div class="todo-summary-card overdue">
-                            <span id="todoOverdueCount" class="todo-summary-value">0</span>
-                            <span id="todoOverdueLabel" class="todo-summary-label">En retard</span>
-                        </div>
-                    </div>
-                    <div class="todo-toolbar">
-                        <div class="form-group">
-                            <label id="todoSearchLabel" for="todoSearch">Recherche</label>
-                            <input type="text" id="todoSearch" placeholder="Titre, description, assignation..." oninput="displayTodos()">
-                        </div>
-                        <div class="form-group">
-                            <label id="todoFilterStatusLabel" for="todoFilterStatus">Statut</label>
-                            <select id="todoFilterStatus" onchange="displayTodos()">
-                                <option value="">Tous les statuts</option>
-                                <option value="todo">À faire</option>
-                                <option value="in_progress">En cours</option>
-                                <option value="done">Terminé</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label id="todoFilterAssigneeLabel" for="todoFilterAssignee">Assigné à</label>
-                            <select id="todoFilterAssignee" onchange="displayTodos()">
-                                <option value="">Toutes les assignations</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label id="todoSortLabel" for="todoSort">Tri</label>
-                            <select id="todoSort" onchange="displayTodos()">
-                                <option value="deadline">Deadline proche</option>
-                                <option value="updated">Dernière mise à jour</option>
-                                <option value="created">Création récente</option>
-                            </select>
-                        </div>
-                        <label id="todoFilterOverdueLabel" class="todo-toggle" for="todoFilterOverdue">
-                            <input type="checkbox" id="todoFilterOverdue" onchange="displayTodos()">
-                            <span>Afficher seulement les retards</span>
-                        </label>
-                    </div>
-                    <div id="todoResultsMeta" class="todo-results-meta"></div>
-                    <div id="todoList" class="todo-list"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="account-tab" class="tab-content">
-            <div class="form-section">
-                <h2 id="accountSectionTitle">Mon compte agent</h2>
-                <p id="accountSectionSubtitle" style="color: #64748b; margin-bottom: 20px;">Modifiez ici votre Discord, votre portfolio, vos moyens de paiement et votre mot de passe. Le pseudo reste fixe.</p>
-                <div id="accountEmptyState" class="hidden" style="color: #64748b; padding: 16px 0;"></div>
-                <form id="accountForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="accountPseudo">Pseudo (IGN)</label>
-                            <input type="text" id="accountPseudo" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label for="accountEmail">Email de connexion</label>
-                            <input type="email" id="accountEmail" readonly>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="accountDiscord">Discord</label>
-                            <input type="text" id="accountDiscord">
-                        </div>
-                        <div class="form-group">
-                            <label for="accountPF">Portfolio</label>
-                            <input type="text" id="accountPF">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label id="accountPaymentMethodsLabel">Moyens de paiement</label>
-                        <div id="accountPaymentMethodsList"></div>
-                        <button type="button" id="accountAddPaymentMethodButton" onclick="addAccountPaymentMethod()" style="margin-top: 10px; padding: 10px 20px; font-size: 14px;">➕ Ajouter un moyen de paiement</button>
-                    </div>
-                    <div class="button-group">
-                        <button type="submit" id="accountSaveButton">💾 Enregistrer mes informations</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="form-section">
-                <h2 id="accountPasswordTitle">Changer mon mot de passe</h2>
-                <form id="accountPasswordForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="accountCurrentPassword">Mot de passe actuel</label>
-                            <input type="password" id="accountCurrentPassword" autocomplete="current-password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="accountNewPassword">Nouveau mot de passe</label>
-                            <input type="password" id="accountNewPassword" autocomplete="new-password" required>
-                        </div>
-                    </div>
-                    <div class="button-group">
-                        <button type="submit" id="accountPasswordButton">🔐 Mettre à jour le mot de passe</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <!-- Onglet Gestion des Données -->
-        <div id="data-tab" class="tab-content">
-            <h2>Gestion des Données</h2>
-            
-            <div class="form-section">
-                <h2>📍 Où sont stockées les données ?</h2>
-                <div class="alert info" style="background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <p><strong>Les données sont stockées dans MongoDB via l'API du serveur.</strong></p>
-                    <p style="margin-top: 10px;">Cela signifie que :</p>
-                    <ul style="margin-left: 20px; margin-top: 10px;">
-                        <li>Les données sont centralisées sur le serveur</li>
-                        <li>Elles sont partagées entre les navigateurs et les machines autorisés</li>
-                        <li>Le navigateur ne conserve plus la base métier localement</li>
-                        <li>Les suppressions passent désormais par l'API et la base MongoDB</li>
-                    </ul>
-                    <p style="margin-top: 10px;"><strong>⚠️ Important :</strong> Gardez quand même des exports JSON réguliers pour vos sauvegardes d'urgence.</p>
-                </div>
-                
-                <div class="form-group">
-                    <label>Statistiques :</label>
-                    <div id="dataStats" style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
-                        <p><strong>Agents :</strong> <span id="agentCount">0</span></p>
-                        <p><strong>Commissions :</strong> <span id="commissionCount">0</span></p>
-                        <p><strong>Tâches :</strong> <span id="todoCount">0</span></p>
-                        <p><strong>Stockage :</strong> <span id="storageSize">MongoDB (serveur)</span></p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-section">
-                <h2>💾 Export des Données</h2>
-                <p style="margin-bottom: 15px;">Téléchargez toutes vos données dans un fichier JSON pour les sauvegarder.</p>
-                <div class="button-group">
-                    <button type="button" onclick="exportData()">📥 Exporter toutes les données</button>
-                    <button type="button" class="secondary" onclick="exportAgents()">👥 Exporter uniquement les agents</button>
-                    <button type="button" class="secondary" onclick="exportCommissions()">📋 Exporter uniquement les commissions</button>
-                </div>
-            </div>
-            
-            <div id="dataImportSection" class="form-section">
-                <h2>📤 Import des Données</h2>
-                <p style="margin-bottom: 15px;">Importez des données depuis un fichier JSON précédemment exporté.</p>
-                <div class="form-group">
-                    <label for="importFile">Sélectionner un fichier JSON :</label>
-                    <input type="file" id="importFile" accept=".json" style="margin-top: 10px;">
-                </div>
-                <div class="button-group">
-                    <button id="importDataButton" type="button" onclick="importData()">📤 Importer les données</button>
-                    <button id="clearDataButton" type="button" class="danger" onclick="clearAllData()" style="background: #dc3545;">🗑️ Supprimer toutes les données</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const API_BASE_URL = (() => {
+const API_BASE_URL = (() => {
             const override = new URLSearchParams(window.location.search).get('apiBase');
             if (override) {
                 return override.replace(/\/$/, '');
@@ -2212,9 +282,6 @@
                     resultsLabel: '{visible} sur {total} tâches affichées',
                     noResults: 'Aucune tâche ne correspond aux filtres actuels.',
                     columnEmpty: 'Aucune tâche dans cette colonne.',
-                    formShow: 'Afficher le formulaire',
-                    formHide: 'Masquer le formulaire',
-                    formSummary: 'Ajoute une tâche si besoin, sinon laisse ce panneau replié pour garder plus de place aux cartes.',
                     overdueBadge: 'En retard',
                     updatedAt: 'Maj: {date}',
                     changeStatus: 'Changer le statut',
@@ -2553,9 +620,6 @@
                     resultsLabel: '{visible} of {total} tasks shown',
                     noResults: 'No tasks match the current filters.',
                     columnEmpty: 'No task in this column.',
-                    formShow: 'Show form',
-                    formHide: 'Hide form',
-                    formSummary: 'Create a task when needed, otherwise keep this panel collapsed to leave more room for cards.',
                     overdueBadge: 'Overdue',
                     updatedAt: 'Updated: {date}',
                     changeStatus: 'Change status',
@@ -2894,9 +958,6 @@
                     resultsLabel: '{visible} von {total} Aufgaben angezeigt',
                     noResults: 'Keine Aufgabe passt zu den aktuellen Filtern.',
                     columnEmpty: 'Keine Aufgabe in dieser Spalte.',
-                    formShow: 'Formular anzeigen',
-                    formHide: 'Formular ausblenden',
-                    formSummary: 'Erstelle bei Bedarf eine Aufgabe, sonst lasse dieses Panel eingeklappt, damit mehr Platz für die Karten bleibt.',
                     overdueBadge: 'Überfällig',
                     updatedAt: 'Aktualisiert: {date}',
                     changeStatus: 'Status ändern',
@@ -3193,8 +1254,6 @@
             setText('#userForm button[type="submit"]', editingUserId ? 'users.update' : 'users.create');
 
             setText('#todoSectionTitle', editingTodoId ? 'todos.editTitle' : 'todos.createTitle');
-            setText('#todoFormToggle', document.getElementById('todoFormSection')?.classList.contains('is-collapsed') ? 'todos.formShow' : 'todos.formHide');
-            setText('#todoFormSummary', 'todos.formSummary');
             setText('label[for="todoTitle"]', 'todos.title');
             setPlaceholder('#todoTitle', 'todos.titlePlaceholder');
             setText('label[for="todoStatus"]', 'todos.status');
@@ -3369,6 +1428,11 @@
             const sessionInfo = document.getElementById('sessionInfo');
             const sessionUserLabel = document.getElementById('sessionUserLabel');
             const headerSubtitle = document.getElementById('headerSubtitle');
+
+            if (!loginForm || !sessionInfo || !sessionUserLabel || !headerSubtitle) {
+                applyRolePermissions();
+                return;
+            }
 
             if (accessToken && currentUser) {
                 loginForm.style.display = 'none';
@@ -4139,6 +2203,7 @@
         function loadAgentsIntoSelects() {
             const agents = getAgents();
             const clientNameSelect = document.getElementById('clientName');
+            if (!clientNameSelect) return;
             clientNameSelect.innerHTML = `<option value="">${t('commissions.selectClient')}</option>`;
             agents.forEach(agent => {
                 if (agent.category === 'client') {
@@ -4151,6 +2216,7 @@
         function loadAgentsIntoSelector() {
             const agents = getAgents().filter(a => a.category !== 'client');
             const selector = document.getElementById('agentSelector');
+            if (!selector) return;
             selector.innerHTML = '';
             
             agents.forEach(agent => {
@@ -4372,7 +2438,14 @@
             }
         }
 
-        document.getElementById('userForm').addEventListener('submit', async function(e) {
+        function bindElementEvent(id, eventName, handler) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener(eventName, handler);
+            }
+        }
+
+        bindElementEvent('userForm', 'submit', async function(e) {
             e.preventDefault();
 
             if (!requirePermission(canManageUsers, t('alerts.permissionUsers'))) {
@@ -4430,19 +2503,6 @@
 
         let editingTodoId = null;
 
-        function toggleTodoForm(forceOpen = null) {
-            const panel = document.getElementById('todoFormSection');
-            const toggleButton = document.getElementById('todoFormToggle');
-            if (!panel || !toggleButton) return;
-
-            const shouldOpen = forceOpen === null
-                ? panel.classList.contains('is-collapsed')
-                : Boolean(forceOpen);
-
-            panel.classList.toggle('is-collapsed', !shouldOpen);
-            toggleButton.textContent = shouldOpen ? t('todos.formHide') : t('todos.formShow');
-        }
-
         function resetTodoForm() {
             const form = document.getElementById('todoForm');
             const title = document.getElementById('todoSectionTitle');
@@ -4454,7 +2514,6 @@
             title.textContent = t('todos.createTitle');
             document.getElementById('todoStatus').value = 'todo';
             submitBtn.textContent = t('todos.add');
-            toggleTodoForm(false);
         }
 
         function resetTodoFilters() {
@@ -4743,7 +2802,6 @@
             document.getElementById('todoDeadline').value = todo.deadline || '';
             document.getElementById('todoAssignedTo').value = todo.assignedTo || '';
             document.getElementById('todoSectionTitle').textContent = t('todos.editTitle');
-            toggleTodoForm(true);
 
             const submitBtn = document.querySelector('#todoForm button[type="submit"]');
             if (submitBtn) {
@@ -4799,7 +2857,7 @@
             }
         }
 
-        document.getElementById('todoForm').addEventListener('submit', async function(e) {
+        bindElementEvent('todoForm', 'submit', async function(e) {
             e.preventDefault();
 
             if (!requirePermission(canManageTodos, t('alerts.permissionTodos'))) {
@@ -4845,7 +2903,7 @@
             }
         });
         
-        document.getElementById('agentForm').addEventListener('submit', async function(e) {
+        bindElementEvent('agentForm', 'submit', async function(e) {
             e.preventDefault();
 
             if (!requirePermission(canManageOperationalData, 'Seuls les managers et plus peuvent gérer les agents.')) {
@@ -4914,7 +2972,7 @@
             }
         });
         
-        document.getElementById('agentCategory').addEventListener('change', function() {
+        bindElementEvent('agentCategory', 'change', function() {
             const clientFields = document.getElementById('clientFields');
             const commissionRateFields = document.getElementById('commissionRateFields');
             const memberSinceFields = document.getElementById('memberSinceFields');
@@ -4937,7 +2995,7 @@
             }
         });
 
-        document.getElementById('userRole').addEventListener('change', function() {
+        bindElementEvent('userRole', 'change', function() {
             syncManagedUserAccountFields();
         });
         
@@ -4958,6 +3016,7 @@
         function displayAgents() {
             const agents = getAgents();
             const list = document.getElementById('agentList');
+            if (!list) return;
             list.innerHTML = '';
             
             const buildersManagers = agents.filter(a => a.category === 'manager' || a.category === 'builder');
@@ -5130,15 +3189,22 @@
         }
         
         function resetAgentForm() {
-            document.getElementById('agentForm').reset();
-            document.getElementById('clientFields').classList.add('hidden');
-            document.getElementById('commissionRateFields').classList.add('hidden');
-            document.getElementById('memberSinceFields').classList.add('hidden');
-            document.getElementById('companyFields').classList.add('hidden');
-            document.getElementById('paymentMethodsList').innerHTML = '';
+            const form = document.getElementById('agentForm');
+            const clientFields = document.getElementById('clientFields');
+            const commissionRateFields = document.getElementById('commissionRateFields');
+            const memberSinceFields = document.getElementById('memberSinceFields');
+            const companyFields = document.getElementById('companyFields');
+            const paymentMethodsList = document.getElementById('paymentMethodsList');
+            if (!form || !clientFields || !commissionRateFields || !memberSinceFields || !companyFields || !paymentMethodsList) return;
+
+            form.reset();
+            clientFields.classList.add('hidden');
+            commissionRateFields.classList.add('hidden');
+            memberSinceFields.classList.add('hidden');
+            companyFields.classList.add('hidden');
+            paymentMethodsList.innerHTML = '';
             editingAgentId = null;
-            
-            // Remettre le texte du bouton
+
             const submitBtn = document.querySelector('#agentForm button[type="submit"]');
             if (submitBtn) {
                 submitBtn.textContent = t('agents.addAgent');
@@ -5417,7 +3483,7 @@ Version : ${version}`;
         }
         
         // Enregistrement de la commission
-        document.getElementById('commissionForm').addEventListener('submit', async function(e) {
+        bindElementEvent('commissionForm', 'submit', async function(e) {
             e.preventDefault();
 
             if (!requirePermission(canManageOperationalData, 'Seuls les managers et plus peuvent gérer les commissions.')) {
@@ -5547,6 +3613,7 @@ Version : ${version}`;
         function displayCommissions() {
             const commissions = getCommissions();
             const list = document.getElementById('commissionList');
+            if (!list) return;
             list.innerHTML = '';
             
             if (commissions.length === 0) {
@@ -5781,18 +3848,22 @@ Version : ${version}`;
             const agents = getAgents();
             const commissions = getCommissions();
             const todos = getTodos();
-            
-            document.getElementById('agentCount').textContent = agents.length;
-            document.getElementById('commissionCount').textContent = commissions.length;
-            document.getElementById('todoCount').textContent = todos.length;
-            document.getElementById('storageSize').textContent = accessToken ? t('data.storageRemote') : t('data.storageLoggedOut');
+            const agentCount = document.getElementById('agentCount');
+            const commissionCount = document.getElementById('commissionCount');
+            const todoCount = document.getElementById('todoCount');
+            const storageSize = document.getElementById('storageSize');
+
+            if (agentCount) agentCount.textContent = agents.length;
+            if (commissionCount) commissionCount.textContent = commissions.length;
+            if (todoCount) todoCount.textContent = todos.length;
+            if (storageSize) storageSize.textContent = accessToken ? t('data.storageRemote') : t('data.storageLoggedOut');
         }
         
         let analystChartMonthly = null;
         let analystChartByAgent = null;
         let allTransactions = [];
 
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        bindElementEvent('loginForm', 'submit', async function(e) {
             e.preventDefault();
 
             const email = document.getElementById('loginEmail').value.trim();
@@ -5814,7 +3885,7 @@ Version : ${version}`;
             }
         });
 
-        document.getElementById('accountForm').addEventListener('submit', async function(e) {
+        bindElementEvent('accountForm', 'submit', async function(e) {
             e.preventDefault();
 
             if (!accountProfile || !accountProfile.agent) {
@@ -5848,7 +3919,7 @@ Version : ${version}`;
             }
         });
 
-        document.getElementById('accountPasswordForm').addEventListener('submit', async function(e) {
+        bindElementEvent('accountPasswordForm', 'submit', async function(e) {
             e.preventDefault();
 
             const currentPassword = document.getElementById('accountCurrentPassword').value;
@@ -5871,7 +3942,7 @@ Version : ${version}`;
             }
         });
 
-        document.getElementById('languageSelect').addEventListener('change', function() {
+        bindElementEvent('languageSelect', 'change', function() {
             setCurrentLanguage(this.value);
         });
 
@@ -6007,6 +4078,9 @@ Version : ${version}`;
         }
         
         function refreshAnalyst() {
+            const kpiContainer = document.getElementById('analystKpis');
+            if (!kpiContainer) return;
+
             const commissions = getCommissions();
             const agents = getAgents();
             
@@ -6054,7 +4128,6 @@ Version : ${version}`;
                 else totalExpensesEUR += Number(e.amount) || 0;
             });
             
-            const kpiContainer = document.getElementById('analystKpis');
             let expensesKpi = '';
             if (totalExpensesEUR > 0 || totalExpensesUSD > 0) {
                 const parts = [];
@@ -6388,6 +4461,7 @@ Version : ${version}`;
         // Génération de la liste des versions Minecraft
         function loadMinecraftVersions() {
             const versionSelect = document.getElementById('version');
+            if (!versionSelect) return;
             const versions = [];
             
             // Liste complète des versions Minecraft de 1.6.4 à 1.21.11
@@ -6464,7 +4538,3 @@ Version : ${version}`;
                 commissionInput.addEventListener('input', updateTotalAmount);
             }
         }, 100);
-    </script>
-</body>
-</html>
-

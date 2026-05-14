@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana - Mon compte</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <div>
+                <h1 id="headerTitle">🏗️ Commission Manager</h1>
+                <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
+            </div>
+            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
+                <div class="language-switcher">
+                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
+                    <select id="languageSelect">
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
+                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
+                    <button type="submit">Connexion</button>
+                </form>
+                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
+                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
+                </div>
+                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
+            </div>
+        </div>
+        <div class="tabs">
+            <a id="tabListBtn" class="tab" href="index.html">Liste des Commissions</a>
+            <a id="tabAgentsBtn" class="tab" href="agents.html">Gérer les Agents</a>
+            <a id="tabUsersBtn" class="tab" href="users.html">Utilisateurs</a>
+            <a id="tabTodosBtn" class="tab" href="todos.html">Todo List</a>
+            <a id="tabAccountBtn" class="tab active" href="compte.html">Mon compte</a>
+            <a id="tabAnalystBtn" class="tab" href="analyst.html">Data Analyst</a>
+            <a id="tabDataBtn" class="tab" href="data.html">Gestion des Données</a>
+        </div>
+
+<div id="account-tab" class="tab-content active">
+            <div class="form-section">
+                <h2 id="accountSectionTitle">Mon compte agent</h2>
+                <p id="accountSectionSubtitle" style="color: #64748b; margin-bottom: 20px;">Modifiez ici votre Discord, votre portfolio, vos moyens de paiement et votre mot de passe. Le pseudo reste fixe.</p>
+                <div id="accountEmptyState" class="hidden" style="color: #64748b; padding: 16px 0;"></div>
+                <form id="accountForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountPseudo">Pseudo (IGN)</label>
+                            <input type="text" id="accountPseudo" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="accountEmail">Email de connexion</label>
+                            <input type="email" id="accountEmail" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountDiscord">Discord</label>
+                            <input type="text" id="accountDiscord">
+                        </div>
+                        <div class="form-group">
+                            <label for="accountPF">Portfolio</label>
+                            <input type="text" id="accountPF">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label id="accountPaymentMethodsLabel">Moyens de paiement</label>
+                        <div id="accountPaymentMethodsList"></div>
+                        <button type="button" id="accountAddPaymentMethodButton" onclick="addAccountPaymentMethod()" style="margin-top: 10px; padding: 10px 20px; font-size: 14px;">➕ Ajouter un moyen de paiement</button>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" id="accountSaveButton">💾 Enregistrer mes informations</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="form-section">
+                <h2 id="accountPasswordTitle">Changer mon mot de passe</h2>
+                <form id="accountPasswordForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountCurrentPassword">Mot de passe actuel</label>
+                            <input type="password" id="accountCurrentPassword" autocomplete="current-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="accountNewPassword">Nouveau mot de passe</label>
+                            <input type="password" id="accountNewPassword" autocomplete="new-password" required>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" id="accountPasswordButton">🔐 Mettre à jour le mot de passe</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+</body>
+</html>

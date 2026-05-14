@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana - Todo List</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <div>
+                <h1 id="headerTitle">🏗️ Commission Manager</h1>
+                <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
+            </div>
+            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
+                <div class="language-switcher">
+                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
+                    <select id="languageSelect">
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
+                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
+                    <button type="submit">Connexion</button>
+                </form>
+                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
+                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
+                </div>
+                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
+            </div>
+        </div>
+        <div class="tabs">
+            <a id="tabListBtn" class="tab" href="index.html">Liste des Commissions</a>
+            <a id="tabAgentsBtn" class="tab" href="agents.html">Gérer les Agents</a>
+            <a id="tabUsersBtn" class="tab" href="users.html">Utilisateurs</a>
+            <a id="tabTodosBtn" class="tab active" href="todos.html">Todo List</a>
+            <a id="tabAccountBtn" class="tab" href="compte.html">Mon compte</a>
+            <a id="tabAnalystBtn" class="tab" href="analyst.html">Data Analyst</a>
+            <a id="tabDataBtn" class="tab" href="data.html">Gestion des Données</a>
+        </div>
+
+<div id="todos-tab" class="tab-content active">
+            <div class="todo-board">
+                <div id="todoFormSection" class="form-section todo-form-panel">
+                    <h2 id="todoSectionTitle">Créer une tâche</h2>
+                    <form id="todoForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="todoTitle">Titre</label>
+                                <input type="text" id="todoTitle" name="todoTitle" required placeholder="Ex: Finaliser les paiements de mars">
+                            </div>
+                            <div class="form-group">
+                                <label for="todoStatus">Statut</label>
+                                <select id="todoStatus" name="todoStatus" required>
+                                    <option value="todo">À faire</option>
+                                    <option value="in_progress">En cours</option>
+                                    <option value="done">Terminé</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="todoAssignedTo">Assigné à</label>
+                                <input type="text" id="todoAssignedTo" name="todoAssignedTo" placeholder="Ex: Antoine / Manager / Builder Team">
+                            </div>
+                            <div class="form-group">
+                                <label for="todoDeadline">Deadline</label>
+                                <input type="date" id="todoDeadline" name="todoDeadline">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="todoDescription">Description</label>
+                            <textarea id="todoDescription" name="todoDescription" placeholder="Contexte, blocages, prochaine action..."></textarea>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit">➕ Ajouter la tâche</button>
+                            <button type="button" class="secondary" onclick="resetTodoForm()">🔄 Réinitialiser</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="form-section todo-panel">
+                    <div class="todo-panel-header">
+                        <div>
+                            <h2 id="todoTeamTitle">Suivi de l’équipe</h2>
+                            <p id="todoTeamSubtitle" class="todo-panel-subtitle">Un espace partagé pour suivre l’avancement, les deadlines et les blocages.</p>
+                        </div>
+                        <button id="todoClearFilters" type="button" class="secondary todo-clear-filters-btn" onclick="resetTodoFilters()">Effacer les filtres</button>
+                    </div>
+                    <div id="todoSummary" class="todo-summary">
+                        <div class="todo-summary-card">
+                            <span id="todoTotalCount" class="todo-summary-value">0</span>
+                            <span id="todoTotalLabel" class="todo-summary-label">Total</span>
+                        </div>
+                        <div class="todo-summary-card">
+                            <span id="todoTodoCount" class="todo-summary-value">0</span>
+                            <span id="todoTodoLabel" class="todo-summary-label">À faire</span>
+                        </div>
+                        <div class="todo-summary-card">
+                            <span id="todoInProgressCount" class="todo-summary-value">0</span>
+                            <span id="todoInProgressLabel" class="todo-summary-label">En cours</span>
+                        </div>
+                        <div class="todo-summary-card">
+                            <span id="todoDoneCount" class="todo-summary-value">0</span>
+                            <span id="todoDoneLabel" class="todo-summary-label">Terminé</span>
+                        </div>
+                        <div class="todo-summary-card overdue">
+                            <span id="todoOverdueCount" class="todo-summary-value">0</span>
+                            <span id="todoOverdueLabel" class="todo-summary-label">En retard</span>
+                        </div>
+                    </div>
+                    <div class="todo-toolbar">
+                        <div class="form-group">
+                            <label id="todoSearchLabel" for="todoSearch">Recherche</label>
+                            <input type="text" id="todoSearch" placeholder="Titre, description, assignation..." oninput="displayTodos()">
+                        </div>
+                        <div class="form-group">
+                            <label id="todoFilterStatusLabel" for="todoFilterStatus">Statut</label>
+                            <select id="todoFilterStatus" onchange="displayTodos()">
+                                <option value="">Tous les statuts</option>
+                                <option value="todo">À faire</option>
+                                <option value="in_progress">En cours</option>
+                                <option value="done">Terminé</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="todoFilterAssigneeLabel" for="todoFilterAssignee">Assigné à</label>
+                            <select id="todoFilterAssignee" onchange="displayTodos()">
+                                <option value="">Toutes les assignations</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="todoSortLabel" for="todoSort">Tri</label>
+                            <select id="todoSort" onchange="displayTodos()">
+                                <option value="deadline">Deadline proche</option>
+                                <option value="updated">Dernière mise à jour</option>
+                                <option value="created">Création récente</option>
+                            </select>
+                        </div>
+                        <label id="todoFilterOverdueLabel" class="todo-toggle" for="todoFilterOverdue">
+                            <input type="checkbox" id="todoFilterOverdue" onchange="displayTodos()">
+                            <span>Afficher seulement les retards</span>
+                        </label>
+                    </div>
+                    <div id="todoResultsMeta" class="todo-results-meta"></div>
+                    <div id="todoList" class="todo-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+</body>
+</html>

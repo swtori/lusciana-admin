@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana - Gestion des Données</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <div>
+                <h1 id="headerTitle">🏗️ Commission Manager</h1>
+                <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
+            </div>
+            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
+                <div class="language-switcher">
+                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
+                    <select id="languageSelect">
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
+                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
+                    <button type="submit">Connexion</button>
+                </form>
+                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
+                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
+                </div>
+                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
+            </div>
+        </div>
+        <div class="tabs">
+            <a id="tabListBtn" class="tab" href="index.html">Liste des Commissions</a>
+            <a id="tabAgentsBtn" class="tab" href="agents.html">Gérer les Agents</a>
+            <a id="tabUsersBtn" class="tab" href="users.html">Utilisateurs</a>
+            <a id="tabTodosBtn" class="tab" href="todos.html">Todo List</a>
+            <a id="tabAccountBtn" class="tab" href="compte.html">Mon compte</a>
+            <a id="tabAnalystBtn" class="tab" href="analyst.html">Data Analyst</a>
+            <a id="tabDataBtn" class="tab active" href="data.html">Gestion des Données</a>
+        </div>
+
+<div id="data-tab" class="tab-content active">
+            <h2>Gestion des Données</h2>
+            
+            <div class="form-section">
+                <h2>📍 Où sont stockées les données ?</h2>
+                <div class="alert info" style="background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p><strong>Les données sont stockées dans MongoDB via l'API du serveur.</strong></p>
+                    <p style="margin-top: 10px;">Cela signifie que :</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Les données sont centralisées sur le serveur</li>
+                        <li>Elles sont partagées entre les navigateurs et les machines autorisés</li>
+                        <li>Le navigateur ne conserve plus la base métier localement</li>
+                        <li>Les suppressions passent désormais par l'API et la base MongoDB</li>
+                    </ul>
+                    <p style="margin-top: 10px;"><strong>⚠️ Important :</strong> Gardez quand même des exports JSON réguliers pour vos sauvegardes d'urgence.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>Statistiques :</label>
+                    <div id="dataStats" style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
+                        <p><strong>Agents :</strong> <span id="agentCount">0</span></p>
+                        <p><strong>Commissions :</strong> <span id="commissionCount">0</span></p>
+                        <p><strong>Tâches :</strong> <span id="todoCount">0</span></p>
+                        <p><strong>Stockage :</strong> <span id="storageSize">MongoDB (serveur)</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h2>💾 Export des Données</h2>
+                <p style="margin-bottom: 15px;">Téléchargez toutes vos données dans un fichier JSON pour les sauvegarder.</p>
+                <div class="button-group">
+                    <button type="button" onclick="exportData()">📥 Exporter toutes les données</button>
+                    <button type="button" class="secondary" onclick="exportAgents()">👥 Exporter uniquement les agents</button>
+                    <button type="button" class="secondary" onclick="exportCommissions()">📋 Exporter uniquement les commissions</button>
+                </div>
+            </div>
+            
+            <div id="dataImportSection" class="form-section">
+                <h2>📤 Import des Données</h2>
+                <p style="margin-bottom: 15px;">Importez des données depuis un fichier JSON précédemment exporté.</p>
+                <div class="form-group">
+                    <label for="importFile">Sélectionner un fichier JSON :</label>
+                    <input type="file" id="importFile" accept=".json" style="margin-top: 10px;">
+                </div>
+                <div class="button-group">
+                    <button id="importDataButton" type="button" onclick="importData()">📤 Importer les données</button>
+                    <button id="clearDataButton" type="button" class="danger" onclick="clearAllData()" style="background: #dc3545;">🗑️ Supprimer toutes les données</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+</body>
+</html>

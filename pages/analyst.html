@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana - Data Analyst</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <div>
+                <h1 id="headerTitle">🏗️ Commission Manager</h1>
+                <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
+            </div>
+            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
+                <div class="language-switcher">
+                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
+                    <select id="languageSelect">
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
+                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
+                    <button type="submit">Connexion</button>
+                </form>
+                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
+                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
+                </div>
+                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
+            </div>
+        </div>
+        <div class="tabs">
+            <a id="tabListBtn" class="tab" href="index.html">Liste des Commissions</a>
+            <a id="tabAgentsBtn" class="tab" href="agents.html">Gérer les Agents</a>
+            <a id="tabUsersBtn" class="tab" href="users.html">Utilisateurs</a>
+            <a id="tabTodosBtn" class="tab" href="todos.html">Todo List</a>
+            <a id="tabAccountBtn" class="tab" href="compte.html">Mon compte</a>
+            <a id="tabAnalystBtn" class="tab active" href="analyst.html">Data Analyst</a>
+            <a id="tabDataBtn" class="tab" href="data.html">Gestion des Données</a>
+        </div>
+
+<div id="analyst-tab" class="tab-content active">
+            <h2>📊 Data Analyst</h2>
+            <p style="color: #64748b; margin-bottom: 24px;">Rentrées, sorties, CA, dépenses et répartition par builder/manager.</p>
+            <div id="analystKpis" class="analyst-kpi-grid"></div>
+            <div class="analyst-section">
+                <h3>Dépenses</h3>
+                <div id="expenseControls" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px;">
+                    <div class="form-group" style="margin-bottom: 0; min-width: 180px;">
+                        <label for="expenseLabel">Libellé</label>
+                        <input type="text" id="expenseLabel" placeholder="ex: Axiom" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
+                        <label for="expenseAmount">Montant</label>
+                        <input type="number" id="expenseAmount" step="0.01" min="0" placeholder="25" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
+                        <label for="expenseCurrency">Devise</label>
+                        <select id="expenseCurrency" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                            <option value="EUR">€ EUR</option>
+                            <option value="USD">$ USD</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
+                        <label for="expenseDate">Date</label>
+                        <input type="date" id="expenseDate" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                    </div>
+                    <button type="button" onclick="addExpense()" style="padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">➕ Ajouter</button>
+                </div>
+                <div id="analystExpensesList" style="margin-top: 12px;"></div>
+            </div>
+            <div class="analyst-section">
+                <h3>Toutes les transactions</h3>
+                <p style="color: #64748b; font-size: 13px; margin-bottom: 12px;">Entrées et sorties. Tri par type ci-dessous.</p>
+                <div style="margin-bottom: 16px;">
+                    <label for="transactionFilter" style="margin-right: 8px; font-weight: 500;">Filtrer :</label>
+                    <select id="transactionFilter" onchange="renderTransactionsList()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; min-width: 180px;">
+                        <option value="all">Tout</option>
+                        <option value="commission">Commissions (entrées)</option>
+                        <option value="expense">Dépenses</option>
+                        <option value="builder">Builders (paiements)</option>
+                        <option value="manager">Managers (paiements)</option>
+                        <option value="client">Par client</option>
+                    </select>
+                    <select id="transactionFilterClient" class="hidden" onchange="renderTransactionsList()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; min-width: 180px; margin-left: 8px;">
+                        <option value="">-- Client --</option>
+                    </select>
+                </div>
+                <div id="transactionsListWrap" style="overflow-x: auto;"></div>
+            </div>
+            <div class="analyst-section">
+                <h3>Chiffre d'affaires par mois</h3>
+                <div class="analyst-chart-wrap">
+                    <canvas id="analystChartMonthly"></canvas>
+                </div>
+            </div>
+            <div class="analyst-section">
+                <h3>CA par builder / manager</h3>
+                <div class="analyst-chart-wrap">
+                    <canvas id="analystChartByAgent"></canvas>
+                </div>
+            </div>
+            <div class="analyst-section">
+                <h3>Détail par agent (builders & managers)</h3>
+                <div id="analystTableWrap"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/app.js"></script>
+</body>
+</html>
