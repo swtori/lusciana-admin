@@ -3,44 +3,712 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin retire</title>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .card {
-            max-width: 560px;
-            width: 100%;
-            padding: 32px;
-            border-radius: 16px;
-            background: #fff;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            text-align: center;
-        }
-        h1 { margin-top: 0; color: #222; }
-        p { color: #555; line-height: 1.5; }
-        a {
-            display: inline-block;
-            margin-top: 16px;
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-    </style>
+    <title>Lusciana - Commissions</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="../pages/assets/app.css">
 </head>
 <body>
-    <div class="card">
-        <h1>Section admin retiree</h1>
-        <p>La gestion admin dependait d'un service externe qui a ete supprime. L'application principale reste disponible en mode local.</p>
-        <a href="../index.html">Retour a l'application</a>
+    <div id="appContainer" class="container">
+        <div class="header-auth">
+            <div>
+                <h1 id="headerTitle">🏗️ Commission Manager</h1>
+                <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
+            </div>
+            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
+                <div class="language-switcher">
+                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
+                    <select id="languageSelect">
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
+                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
+                    <button type="submit">Connexion</button>
+                </form>
+                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
+                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
+                </div>
+                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
+            </div>
+        </div>
+        <div class="tabs">
+            <a id="tabListBtn" class="tab active" href="#list" onclick="event.preventDefault(); void showTab('list', this);">Liste des Commissions</a>
+            <a id="tabAgentsBtn" class="tab" href="#agents" onclick="event.preventDefault(); void showTab('agents', this);">Gérer les Agents</a>
+            <a id="tabUsersBtn" class="tab" href="#users" onclick="event.preventDefault(); void showTab('users', this);">Utilisateurs</a>
+            <a id="tabTodosBtn" class="tab" href="#todos" onclick="event.preventDefault(); void showTab('todos', this);">Todo List</a>
+            <a id="tabAccountBtn" class="tab" href="#account" onclick="event.preventDefault(); void showTab('account', this);">Mon compte</a>
+            <a id="tabAnalystBtn" class="tab" href="#analyst" onclick="event.preventDefault(); void showTab('analyst', this);">Data Analyst</a>
+            <a id="tabDataBtn" class="tab" href="#data" onclick="event.preventDefault(); void showTab('data', this);">Gestion des Données</a>
+        </div>
+
+<div id="list-tab" class="tab-content active">
+            <div id="commissionListView">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Liste des Commissions</h2>
+                    <button id="newCommissionButton" type="button" onclick="showCommissionForm()" style="padding: 12px 24px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">➕ Nouvelle commission</button>
+                </div>
+                <div id="commissionList" class="commission-list"></div>
+            </div>
+            <div id="commissionFormView" style="display: none;">
+                <div style="margin-bottom: 16px;">
+                    <button type="button" onclick="showCommissionList()" class="secondary" style="padding: 10px 18px;">← Retour à la liste</button>
+                </div>
+            <form id="commissionForm">
+                <div class="form-section">
+                    <h2>Informations du Build</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buildSize">La taille du build :</label>
+                            <input type="text" id="buildSize" name="buildSize" placeholder="600 ou 600x600" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="buildName">Nom du build :</label>
+                            <input type="text" id="buildName" name="buildName" placeholder="Greek Countryside" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="worldName">Nom du monde :</label>
+                            <input type="text" id="worldName" name="worldName" value="c-" placeholder="c-mon-monde" required pattern="c-.*" title="Doit commencer par c-">
+                            <p style="font-size: 12px; color: #666; margin-top: 4px;">Obligatoire, doit commencer par « c- ».</p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientWants">Description de la demande :</label>
+                        <textarea id="clientWants" name="clientWants" placeholder="Décrire la demande"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="version">Version :</label>
+                        <select id="version" name="version" required>
+                            <option value="">Sélectionner une version</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Répartition du Prix</label>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">Répartition (€) = part totale. % = taxe que l'agent paie. Prix total = somme des répartitions. La taxe pré-remplit avec le taux de l'agent.</p>
+                        <div style="margin-top: 10px;">
+                            <label style="font-size: 14px; margin-bottom: 8px; display: block;">Sélectionner les agents :</label>
+                            <div id="agentSelector" class="agent-selector"></div>
+                        </div>
+                        <div id="priceDistribution" class="price-distribution"></div>
+                        <div style="margin-top: 20px;">
+                            <h3 style="font-size: 1rem; color: #333; margin-bottom: 10px;">Qui a pris combien ?</h3>
+                            <div id="whoTookWhat"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Dates</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buildStart">Début build :</label>
+                            <input type="date" id="buildStart" name="buildStart" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="buildEnd">On a fini le build :</label>
+                            <input type="date" id="buildEnd" name="buildEnd" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Paiement</h2>
+                    <div class="form-group">
+                        <label for="depositPaid">Est-ce que l'acompte est versé ?</label>
+                        <div class="yes-no-buttons">
+                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
+                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
+                        </div>
+                        <input type="hidden" id="depositPaid" name="depositPaid" value="no">
+                    </div>
+                    <div class="form-group">
+                        <label for="depositAmount">Acompte perçu (€)</label>
+                        <input type="number" id="depositAmount" name="depositAmount" step="0.01" min="0" placeholder="Prix total / 2" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                        <p style="font-size: 12px; color: #666; margin-top: 4px;">Par défaut : prix total / 2. Pour les commissions en cours, seul l'acompte est compté dans le Data Analyst.</p>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Type de Build</h2>
+                    <div class="form-group">
+                        <label>Modification/build de base ?</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="buildType" value="base" required checked>
+                                Build de base
+                            </label>
+                            <label>
+                                <input type="radio" name="buildType" value="modification" required>
+                                Modification
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Organiques ?</label>
+                        <div class="yes-no-buttons">
+                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
+                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
+                        </div>
+                        <input type="hidden" id="organics" name="organics" value="no">
+                    </div>
+                </div>
+                
+                <input type="hidden" id="commissionPercent" name="commissionPercent" value="0">
+                <input type="hidden" id="wentWell" name="wentWell" value="yes">
+                <input type="hidden" id="forCustomer" name="forCustomer" value="yes">
+                <div class="form-section">
+                    <h2>Client</h2>
+                    <div class="form-group">
+                        <label for="clientName">Nom du client :</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                            <select id="clientName" name="clientName" required style="flex: 1; min-width: 200px;">
+                                <option value="">Sélectionner un client</option>
+                            </select>
+                            <button type="button" onclick="toggleNewClientForm()" style="padding: 10px 16px; white-space: nowrap;">➕ Créer un client</button>
+                        </div>
+                        <div id="newClientForm" class="hidden" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e0e0e0;">
+                            <p style="font-weight: 600; margin-bottom: 12px;">Nouveau client</p>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="newClientPseudo">Pseudo (IGN) :</label>
+                                    <input type="text" id="newClientPseudo" placeholder="Pseudo du client">
+                                </div>
+                                <div class="form-group">
+                                    <label for="newClientDiscord">Discord :</label>
+                                    <input type="text" id="newClientDiscord" placeholder="Discord du client">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="button" onclick="addClientFromCommission()">Ajouter le client</button>
+                                <button type="button" class="secondary" onclick="toggleNewClientForm()">Annuler</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientFeedback">Clients ont-ils donné un avis ?</label>
+                        <div class="yes-no-buttons">
+                            <button type="button" class="yes-no-btn yes" data-value="yes">Oui</button>
+                            <button type="button" class="yes-no-btn no active" data-value="no">Non</button>
+                        </div>
+                        <input type="hidden" id="hasFeedback" name="hasFeedback" value="no">
+                    </div>
+                    <div class="form-group hidden" id="feedbackGroup">
+                        <label for="clientFeedbackText">Avis du client :</label>
+                        <textarea id="clientFeedbackText" name="clientFeedbackText" placeholder="Avis du client"></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <h2>Render</h2>
+                    <div class="form-group">
+                        <label for="render">Render :</label>
+                        <input type="text" id="render" name="render" placeholder="URL ou chemin du render">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit">💾 Enregistrer la Commission</button>
+                    <button type="button" class="secondary" onclick="resetForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+            </div>
+        </div>
+
+        <div id="agents-tab" class="tab-content">
+            <div id="agentFormSection">
+            <h2 id="agentSectionTitle">Ajouter un Agent</h2>
+            <form id="agentForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="agentPseudo">Pseudo (IGN) :</label>
+                        <input type="text" id="agentPseudo" name="agentPseudo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="agentDiscord">Discord :</label>
+                        <input type="text" id="agentDiscord" name="agentDiscord" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Moyens de paiement :</label>
+                    <div id="paymentMethodsList"></div>
+                    <button type="button" onclick="addPaymentMethod()" style="margin-top: 10px; padding: 10px 20px; font-size: 14px;">➕ Ajouter un moyen de paiement</button>
+                </div>
+                <div class="form-group">
+                    <label for="agentPF">PF (si dispo) :</label>
+                    <input type="text" id="agentPF" name="agentPF" placeholder="Portfolio">
+                </div>
+                <div class="form-group">
+                    <label for="agentCategory">Catégorie :</label>
+                    <select id="agentCategory" name="agentCategory" required>
+                        <option value="">Sélectionner</option>
+                        <option value="manager">Manager</option>
+                        <option value="apprentice">Apprentice</option>
+                        <option value="builder">Builder</option>
+                        <option value="client">Client</option>
+                    </select>
+                </div>
+                <div id="commissionRateFields" class="hidden">
+                    <div class="form-group">
+                        <label for="agentCommissionRate">Taux de commission (%) :</label>
+                        <input type="number" id="agentCommissionRate" name="agentCommissionRate" min="0" max="100" step="0.01" value="15" placeholder="15.00" required>
+                    </div>
+                </div>
+                <div id="memberSinceFields" class="hidden">
+                    <div class="form-group">
+                        <label for="agentMemberSince">Membre depuis :</label>
+                        <input type="date" id="agentMemberSince" name="agentMemberSince">
+                    </div>
+                    <div class="form-group">
+                        <label for="agentIsCurrentTeamMember">Fait actuellement partie de l'équipe :</label>
+                        <select id="agentIsCurrentTeamMember" name="agentIsCurrentTeamMember">
+                            <option value="true">Oui</option>
+                            <option value="false">Non</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="clientFields" class="hidden">
+                    <div class="form-group">
+                        <label for="isCompany">Est-ce une entreprise ?</label>
+                        <input type="checkbox" id="isCompany" name="isCompany">
+                    </div>
+                    <div id="companyFields" class="hidden">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="companyIBAN">IBAN :</label>
+                                <input type="text" id="companyIBAN" name="companyIBAN">
+                            </div>
+                            <div class="form-group">
+                                <label for="companyCountry">Pays :</label>
+                                <input type="text" id="companyCountry" name="companyCountry">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="companyAddress">Adresse :</label>
+                                <input type="text" id="companyAddress" name="companyAddress">
+                            </div>
+                            <div class="form-group">
+                                <label for="companyName">Nom de l'entreprise :</label>
+                                <input type="text" id="companyName" name="companyName">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button type="submit">➕ Ajouter l'Agent</button>
+                    <button type="button" class="secondary" onclick="resetAgentForm()">🔄 Réinitialiser</button>
+                </div>
+            </form>
+            </div>
+
+            <div id="agentEngagementSection" class="form-section" style="display: none;">
+                <h2 id="engagementSectionTitle">Suivi d'activité</h2>
+                <p id="engagementSectionHint" class="engagement-hint"></p>
+                <form id="engagementEventForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="engagementAgentSelect" id="engagementAgentLabel">Agent</label>
+                            <select id="engagementAgentSelect" name="engagementAgentSelect" required>
+                                <option value="">—</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="engagementEventType" id="engagementTypeLabel">Type d'incident</label>
+                            <select id="engagementEventType" name="engagementEventType" required>
+                                <option value="meeting_absence">Réunion / meeting non rejoint</option>
+                                <option value="survey_no_response">Sondage sans réponse</option>
+                                <option value="task_missed">Participation / tâche manquée</option>
+                                <option value="other_inactivity">Autre inactivité</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="engagementEventNote" id="engagementNoteLabel">Détail (optionnel)</label>
+                        <input type="text" id="engagementEventNote" name="engagementEventNote" placeholder="ex. réunion hebdo du 12/05">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="engagementEventDate" id="engagementDateLabel">Date de l'incident (optionnel)</label>
+                            <input type="datetime-local" id="engagementEventDate" name="engagementEventDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="engagementExternalRef" id="engagementRefLabel">Réf. anti-doublon (optionnel)</label>
+                            <input type="text" id="engagementExternalRef" name="engagementExternalRef" placeholder="ex. poll_2026q1">
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" id="engagementSubmitBtn">Enregistrer l'incident</button>
+                    </div>
+                </form>
+            </div>
+
+            <h2 style="margin-top: 40px;">Liste des Agents</h2>
+            <div id="agentList" class="agent-list"></div>
+        </div>
+
+        <div id="users-tab" class="tab-content">
+            <div id="userFormSection">
+                <h2 id="userSectionTitle">Créer un utilisateur</h2>
+                <form id="userForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="userName">Nom</label>
+                            <input type="text" id="userName" name="userName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userEmail">Email</label>
+                            <input type="email" id="userEmail" name="userEmail" required autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="userPassword">Mot de passe</label>
+                            <input type="password" id="userPassword" name="userPassword" required autocomplete="new-password">
+                            <p id="userPasswordHelp" style="font-size: 12px; color: #666; margin-top: 4px;">Obligatoire à la création. En modification, laisse vide pour ne pas le changer.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="userRole">Rôle</label>
+                            <select id="userRole" name="userRole" required>
+                                <option value="guest">Guest</option>
+                                <option value="builder">Builder</option>
+                                <option value="manager">Manager</option>
+                                <option value="admin">Admin</option>
+                                <option value="superadmin">Superadmin</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="userIsActive">Statut</label>
+                        <select id="userIsActive" name="userIsActive">
+                            <option value="true">Compte actif</option>
+                            <option value="false">Compte désactivé</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Agents assignés</label>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">Utile surtout pour les builders: cela limite les agents et commissions visibles.</p>
+                        <div id="userAgentSelector" class="agent-selector"></div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit">➕ Créer l'utilisateur</button>
+                        <button type="button" class="secondary" onclick="resetUserForm()">🔄 Réinitialiser</button>
+                    </div>
+                </form>
+            </div>
+
+            <h2 style="margin-top: 40px;">Liste des utilisateurs</h2>
+            <div id="userList" class="user-list"></div>
+        </div>
+
+        <div id="todos-tab" class="tab-content">
+            <div class="todo-board">
+                <div id="todoFormSection" class="form-section todo-form-panel">
+                    <h2 id="todoSectionTitle">Créer une tâche</h2>
+                    <form id="todoForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="todoTitle">Titre</label>
+                                <input type="text" id="todoTitle" name="todoTitle" required placeholder="Ex: Finaliser les paiements de mars">
+                            </div>
+                            <div class="form-group">
+                                <label for="todoStatus">Statut</label>
+                                <select id="todoStatus" name="todoStatus" required>
+                                    <option value="todo">À faire</option>
+                                    <option value="in_progress">En cours</option>
+                                    <option value="done">Terminé</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="todoAssignedTo">Assigné à</label>
+                                <input type="text" id="todoAssignedTo" name="todoAssignedTo" placeholder="Ex: Antoine / Manager / Builder Team">
+                            </div>
+                            <div class="form-group">
+                                <label for="todoDeadline">Deadline</label>
+                                <input type="date" id="todoDeadline" name="todoDeadline">
+                            </div>
+                            <div class="form-group">
+                                <label for="todoDeadlineTime">Heure</label>
+                                <input type="time" id="todoDeadlineTime" name="todoDeadlineTime">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="todoDescription">Description</label>
+                            <textarea id="todoDescription" name="todoDescription" placeholder="Contexte, blocages, prochaine action..."></textarea>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit">➕ Ajouter la tâche</button>
+                            <button type="button" class="secondary" onclick="resetTodoForm()">🔄 Réinitialiser</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="form-section todo-panel">
+                    <div class="todo-panel-header">
+                        <div>
+                            <h2 id="todoTeamTitle">Suivi de l'équipe</h2>
+                            <p id="todoTeamSubtitle" class="todo-panel-subtitle">Un espace partagé pour suivre l'avancement, les deadlines et les blocages.</p>
+                        </div>
+                        <button id="todoClearFilters" type="button" class="secondary todo-clear-filters-btn" onclick="resetTodoFilters()">Effacer les filtres</button>
+                    </div>
+                    <div id="todoSummary" class="todo-summary">
+                        <div class="todo-summary-card">
+                            <span id="todoTotalCount" class="todo-summary-value">0</span>
+                            <span id="todoTotalLabel" class="todo-summary-label">Total</span>
+                        </div>
+                        <div class="todo-summary-card">
+                            <span id="todoTodoCount" class="todo-summary-value">0</span>
+                            <span id="todoTodoLabel" class="todo-summary-label">À faire</span>
+                        </div>
+                        <div class="todo-summary-card">
+                            <span id="todoInProgressCount" class="todo-summary-value">0</span>
+                            <span id="todoInProgressLabel" class="todo-summary-label">En cours</span>
+                        </div>
+                        <div class="todo-summary-card">
+                            <span id="todoDoneCount" class="todo-summary-value">0</span>
+                            <span id="todoDoneLabel" class="todo-summary-label">Terminé</span>
+                        </div>
+                        <div class="todo-summary-card archived">
+                            <span id="todoArchivedCount" class="todo-summary-value">0</span>
+                            <span id="todoArchivedLabel" class="todo-summary-label">Archivées</span>
+                        </div>
+                        <div class="todo-summary-card due-today">
+                            <span id="todoDueTodayCount" class="todo-summary-value">0</span>
+                            <span id="todoDueTodayLabel" class="todo-summary-label">Attention aujourd'hui</span>
+                        </div>
+                        <div class="todo-summary-card overdue">
+                            <span id="todoOverdueCount" class="todo-summary-value">0</span>
+                            <span id="todoOverdueLabel" class="todo-summary-label">En retard</span>
+                        </div>
+                    </div>
+                    <div class="todo-toolbar">
+                        <div class="form-group">
+                            <label id="todoSearchLabel" for="todoSearch">Recherche</label>
+                            <input type="text" id="todoSearch" placeholder="Titre, description, assignation..." oninput="displayTodos()">
+                        </div>
+                        <div class="form-group">
+                            <label id="todoFilterStatusLabel" for="todoFilterStatus">Statut</label>
+                            <select id="todoFilterStatus" onchange="displayTodos()">
+                                <option value="">Tous les statuts</option>
+                                <option value="todo">À faire</option>
+                                <option value="in_progress">En cours</option>
+                                <option value="done">Terminé</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="todoFilterAssigneeLabel" for="todoFilterAssignee">Assigné à</label>
+                            <select id="todoFilterAssignee" onchange="displayTodos()">
+                                <option value="">Toutes les assignations</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="todoSortLabel" for="todoSort">Tri</label>
+                            <select id="todoSort" onchange="displayTodos()">
+                                <option value="deadline">Deadline proche</option>
+                                <option value="updated">Dernière mise à jour</option>
+                                <option value="created">Création récente</option>
+                            </select>
+                        </div>
+                        <label id="todoFilterOverdueLabel" class="todo-toggle" for="todoFilterOverdue">
+                            <input type="checkbox" id="todoFilterOverdue" onchange="displayTodos()">
+                            <span>Afficher seulement les retards</span>
+                        </label>
+                        <label id="todoFilterArchivedLabel" class="todo-toggle" for="todoFilterArchived">
+                            <input type="checkbox" id="todoFilterArchived" onchange="displayTodos()">
+                            <span>Afficher aussi les archivées</span>
+                        </label>
+                    </div>
+                    <div id="todoResultsMeta" class="todo-results-meta"></div>
+                    <div id="todoList" class="todo-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="account-tab" class="tab-content">
+            <div class="form-section">
+                <h2 id="accountSectionTitle">Mon compte agent</h2>
+                <p id="accountSectionSubtitle" style="color: #64748b; margin-bottom: 20px;">Modifiez ici votre Discord, votre portfolio, vos moyens de paiement et votre mot de passe. Le pseudo reste fixe.</p>
+                <div id="accountEmptyState" class="hidden" style="color: #64748b; padding: 16px 0;"></div>
+                <form id="accountForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountPseudo">Pseudo (IGN)</label>
+                            <input type="text" id="accountPseudo" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="accountEmail">Email de connexion</label>
+                            <input type="email" id="accountEmail" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountDiscord">Discord</label>
+                            <input type="text" id="accountDiscord">
+                        </div>
+                        <div class="form-group">
+                            <label for="accountPF">Portfolio</label>
+                            <input type="text" id="accountPF">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label id="accountPaymentMethodsLabel">Moyens de paiement</label>
+                        <div id="accountPaymentMethodsList"></div>
+                        <button type="button" id="accountAddPaymentMethodButton" onclick="addAccountPaymentMethod()" style="margin-top: 10px; padding: 10px 20px; font-size: 14px;">➕ Ajouter un moyen de paiement</button>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" id="accountSaveButton">💾 Enregistrer mes informations</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="form-section">
+                <h2 id="accountPasswordTitle">Changer mon mot de passe</h2>
+                <form id="accountPasswordForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountCurrentPassword">Mot de passe actuel</label>
+                            <input type="password" id="accountCurrentPassword" autocomplete="current-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="accountNewPassword">Nouveau mot de passe</label>
+                            <input type="password" id="accountNewPassword" autocomplete="new-password" required>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" id="accountPasswordButton">🔐 Mettre à jour le mot de passe</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="analyst-tab" class="tab-content">
+            <h2>📊 Data Analyst</h2>
+            <p style="color: #64748b; margin-bottom: 24px;">Rentrées, sorties, CA, dépenses et répartition par builder/manager.</p>
+            <div id="analystKpis" class="analyst-kpi-grid"></div>
+            <div class="analyst-section">
+                <h3>Dépenses</h3>
+                <div id="expenseControls" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px;">
+                    <div class="form-group" style="margin-bottom: 0; min-width: 180px;">
+                        <label for="expenseLabel">Libellé</label>
+                        <input type="text" id="expenseLabel" placeholder="ex: Axiom" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
+                        <label for="expenseAmount">Montant</label>
+                        <input type="number" id="expenseAmount" step="0.01" min="0" placeholder="25" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 100px;">
+                        <label for="expenseCurrency">Devise</label>
+                        <select id="expenseCurrency" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                            <option value="EUR">€ EUR</option>
+                            <option value="USD">$ USD</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 140px;">
+                        <label for="expenseDate">Date</label>
+                        <input type="date" id="expenseDate" style="padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%;">
+                    </div>
+                    <button type="button" onclick="addExpense()" style="padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">➕ Ajouter</button>
+                </div>
+                <div id="analystExpensesList" style="margin-top: 12px;"></div>
+            </div>
+            <div class="analyst-section">
+                <h3>Toutes les transactions</h3>
+                <p style="color: #64748b; font-size: 13px; margin-bottom: 12px;">Entrées et sorties. Tri par type ci-dessous.</p>
+                <div style="margin-bottom: 16px;">
+                    <label for="transactionFilter" style="margin-right: 8px; font-weight: 500;">Filtrer :</label>
+                    <select id="transactionFilter" onchange="renderTransactionsList()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; min-width: 180px;">
+                        <option value="all">Tout</option>
+                        <option value="commission">Commissions (entrées)</option>
+                        <option value="expense">Dépenses</option>
+                        <option value="builder">Builders (paiements)</option>
+                        <option value="manager">Managers (paiements)</option>
+                        <option value="client">Par client</option>
+                    </select>
+                    <select id="transactionFilterClient" class="hidden" onchange="renderTransactionsList()" style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; min-width: 180px; margin-left: 8px;">
+                        <option value="">-- Client --</option>
+                    </select>
+                </div>
+                <div id="transactionsListWrap" style="overflow-x: auto;"></div>
+            </div>
+            <div class="analyst-section">
+                <h3>Chiffre d'affaires par mois</h3>
+                <div class="analyst-chart-wrap">
+                    <canvas id="analystChartMonthly"></canvas>
+                </div>
+            </div>
+            <div class="analyst-section">
+                <h3>CA par builder / manager</h3>
+                <div class="analyst-chart-wrap">
+                    <canvas id="analystChartByAgent"></canvas>
+                </div>
+            </div>
+            <div class="analyst-section">
+                <h3>Détail par agent (builders & managers)</h3>
+                <div id="analystTableWrap"></div>
+            </div>
+        </div>
+
+        <div id="data-tab" class="tab-content">
+            <h2>Gestion des Données</h2>
+
+            <div class="form-section">
+                <h2>📍 Où sont stockées les données ?</h2>
+                <div class="alert info" style="background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p><strong>Les données sont stockées dans MongoDB via l'API du serveur.</strong></p>
+                    <p style="margin-top: 10px;">Cela signifie que :</p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Les données sont centralisées sur le serveur</li>
+                        <li>Elles sont partagées entre les navigateurs et les machines autorisés</li>
+                        <li>Le navigateur ne conserve plus la base métier localement</li>
+                        <li>Les suppressions passent désormais par l'API et la base MongoDB</li>
+                    </ul>
+                    <p style="margin-top: 10px;"><strong>⚠️ Important :</strong> Gardez quand même des exports JSON réguliers pour vos sauvegardes d'urgence.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Statistiques :</label>
+                    <div id="dataStats" style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
+                        <p><strong>Agents :</strong> <span id="agentCount">0</span></p>
+                        <p><strong>Commissions :</strong> <span id="commissionCount">0</span></p>
+                        <p><strong>Tâches :</strong> <span id="todoCount">0</span></p>
+                        <p><strong>Stockage :</strong> <span id="storageSize">MongoDB (serveur)</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>💾 Export des Données</h2>
+                <p style="margin-bottom: 15px;">Téléchargez toutes vos données dans un fichier JSON pour les sauvegarder.</p>
+                <div class="button-group">
+                    <button type="button" onclick="exportData()">📥 Exporter toutes les données</button>
+                    <button type="button" class="secondary" onclick="exportAgents()">👥 Exporter uniquement les agents</button>
+                    <button type="button" class="secondary" onclick="exportCommissions()">📋 Exporter uniquement les commissions</button>
+                </div>
+            </div>
+
+            <div id="dataImportSection" class="form-section">
+                <h2>📤 Import des Données</h2>
+                <p style="margin-bottom: 15px;">Importez des données depuis un fichier JSON précédemment exporté.</p>
+                <div class="form-group">
+                    <label for="importFile">Sélectionner un fichier JSON :</label>
+                    <input type="file" id="importFile" accept=".json" style="margin-top: 10px;">
+                </div>
+                <div class="button-group">
+                    <button id="importDataButton" type="button" onclick="importData()">📤 Importer les données</button>
+                    <button id="clearDataButton" type="button" class="danger" onclick="clearAllData()" style="background: #dc3545;">🗑️ Supprimer toutes les données</button>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script src="../pages/assets/app.js"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Controllers\AgentEngagementController;
 use App\Controllers\AgentsController;
 use App\Controllers\AccountController;
 use App\Controllers\AuthController;
@@ -16,12 +17,15 @@ use App\Exceptions\HttpException;
 use App\Http\JsonResponse;
 use App\Http\Request;
 use App\Http\Router;
+use App\Repositories\AgentEngagementRepository;
 use App\Repositories\AgentRepository;
 use App\Repositories\CommissionRepository;
 use App\Repositories\ExpenseRepository;
+use App\Repositories\LoginEventRepository;
 use App\Repositories\RefreshTokenRepository;
 use App\Repositories\TodoRepository;
 use App\Repositories\UserRepository;
+use App\Services\AgentEngagementService;
 use App\Services\AuthService;
 use App\Services\HistoricalImportService;
 use App\Services\JwtService;
@@ -43,9 +47,7 @@ final class App
     {
         $request = Request::capture();
 
-        header('Access-Control-Allow-Origin: ' . $this->config['frontend_url']);
-        header('Access-Control-Allow-Headers: Content-Type, Authorization');
-        header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
+        $this->applyCorsHeaders($request);
 
         if ($request->method === 'OPTIONS') {
             http_response_code(204);
@@ -70,26 +72,51 @@ final class App
         $response->send();
     }
 
+    private function applyCorsHeaders(Request $request): void
+    {
+        $allowed = $this->config['frontend_origins'] ?? [$this->config['frontend_url']];
+        $origin = isset($request->headers['origin']) ? trim((string) $request->headers['origin']) : '';
+        $originNorm = rtrim($origin, '/');
+        $allowedNorm = array_map(
+            static fn (string $u): string => rtrim($u, '/'),
+            $allowed
+        );
+
+        if ($origin !== '' && in_array($originNorm, $allowedNorm, true)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+        } elseif ($origin === '' && $allowed !== []) {
+            header('Access-Control-Allow-Origin: ' . rtrim($allowed[0], '/'));
+        }
+
+        header('Vary: Origin');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization');
+        header('Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS');
+    }
+
     private function registerRoutes(): void
     {
         $userRepository = new UserRepository($this->database);
+        $loginEventRepository = new LoginEventRepository($this->database);
         $refreshTokenRepository = new RefreshTokenRepository($this->database);
         $agentRepository = new AgentRepository($this->database);
+        $agentEngagementRepository = new AgentEngagementRepository($this->database);
         $commissionRepository = new CommissionRepository($this->database);
         $expenseRepository = new ExpenseRepository($this->database);
         $todoRepository = new TodoRepository($this->database);
 
         $jwt = new JwtService($this->config);
-        $auth = new AuthService($this->config, $userRepository, $refreshTokenRepository, $jwt);
+        $auth = new AuthService($this->config, $userRepository, $loginEventRepository, $refreshTokenRepository, $jwt);
         $historicalImport = new HistoricalImportService($this->database, dirname(__DIR__));
         $historicalImport->importIfAvailable();
+        $agentEngagement = new AgentEngagementService($agentEngagementRepository);
         $auth->ensureSuperadmin();
 
         $health = new HealthController();
         $authController = new AuthController($auth);
         $account = new AccountController($agentRepository, $userRepository, $auth);
-        $users = new UsersController($userRepository, $agentRepository, $auth);
-        $agents = new AgentsController($agentRepository, $userRepository, $auth);
+        $users = new UsersController($userRepository, $agentRepository, $loginEventRepository, $auth);
+        $agents = new AgentsController($agentRepository, $userRepository, $auth, $agentEngagement);
+        $agentEngagementController = new AgentEngagementController($agentRepository, $agentEngagement, $auth);
         $commissions = new CommissionsController($commissionRepository, $agentRepository, $auth);
         $expenses = new ExpensesController($expenseRepository, $auth);
         $todos = new TodosController($todoRepository, $auth);
@@ -113,6 +140,8 @@ final class App
         $this->router->add('POST', '/api/agents', [$agents, 'create']);
         $this->router->add('PATCH', '/api/agents/:id', [$agents, 'update']);
         $this->router->add('DELETE', '/api/agents/:id', [$agents, 'delete']);
+        $this->router->add('GET', '/api/agents/:id/engagement-events', [$agentEngagementController, 'listEvents']);
+        $this->router->add('POST', '/api/agents/:id/engagement-events', [$agentEngagementController, 'createEvent']);
 
         $this->router->add('GET', '/api/commissions', [$commissions, 'list']);
         $this->router->add('GET', '/api/commissions/:id', [$commissions, 'show']);

@@ -9,6 +9,7 @@ use App\Http\JsonResponse;
 use App\Http\Request;
 use App\Repositories\AgentRepository;
 use App\Repositories\UserRepository;
+use App\Services\AgentEngagementService;
 use App\Services\AuthService;
 use App\Support\MongoSerializer;
 use App\Support\Roles;
@@ -20,7 +21,8 @@ final class AgentsController
     public function __construct(
         private readonly AgentRepository $agents,
         private readonly UserRepository $users,
-        private readonly AuthService $auth
+        private readonly AuthService $auth,
+        private readonly AgentEngagementService $engagement
     ) {
     }
 
@@ -43,6 +45,24 @@ final class AgentsController
             $items = array_values(array_filter($items, function (array $item) use ($allowedAgentIds): bool {
                 return in_array((string) ($item['id'] ?? ''), $allowedAgentIds, true);
             }));
+        }
+
+        $agentIds = array_values(array_filter(
+            array_map(static fn (array $item): string => (string) ($item['id'] ?? ''), $items),
+            static fn (string $id): bool => $id !== ''
+        ));
+        try {
+            $summaries = $this->engagement->summariesForAgentIds($agentIds);
+            foreach ($items as &$item) {
+                $aid = (string) ($item['id'] ?? '');
+                $item['engagement'] = $summaries[$aid] ?? null;
+            }
+            unset($item);
+        } catch (\Throwable) {
+            foreach ($items as &$item) {
+                $item['engagement'] = null;
+            }
+            unset($item);
         }
 
         return new JsonResponse([
@@ -68,6 +88,14 @@ final class AgentsController
             }
         }
 
+        $aid = (string) ($normalized['id'] ?? '');
+        try {
+            $summaries = $this->engagement->summariesForAgentIds([$aid]);
+            $normalized['engagement'] = $summaries[$aid] ?? null;
+        } catch (\Throwable) {
+            $normalized['engagement'] = null;
+        }
+
         return new JsonResponse(['item' => $normalized]);
     }
 
@@ -79,6 +107,7 @@ final class AgentsController
         $pseudo = (string) $request->body['pseudo'];
         Validator::ensureInArray($category, [
             Roles::AGENT_CLIENT,
+            Roles::AGENT_APPRENTICE,
             Roles::AGENT_BUILDER,
             Roles::AGENT_MANAGER,
         ], 'category');
@@ -94,6 +123,7 @@ final class AgentsController
             'paymentMethods' => array_values($request->body['paymentMethods'] ?? []),
             'pf' => (string) ($request->body['pf'] ?? ''),
             'category' => $category,
+            'isCurrentTeamMember' => (bool) ($request->body['isCurrentTeamMember'] ?? true),
             'commissionRate' => (float) ($request->body['commissionRate'] ?? 0),
             'memberSince' => (string) ($request->body['memberSince'] ?? ''),
             'isCompany' => (bool) ($request->body['isCompany'] ?? false),
@@ -106,7 +136,7 @@ final class AgentsController
         ]);
 
         $credentials = null;
-        if (in_array($category, [Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
+        if (in_array($category, [Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
             try {
                 $agent = MongoSerializer::normalize($this->agents->findById($id));
                 $credentials = $this->createLinkedUserForAgent($agent, $now);
@@ -156,6 +186,7 @@ final class AgentsController
         if (isset($payload['category'])) {
             Validator::ensureInArray((string) $payload['category'], [
                 Roles::AGENT_CLIENT,
+                Roles::AGENT_APPRENTICE,
                 Roles::AGENT_BUILDER,
                 Roles::AGENT_MANAGER,
             ], 'category');
@@ -288,7 +319,7 @@ final class AgentsController
         }
 
         $category = (string) ($agent['category'] ?? '');
-        if (!in_array($category, [Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
+        if (!in_array($category, [Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
             return;
         }
 

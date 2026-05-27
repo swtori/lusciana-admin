@@ -47,7 +47,9 @@ final class TodosController
             'title' => trim((string) $request->body['title']),
             'description' => trim((string) ($request->body['description'] ?? '')),
             'status' => (string) $request->body['status'],
+            'archived' => false,
             'deadline' => trim((string) ($request->body['deadline'] ?? '')),
+            'deadlineTime' => trim((string) ($request->body['deadlineTime'] ?? '')),
             'assignedTo' => trim((string) ($request->body['assignedTo'] ?? '')),
             'createdBy' => $user['id'],
             'createdByName' => (string) ($user['name'] ?? $user['email']),
@@ -74,7 +76,7 @@ final class TodosController
 
         $payload = [];
 
-        foreach (['title', 'description', 'status', 'deadline', 'assignedTo'] as $field) {
+        foreach (['title', 'description', 'status', 'deadline', 'deadlineTime', 'assignedTo', 'archived'] as $field) {
             if (!array_key_exists($field, $request->body)) {
                 continue;
             }
@@ -86,7 +88,21 @@ final class TodosController
                 continue;
             }
 
+            if ($field === 'archived') {
+                $payload[$field] = (bool) $value;
+                continue;
+            }
+
             $payload[$field] = trim((string) $value);
+        }
+
+        $nextStatus = (string) ($payload['status'] ?? $existing['status']);
+        $nextArchived = (bool) ($payload['archived'] ?? ($existing['archived'] ?? false));
+
+        if ($nextStatus !== 'done') {
+            $payload['archived'] = false;
+        } elseif (array_key_exists('archived', $payload)) {
+            $payload['archived'] = $nextArchived;
         }
 
         if ($payload === []) {

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Exceptions\HttpException;
 use App\Http\Request;
+use App\Repositories\LoginEventRepository;
 use App\Repositories\RefreshTokenRepository;
 use App\Repositories\UserRepository;
 use App\Support\MongoSerializer;
@@ -17,6 +18,7 @@ final class AuthService
     public function __construct(
         private readonly array $config,
         private readonly UserRepository $users,
+        private readonly LoginEventRepository $loginEvents,
         private readonly RefreshTokenRepository $refreshTokens,
         private readonly JwtService $jwt
     ) {
@@ -59,9 +61,18 @@ final class AuthService
         }
 
         $userId = (string) $user['_id'];
+        $now = new UTCDateTime();
         $this->users->update($userId, [
-            'lastLoginAt' => new UTCDateTime(),
-            'updatedAt' => new UTCDateTime(),
+            'lastLoginAt' => $now,
+            'updatedAt' => $now,
+        ]);
+        $this->loginEvents->insert([
+            'userId' => $userId,
+            'occurredAt' => $now,
+            'ipAddress' => $request->ip,
+            'userAgent' => $request->userAgent,
+            'createdAt' => $now,
+            'updatedAt' => $now,
         ]);
 
         return $this->issueSession($this->users->findById($userId), $request);

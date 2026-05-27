@@ -8,6 +8,19 @@ const API_BASE_URL = (() => {
                 return 'http://localhost:4000/api';
             }
 
+            const segments = window.location.pathname.split('/').filter(Boolean);
+            let appRootIndex = -1;
+            for (let i = 0; i < segments.length; i++) {
+                if (segments[i] === 'pages' || segments[i] === 'admin') {
+                    appRootIndex = i;
+                    break;
+                }
+            }
+            if (appRootIndex > 0) {
+                const prefix = '/' + segments.slice(0, appRootIndex).join('/');
+                return `${window.location.origin}${prefix}/api`;
+            }
+
             return `${window.location.origin}/api`;
         })();
 
@@ -20,6 +33,294 @@ const API_BASE_URL = (() => {
         let accessToken = null;
         let refreshToken = null;
         let currentUser = null;
+
+        const LUSCIANA_AUTH_STORAGE_KEY = 'lusciana-auth-session';
+        const LUSCIANA_SESSION_STARTED_KEY = 'lusciana-session-started';
+        const LUSCIANA_SESSION_ACTIVITY_KEY = 'lusciana-session-activity';
+        /** Inactivité max avant déconnexion automatique (30 min). */
+        const SESSION_IDLE_MS = 30 * 60 * 1000;
+        /** Durée max d'une session depuis la connexion (8 h, alignée sur le refresh token). */
+        const SESSION_MAX_MS = 8 * 60 * 60 * 1000;
+        /** Cache navigateur (sessionStorage) pour atténuer le coût d’un rechargement complet à chaque page HTML. */
+        const REMOTE_DATA_CACHE_KEY = 'lusciana-remote-data-v1';
+        let sessionIdleTimer = null;
+        let sessionActivityPersistAt = 0;
+
+        function remoteDataCacheUserKey() {
+            if (!currentUser) {
+                return null;
+            }
+            const id = currentUser.id ?? currentUser._id;
+            if (id !== undefined && id !== null && String(id) !== '') {
+                return 'id:' + String(id);
+            }
+            const email = currentUser.email;
+            if (email && String(email).trim() !== '') {
+                return 'em:' + String(email).trim().toLowerCase();
+            }
+            return null;
+        }
+
+        function clearSessionRemoteDataCache() {
+            try {
+                sessionStorage.removeItem(REMOTE_DATA_CACHE_KEY);
+            } catch (e) {
+                /* ignore */
+            }
+        }
+
+        function readSessionRemoteDataCache(expectedKey) {
+            if (!expectedKey) {
+                return null;
+            }
+            try {
+                const raw = sessionStorage.getItem(REMOTE_DATA_CACHE_KEY);
+                if (!raw) {
+                    return null;
+                }
+                const parsed = JSON.parse(raw);
+                if (!parsed || parsed.userKey !== expectedKey || typeof parsed.payload !== 'object' || parsed.payload === null) {
+                    return null;
+                }
+                return parsed.payload;
+            } catch {
+                return null;
+            }
+        }
+
+        function writeSessionRemoteDataCache(userKey, payload) {
+            if (!userKey) {
+                return;
+            }
+            try {
+                sessionStorage.setItem(REMOTE_DATA_CACHE_KEY, JSON.stringify({
+                    userKey,
+                    payload
+                }));
+            } catch (e) {
+                /* quota, mode privé */
+            }
+        }
+
+        function applyRemotePayload(payload) {
+            const p = payload || {};
+            agentsCache = Array.isArray(p.agents) ? p.agents : [];
+            commissionsCache = Array.isArray(p.commissions) ? p.commissions : [];
+            expensesCache = Array.isArray(p.expenses) ? p.expenses : [];
+            usersCache = Array.isArray(p.users) ? p.users : [];
+            todosCache = Array.isArray(p.todos) ? p.todos : [];
+            accountProfile = p.accountProfile !== undefined ? p.accountProfile : null;
+        }
+
+        function decodeJwtPayload(token) {
+            if (!token || typeof token !== 'string') {
+                return null;
+            }
+            try {
+                const segment = token.split('.')[1];
+                if (!segment) {
+                    return null;
+                }
+                const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
+                const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+                return JSON.parse(atob(padded));
+            } catch {
+                return null;
+            }
+        }
+
+        function isJwtExpired(token) {
+            const payload = decodeJwtPayload(token);
+            if (!payload || typeof payload.exp !== 'number') {
+                return true;
+            }
+            return Date.now() >= payload.exp * 1000;
+        }
+
+        function isSessionExpiredByPolicy() {
+            if (!accessToken) {
+                return false;
+            }
+            const now = Date.now();
+            const started = Number(sessionStorage.getItem(LUSCIANA_SESSION_STARTED_KEY));
+            const lastActivity = Number(sessionStorage.getItem(LUSCIANA_SESSION_ACTIVITY_KEY));
+            if (Number.isFinite(started) && now - started > SESSION_MAX_MS) {
+                return true;
+            }
+            if (Number.isFinite(lastActivity) && now - lastActivity > SESSION_IDLE_MS) {
+                return true;
+            }
+            return isJwtExpired(refreshToken);
+        }
+
+        function markSessionStarted() {
+            const now = Date.now();
+            try {
+                sessionStorage.setItem(LUSCIANA_SESSION_STARTED_KEY, String(now));
+                sessionStorage.setItem(LUSCIANA_SESSION_ACTIVITY_KEY, String(now));
+            } catch (e) {
+                /* ignore */
+            }
+            sessionActivityPersistAt = now;
+            resetSessionIdleTimer();
+        }
+
+        function touchSessionActivity() {
+            if (!accessToken) {
+                return;
+            }
+            const now = Date.now();
+            resetSessionIdleTimer();
+            if (now - sessionActivityPersistAt < 60000) {
+                return;
+            }
+            sessionActivityPersistAt = now;
+            try {
+                sessionStorage.setItem(LUSCIANA_SESSION_ACTIVITY_KEY, String(now));
+            } catch (e) {
+                /* ignore */
+            }
+        }
+
+        function resetSessionIdleTimer() {
+            if (sessionIdleTimer) {
+                clearTimeout(sessionIdleTimer);
+                sessionIdleTimer = null;
+            }
+            if (!accessToken) {
+                return;
+            }
+            sessionIdleTimer = setTimeout(() => {
+                void expireSession('idle');
+            }, SESSION_IDLE_MS);
+        }
+
+        function clearSessionIdleTimer() {
+            if (sessionIdleTimer) {
+                clearTimeout(sessionIdleTimer);
+                sessionIdleTimer = null;
+            }
+        }
+
+        function bindSessionActivityListeners() {
+            const events = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
+            events.forEach(eventName => {
+                document.addEventListener(eventName, touchSessionActivity, { passive: true });
+            });
+        }
+
+        function migrateLegacyAuthStorage() {
+            try {
+                window.localStorage.removeItem(LUSCIANA_AUTH_STORAGE_KEY);
+            } catch (e) {
+                /* ignore */
+            }
+        }
+
+        function persistAuthSession() {
+            if (accessToken && refreshToken && currentUser) {
+                try {
+                    sessionStorage.setItem(LUSCIANA_AUTH_STORAGE_KEY, JSON.stringify({
+                        accessToken,
+                        refreshToken,
+                        user: currentUser
+                    }));
+                } catch (e) {
+                    console.warn('Impossible de sauver la session localement.', e);
+                }
+            }
+        }
+
+        function clearAuthSessionStorage() {
+            try {
+                sessionStorage.removeItem(LUSCIANA_AUTH_STORAGE_KEY);
+                sessionStorage.removeItem(LUSCIANA_SESSION_STARTED_KEY);
+                sessionStorage.removeItem(LUSCIANA_SESSION_ACTIVITY_KEY);
+            } catch (e) {
+                /* ignore */
+            }
+        }
+
+        function resetDataCaches() {
+            agentsCache = [];
+            commissionsCache = [];
+            expensesCache = [];
+            usersCache = [];
+            todosCache = [];
+            accountProfile = null;
+        }
+
+        /**
+         * Lit sessionStorage et remplit accessToken / refreshToken / currentUser.
+         * Ne touche pas au rechargement API (fait par tryRestoreAuthSession).
+         */
+        function hydrateAuthFromSessionStorage() {
+            accessToken = null;
+            refreshToken = null;
+            currentUser = null;
+            let raw = null;
+            try {
+                raw = sessionStorage.getItem(LUSCIANA_AUTH_STORAGE_KEY);
+            } catch (e) {
+                return false;
+            }
+            if (!raw) {
+                return false;
+            }
+            let data;
+            try {
+                data = JSON.parse(raw);
+            } catch {
+                clearAuthSessionStorage();
+                return false;
+            }
+            if (!data || !data.accessToken || !data.refreshToken || !data.user) {
+                clearAuthSessionStorage();
+                return false;
+            }
+            accessToken = data.accessToken;
+            refreshToken = data.refreshToken;
+            currentUser = data.user;
+            if (isSessionExpiredByPolicy()) {
+                clearAuthSessionStorage();
+                accessToken = null;
+                refreshToken = null;
+                currentUser = null;
+                return false;
+            }
+            resetSessionIdleTimer();
+            return true;
+        }
+
+        async function expireSession(reason) {
+            if (!accessToken && !refreshToken) {
+                return;
+            }
+            console.info('[Lusciana] Session terminée (' + reason + ').');
+            await logout();
+        }
+
+        async function tryRestoreAuthSession() {
+            if (!accessToken || isSessionExpiredByPolicy()) {
+                if (accessToken || refreshToken) {
+                    clearSessionData();
+                    setAuthenticatedState(false);
+                    refreshUIAfterLoad();
+                }
+                return;
+            }
+            try {
+                await loadRemoteData();
+                persistAuthSession();
+                resetSessionIdleTimer();
+            } catch (error) {
+                console.warn('Restauration de session impossible.', error);
+                clearSessionData();
+                setAuthenticatedState(false);
+                refreshUIAfterLoad();
+            }
+        }
+
         const ROLE_ORDER = ['guest', 'builder', 'manager', 'admin', 'superadmin'];
         const TODO_STATUS_LABELS = {
             todo: 'À faire',
@@ -153,10 +454,15 @@ const API_BASE_URL = (() => {
                     category: 'Catégorie :',
                     selectCategory: 'Sélectionner',
                     manager: 'Manager',
+                    apprentice: 'Apprentice',
                     builder: 'Builder',
                     client: 'Client',
                     commissionRate: 'Taux de commission (%) :',
                     memberSince: 'Membre depuis :',
+                    currentTeamMember: 'Fait actuellement partie de l\'équipe :',
+                    currentTeamMemberYes: 'Oui',
+                    currentTeamMemberNo: 'Non',
+                    inactiveTeamBadge: 'Hors équipe',
                     isCompany: 'Est-ce une entreprise ?',
                     iban: 'IBAN :',
                     country: 'Pays :',
@@ -165,7 +471,7 @@ const API_BASE_URL = (() => {
                     addAgent: '➕ Ajouter l\'Agent',
                     editAgent: '💾 Modifier l\'Agent',
                     reset: '🔄 Réinitialiser',
-                    buildersManagers: 'Builders / Managers',
+                    buildersManagers: 'Apprentices / Builders / Managers',
                     clients: 'Clients',
                     noAgents: 'Aucun agent enregistré.',
                     payment: 'Paiement',
@@ -181,7 +487,36 @@ const API_BASE_URL = (() => {
                     paymentPaypal: 'Email PayPal :',
                     paymentPaypalPlaceholder: 'exemple@email.com',
                     paymentOtherPlaceholder: 'Précisez le moyen de paiement',
-                    removePayment: '🗑️ Supprimer'
+                    removePayment: '🗑️ Supprimer',
+                    engagement: {
+                        sectionTitle: 'Suivi d’activité & incidents',
+                        rulesHint: 'Fenêtre glissante : {days} jours. Statut selon le nombre d’incidents : 0–1 actif, 2–3 à surveiller, 4–5 avertissement, 6 ou plus sanction à envisager. Chaque enregistrement compte pour 1.',
+                        selectAgent: 'Choisir un agent…',
+                        agentLabel: 'Agent',
+                        typeLabel: 'Type d’incident',
+                        noteLabel: 'Détail (optionnel)',
+                        notePlaceholder: 'ex. réunion hebdo du 12/05',
+                        dateLabel: 'Date de l’incident (optionnel)',
+                        refLabel: 'Réf. anti-doublon (optionnel)',
+                        refPlaceholder: 'ex. poll_2026q1',
+                        submit: 'Enregistrer l’incident',
+                        incidentCount: '{count} incident(s) sur {days} j',
+                        periodFrom: 'Depuis le {date}',
+                        status: {
+                            active: 'Actif',
+                            attention: 'À surveiller',
+                            warn: 'Avertissement',
+                            sanction: 'Sanction à envisager'
+                        },
+                        types: {
+                            meeting_absence: 'Réunion / meeting non rejoint',
+                            survey_no_response: 'Sondage sans réponse',
+                            task_missed: 'Participation / tâche manquée',
+                            other_inactivity: 'Autre inactivité'
+                        },
+                        eventSaved: 'Incident enregistré. Le statut de l’agent a été mis à jour.',
+                        eventFailed: 'Enregistrement impossible : {error}'
+                    }
                 },
                 analyst: {
                     title: '📊 Data Analyst',
@@ -234,6 +569,14 @@ const API_BASE_URL = (() => {
                     userRole: 'Rôle',
                     userStatus: 'Statut',
                     lastLogin: 'Dernière connexion',
+                    recentLogins: 'Connexions récentes au site',
+                    noLoginHistory: 'Aucune connexion enregistrée pour le moment.',
+                    siteLoginLine: 'Connexion au site le {date}',
+                    seeMoreLogins: 'Voir plus',
+                    seeLessLogins: 'Voir moins',
+                    ipAddress: 'IP',
+                    device: 'Appareil',
+                    unknownDevice: 'Appareil non renseigné',
                     edit: '✏️ Modifier',
                     deactivate: 'Désactiver',
                     reactivate: 'Réactiver'
@@ -261,6 +604,8 @@ const API_BASE_URL = (() => {
                     editTitle: 'Modifier une tâche',
                     summaryTotal: 'Total',
                     summaryOverdue: 'En retard',
+                    summaryDueToday: 'Attention aujourd\'hui',
+                    summaryArchived: 'Archivées',
                     title: 'Titre',
                     titlePlaceholder: 'Ex: Finaliser les paiements de mars',
                     status: 'Statut',
@@ -273,6 +618,7 @@ const API_BASE_URL = (() => {
                     filterAllStatuses: 'Tous les statuts',
                     filterAssignee: 'Assigné à',
                     filterAllAssignees: 'Toutes les assignations',
+                    filterArchived: 'Afficher aussi les archivées',
                     filterOverdue: 'Afficher seulement les retards',
                     sortBy: 'Tri',
                     sortDeadline: 'Deadline proche',
@@ -288,6 +634,7 @@ const API_BASE_URL = (() => {
                     assignedTo: 'Assigné à',
                     assignedToPlaceholder: 'Ex: Antoine / Manager / Builder Team',
                     deadline: 'Deadline',
+                    deadlineTime: 'Heure',
                     description: 'Description',
                     descriptionPlaceholder: 'Contexte, blocages, prochaine action...',
                     add: '➕ Ajouter la tâche',
@@ -301,6 +648,8 @@ const API_BASE_URL = (() => {
                     deadlineLabel: 'Deadline: {date}',
                     assignedLabel: 'Assigné à: {name}',
                     edit: '✏️ Modifier',
+                    archive: 'Archiver',
+                    restore: 'Désarchiver',
                     moveTodo: 'À faire',
                     moveInProgress: 'En cours',
                     moveDone: 'Terminé',
@@ -357,8 +706,10 @@ const API_BASE_URL = (() => {
                     todoDeleteFailed: 'Impossible de supprimer la tâche : {error}',
                     todoStatusFailed: 'Impossible de mettre à jour le statut : {error}',
                     todoSaveFailed: 'Impossible d\'enregistrer la tâche : {error}',
+                    todoArchiveFailed: 'Impossible de mettre à jour l\'archivage : {error}',
                     authLoginRequired: 'Veuillez saisir votre email et votre mot de passe.',
                     authLoginFailed: 'Impossible de se connecter : {error}',
+                    apiNetworkHint: 'API utilisée : {api}\n— Vérifiez FRONTEND_URL sur le backend (origine exacte de cette page, plusieurs valeurs possibles séparées par des virgules).\n— Ou ouvrez le site avec ?apiBase=https://votre-serveur/api',
                     authDenied: 'Connexion refusée.',
                     authInProgress: 'Connexion en cours...',
                     showcaseCopied: 'Texte showcase copié !',
@@ -491,10 +842,15 @@ const API_BASE_URL = (() => {
                     category: 'Category:',
                     selectCategory: 'Select',
                     manager: 'Manager',
+                    apprentice: 'Apprentice',
                     builder: 'Builder',
                     client: 'Client',
                     commissionRate: 'Commission rate (%):',
                     memberSince: 'Member since:',
+                    currentTeamMember: 'Currently part of the team:',
+                    currentTeamMemberYes: 'Yes',
+                    currentTeamMemberNo: 'No',
+                    inactiveTeamBadge: 'No longer in team',
                     isCompany: 'Is it a company?',
                     iban: 'IBAN:',
                     country: 'Country:',
@@ -503,7 +859,7 @@ const API_BASE_URL = (() => {
                     addAgent: '➕ Add Agent',
                     editAgent: '💾 Update Agent',
                     reset: '🔄 Reset',
-                    buildersManagers: 'Builders / Managers',
+                    buildersManagers: 'Apprentices / Builders / Managers',
                     clients: 'Clients',
                     noAgents: 'No agent recorded.',
                     payment: 'Payment',
@@ -519,7 +875,36 @@ const API_BASE_URL = (() => {
                     paymentPaypal: 'PayPal email:',
                     paymentPaypalPlaceholder: 'example@email.com',
                     paymentOtherPlaceholder: 'Specify the payment method',
-                    removePayment: '🗑️ Remove'
+                    removePayment: '🗑️ Remove',
+                    engagement: {
+                        sectionTitle: 'Activity & incidents',
+                        rulesHint: 'Rolling window: {days} days. Status from incident count: 0–1 active, 2–3 watch, 4–5 warning, 6+ consider sanction. Each logged item counts as 1.',
+                        selectAgent: 'Select an agent…',
+                        agentLabel: 'Agent',
+                        typeLabel: 'Incident type',
+                        noteLabel: 'Details (optional)',
+                        notePlaceholder: 'e.g. weekly meeting May 12',
+                        dateLabel: 'Incident date (optional)',
+                        refLabel: 'Dedup reference (optional)',
+                        refPlaceholder: 'e.g. poll_2026q1',
+                        submit: 'Log incident',
+                        incidentCount: '{count} incident(s) in {days}d',
+                        periodFrom: 'Since {date}',
+                        status: {
+                            active: 'Active',
+                            attention: 'Watch',
+                            warn: 'Warning',
+                            sanction: 'Sanction review'
+                        },
+                        types: {
+                            meeting_absence: 'Missed meeting',
+                            survey_no_response: 'Survey not answered',
+                            task_missed: 'Missed task / participation',
+                            other_inactivity: 'Other inactivity'
+                        },
+                        eventSaved: 'Incident saved. The agent status was updated.',
+                        eventFailed: 'Could not save: {error}'
+                    }
                 },
                 analyst: {
                     title: '📊 Analytics',
@@ -572,6 +957,14 @@ const API_BASE_URL = (() => {
                     userRole: 'Role',
                     userStatus: 'Status',
                     lastLogin: 'Last login',
+                    recentLogins: 'Recent site logins',
+                    noLoginHistory: 'No login recorded yet.',
+                    siteLoginLine: 'Signed in to the site at {date}',
+                    seeMoreLogins: 'See more',
+                    seeLessLogins: 'See less',
+                    ipAddress: 'IP',
+                    device: 'Device',
+                    unknownDevice: 'Unknown device',
                     edit: '✏️ Edit',
                     deactivate: 'Disable',
                     reactivate: 'Reactivate'
@@ -599,6 +992,8 @@ const API_BASE_URL = (() => {
                     editTitle: 'Edit task',
                     summaryTotal: 'Total',
                     summaryOverdue: 'Overdue',
+                    summaryDueToday: 'Due today alert',
+                    summaryArchived: 'Archived',
                     title: 'Title',
                     titlePlaceholder: 'E.g. Finalize March payments',
                     status: 'Status',
@@ -611,6 +1006,7 @@ const API_BASE_URL = (() => {
                     filterAllStatuses: 'All statuses',
                     filterAssignee: 'Assigned to',
                     filterAllAssignees: 'All assignees',
+                    filterArchived: 'Show archived too',
                     filterOverdue: 'Show overdue only',
                     sortBy: 'Sort by',
                     sortDeadline: 'Closest deadline',
@@ -626,6 +1022,7 @@ const API_BASE_URL = (() => {
                     assignedTo: 'Assigned to',
                     assignedToPlaceholder: 'E.g. Antoine / Manager / Builder Team',
                     deadline: 'Deadline',
+                    deadlineTime: 'Time',
                     description: 'Description',
                     descriptionPlaceholder: 'Context, blockers, next action...',
                     add: '➕ Add task',
@@ -639,6 +1036,8 @@ const API_BASE_URL = (() => {
                     deadlineLabel: 'Deadline: {date}',
                     assignedLabel: 'Assigned to: {name}',
                     edit: '✏️ Edit',
+                    archive: 'Archive',
+                    restore: 'Unarchive',
                     moveTodo: 'To do',
                     moveInProgress: 'In progress',
                     moveDone: 'Done',
@@ -695,8 +1094,10 @@ const API_BASE_URL = (() => {
                     todoDeleteFailed: 'Unable to delete the task: {error}',
                     todoStatusFailed: 'Unable to update the status: {error}',
                     todoSaveFailed: 'Unable to save the task: {error}',
+                    todoArchiveFailed: 'Unable to update the archive state: {error}',
                     authLoginRequired: 'Please enter your email and password.',
                     authLoginFailed: 'Unable to sign in: {error}',
+                    apiNetworkHint: 'API tried: {api}\n— Check FRONTEND_URL on the backend lists this page origin (comma-separated allowed).\n— Or open the site with ?apiBase=https://your-server/api',
                     authDenied: 'Login denied.',
                     authInProgress: 'Signing in...',
                     showcaseCopied: 'Showcase text copied!',
@@ -829,10 +1230,15 @@ const API_BASE_URL = (() => {
                     category: 'Kategorie:',
                     selectCategory: 'Auswählen',
                     manager: 'Manager',
+                    apprentice: 'Apprentice',
                     builder: 'Builder',
                     client: 'Kunde',
                     commissionRate: 'Provisionssatz (%):',
                     memberSince: 'Mitglied seit:',
+                    currentTeamMember: 'Aktuell im Team:',
+                    currentTeamMemberYes: 'Ja',
+                    currentTeamMemberNo: 'Nein',
+                    inactiveTeamBadge: 'Nicht mehr im Team',
                     isCompany: 'Ist es ein Unternehmen?',
                     iban: 'IBAN:',
                     country: 'Land:',
@@ -841,7 +1247,7 @@ const API_BASE_URL = (() => {
                     addAgent: '➕ Agent hinzufügen',
                     editAgent: '💾 Agent aktualisieren',
                     reset: '🔄 Zurücksetzen',
-                    buildersManagers: 'Builder / Manager',
+                    buildersManagers: 'Apprentices / Builder / Manager',
                     clients: 'Kunden',
                     noAgents: 'Keine Agenten vorhanden.',
                     payment: 'Zahlung',
@@ -857,7 +1263,36 @@ const API_BASE_URL = (() => {
                     paymentPaypal: 'PayPal-E-Mail:',
                     paymentPaypalPlaceholder: 'beispiel@email.com',
                     paymentOtherPlaceholder: 'Zahlungsmethode angeben',
-                    removePayment: '🗑️ Entfernen'
+                    removePayment: '🗑️ Entfernen',
+                    engagement: {
+                        sectionTitle: 'Aktivität & Vorfälle',
+                        rulesHint: 'Zeitfenster: {days} Tage. Status nach Anzahl: 0–1 aktiv, 2–3 beobachten, 4–5 Verwarnung, 6+ Sanktion prüfen. Jeder Eintrag zählt 1.',
+                        selectAgent: 'Agent wählen…',
+                        agentLabel: 'Agent',
+                        typeLabel: 'Vorfall-Typ',
+                        noteLabel: 'Detail (optional)',
+                        notePlaceholder: 'z. B. Weekly am 12.05.',
+                        dateLabel: 'Datum des Vorfalls (optional)',
+                        refLabel: 'Referenz gegen Dubletten (optional)',
+                        refPlaceholder: 'z. B. poll_2026q1',
+                        submit: 'Vorfall speichern',
+                        incidentCount: '{count} Vorfall/Vorfälle in {days} T.',
+                        periodFrom: 'Seit {date}',
+                        status: {
+                            active: 'Aktiv',
+                            attention: 'Beobachten',
+                            warn: 'Verwarnung',
+                            sanction: 'Sanktion prüfen'
+                        },
+                        types: {
+                            meeting_absence: 'Meeting nicht besucht',
+                            survey_no_response: 'Umfrage nicht beantwortet',
+                            task_missed: 'Aufgabe / Teilnahme verpasst',
+                            other_inactivity: 'Sonstige Inaktivität'
+                        },
+                        eventSaved: 'Vorfall gespeichert. Status wurde aktualisiert.',
+                        eventFailed: 'Speichern fehlgeschlagen: {error}'
+                    }
                 },
                 analyst: {
                     title: '📊 Analyse',
@@ -910,6 +1345,14 @@ const API_BASE_URL = (() => {
                     userRole: 'Rolle',
                     userStatus: 'Status',
                     lastLogin: 'Letzte Anmeldung',
+                    recentLogins: 'Letzte Website-Anmeldungen',
+                    noLoginHistory: 'Noch keine Verbindung protokolliert.',
+                    siteLoginLine: 'Website-Anmeldung am {date}',
+                    seeMoreLogins: 'Mehr anzeigen',
+                    seeLessLogins: 'Weniger anzeigen',
+                    ipAddress: 'IP',
+                    device: 'Gerät',
+                    unknownDevice: 'Unbekanntes Gerät',
                     edit: '✏️ Bearbeiten',
                     deactivate: 'Deaktivieren',
                     reactivate: 'Reaktivieren'
@@ -937,6 +1380,8 @@ const API_BASE_URL = (() => {
                     editTitle: 'Aufgabe bearbeiten',
                     summaryTotal: 'Gesamt',
                     summaryOverdue: 'Überfällig',
+                    summaryDueToday: 'Heute fällig',
+                    summaryArchived: 'Archiviert',
                     title: 'Titel',
                     titlePlaceholder: 'Z. B. März-Zahlungen finalisieren',
                     status: 'Status',
@@ -949,6 +1394,7 @@ const API_BASE_URL = (() => {
                     filterAllStatuses: 'Alle Status',
                     filterAssignee: 'Zugewiesen an',
                     filterAllAssignees: 'Alle Zuweisungen',
+                    filterArchived: 'Archivierte auch anzeigen',
                     filterOverdue: 'Nur überfällige zeigen',
                     sortBy: 'Sortierung',
                     sortDeadline: 'Nächste Deadline',
@@ -964,6 +1410,7 @@ const API_BASE_URL = (() => {
                     assignedTo: 'Zugewiesen an',
                     assignedToPlaceholder: 'Z. B. Antoine / Manager / Builder Team',
                     deadline: 'Deadline',
+                    deadlineTime: 'Uhrzeit',
                     description: 'Beschreibung',
                     descriptionPlaceholder: 'Kontext, Blocker, nächste Aktion...',
                     add: '➕ Aufgabe hinzufügen',
@@ -977,6 +1424,8 @@ const API_BASE_URL = (() => {
                     deadlineLabel: 'Deadline: {date}',
                     assignedLabel: 'Zugewiesen an: {name}',
                     edit: '✏️ Bearbeiten',
+                    archive: 'Archivieren',
+                    restore: 'Wiederherstellen',
                     moveTodo: 'Offen',
                     moveInProgress: 'In Arbeit',
                     moveDone: 'Erledigt',
@@ -1033,8 +1482,10 @@ const API_BASE_URL = (() => {
                     todoDeleteFailed: 'Aufgabe konnte nicht gelöscht werden: {error}',
                     todoStatusFailed: 'Status konnte nicht aktualisiert werden: {error}',
                     todoSaveFailed: 'Aufgabe konnte nicht gespeichert werden: {error}',
+                    todoArchiveFailed: 'Archivierungsstatus konnte nicht aktualisiert werden: {error}',
                     authLoginRequired: 'Bitte gib deine E-Mail und dein Passwort ein.',
                     authLoginFailed: 'Anmeldung fehlgeschlagen: {error}',
+                    apiNetworkHint: 'API: {api}\n— FRONTEND_URL auf dem Server pruefen (exakte Origin, kommagetrennt erlaubt).\n— Oder ?apiBase=https://dein-server/api in der URL.',
                     authDenied: 'Anmeldung verweigert.',
                     authInProgress: 'Anmeldung läuft...',
                     showcaseCopied: 'Showcase-Text kopiert!',
@@ -1091,6 +1542,9 @@ const API_BASE_URL = (() => {
         function getRoleLabel(role) {
             if (role === 'client') {
                 return t('agents.client');
+            }
+            if (role === 'apprentice') {
+                return t('agents.apprentice');
             }
             return t(`roles.${role || 'guest'}`);
         }
@@ -1196,11 +1650,15 @@ const API_BASE_URL = (() => {
             setText('label[for="agentCategory"]', 'agents.category');
             setText('#agentCategory option[value=""]', 'agents.selectCategory');
             setText('#agentCategory option[value="manager"]', 'agents.manager');
+            setText('#agentCategory option[value="apprentice"]', 'agents.apprentice');
             setText('#agentCategory option[value="builder"]', 'agents.builder');
             setText('#agentCategory option[value="client"]', 'agents.client');
             setText('label[for="agentCommissionRate"]', 'agents.commissionRate');
             setText('label[for="agentMemberSince"]', 'agents.memberSince');
-            setText('#clientFields label', 'agents.isCompany');
+            setText('label[for="agentIsCurrentTeamMember"]', 'agents.currentTeamMember');
+            setText('#agentIsCurrentTeamMember option[value="true"]', 'agents.currentTeamMemberYes');
+            setText('#agentIsCurrentTeamMember option[value="false"]', 'agents.currentTeamMemberNo');
+            setText('label[for="isCompany"]', 'agents.isCompany');
             setText('label[for="companyIBAN"]', 'agents.iban');
             setText('label[for="companyCountry"]', 'agents.country');
             setText('label[for="companyAddress"]', 'agents.address');
@@ -1208,6 +1666,20 @@ const API_BASE_URL = (() => {
             setText('#agents-tab > h2', 'agents.listTitle');
             setText('#agentForm button[type="button"].secondary', 'agents.reset');
             setText('#agentForm button[type="submit"]', editingAgentId ? 'agents.editAgent' : 'agents.addAgent');
+            setText('#engagementSectionTitle', 'agents.engagement.sectionTitle');
+            const engagementHintEl = document.getElementById('engagementSectionHint');
+            if (engagementHintEl) {
+                engagementHintEl.textContent = t('agents.engagement.rulesHint', { days: 60 });
+            }
+            setText('#engagementAgentLabel', 'agents.engagement.agentLabel');
+            setText('#engagementTypeLabel', 'agents.engagement.typeLabel');
+            setText('#engagementNoteLabel', 'agents.engagement.noteLabel');
+            setPlaceholder('#engagementEventNote', 'agents.engagement.notePlaceholder');
+            setText('#engagementDateLabel', 'agents.engagement.dateLabel');
+            setText('#engagementRefLabel', 'agents.engagement.refLabel');
+            setPlaceholder('#engagementExternalRef', 'agents.engagement.refPlaceholder');
+            setText('#engagementSubmitBtn', 'agents.engagement.submit');
+            syncEngagementTypeOptions();
 
             setText('#analyst-tab > h2', 'analyst.title');
             setText('#analyst-tab > p', 'analyst.subtitle');
@@ -1263,6 +1735,7 @@ const API_BASE_URL = (() => {
             setText('label[for="todoAssignedTo"]', 'todos.assignedTo');
             setPlaceholder('#todoAssignedTo', 'todos.assignedToPlaceholder');
             setText('label[for="todoDeadline"]', 'todos.deadline');
+            setText('label[for="todoDeadlineTime"]', 'todos.deadlineTime');
             setText('label[for="todoDescription"]', 'todos.description');
             setPlaceholder('#todoDescription', 'todos.descriptionPlaceholder');
             setText('#todoTeamTitle', 'todos.teamTitle');
@@ -1285,10 +1758,16 @@ const API_BASE_URL = (() => {
             setText('#todoTodoLabel', 'todos.todo');
             setText('#todoInProgressLabel', 'todos.in_progress');
             setText('#todoDoneLabel', 'todos.done');
+            setText('#todoDueTodayLabel', 'todos.summaryDueToday');
             setText('#todoOverdueLabel', 'todos.summaryOverdue');
+            setText('#todoArchivedLabel', 'todos.summaryArchived');
             const todoOverdueFilterText = document.querySelector('#todoFilterOverdueLabel span');
             if (todoOverdueFilterText) {
                 todoOverdueFilterText.textContent = t('todos.filterOverdue');
+            }
+            const todoArchivedFilterText = document.querySelector('#todoFilterArchivedLabel span');
+            if (todoArchivedFilterText) {
+                todoArchivedFilterText.textContent = t('todos.filterArchived');
             }
             setText('#todoForm button[type="button"].secondary', 'todos.reset');
             setText('#todoForm button[type="submit"]', editingTodoId ? 'todos.update' : 'todos.add');
@@ -1500,6 +1979,11 @@ const API_BASE_URL = (() => {
                 agentFormSection.style.display = isManagerLike ? '' : 'none';
             }
 
+            const agentEngagementSection = document.getElementById('agentEngagementSection');
+            if (agentEngagementSection) {
+                agentEngagementSection.style.display = isManagerLike ? '' : 'none';
+            }
+
             if (agentSectionTitle) {
                 agentSectionTitle.textContent = isManagerLike ? t('agents.addTitle') : t('agents.listTitle');
             }
@@ -1563,6 +2047,9 @@ const API_BASE_URL = (() => {
             usersCache = [];
             todosCache = [];
             accountProfile = null;
+            clearSessionIdleTimer();
+            clearAuthSessionStorage();
+            clearSessionRemoteDataCache();
         }
 
         async function apiRequest(path, options = {}) {
@@ -1572,6 +2059,11 @@ const API_BASE_URL = (() => {
                 auth = true,
                 retryOnAuthFailure = true
             } = options;
+
+            if (auth && accessToken && isSessionExpiredByPolicy()) {
+                await expireSession('expired');
+                throw new Error(t('header.noSession'));
+            }
 
             const headers = {};
             if (body !== null) {
@@ -1612,7 +2104,19 @@ const API_BASE_URL = (() => {
                 throw error;
             }
 
+            if (auth && accessToken) {
+                touchSessionActivity();
+            }
+
             return payload;
+        }
+
+        function formatFetchError(error) {
+            const msg = error && typeof error.message === 'string' ? error.message : String(error);
+            if (/Failed to fetch|NetworkError|Load failed|NETWORK_FAILED/i.test(msg)) {
+                return `${msg}\n\n${t('alerts.apiNetworkHint', { api: API_BASE_URL })}`;
+            }
+            return msg;
         }
 
         async function copyTextToClipboard(text) {
@@ -1658,6 +2162,8 @@ const API_BASE_URL = (() => {
             refreshToken = payload.refreshToken;
             currentUser = payload.user;
             updateAuthUI();
+            touchSessionActivity();
+            persistAuthSession();
         }
 
         async function login(email, password) {
@@ -1671,8 +2177,10 @@ const API_BASE_URL = (() => {
             accessToken = payload.accessToken;
             refreshToken = payload.refreshToken;
             currentUser = payload.user;
+            markSessionStarted();
             setAuthenticatedState(true);
             await loadRemoteData();
+            persistAuthSession();
         }
 
         async function logout() {
@@ -1691,6 +2199,9 @@ const API_BASE_URL = (() => {
 
             clearSessionData();
             setAuthenticatedState(false);
+            if (typeof history.replaceState === 'function') {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
             refreshUIAfterLoad();
         }
 
@@ -1708,37 +2219,47 @@ const API_BASE_URL = (() => {
         }
 
         async function loadRemoteData() {
+            const cacheKey = remoteDataCacheUserKey();
+            const cachedPayload = readSessionRemoteDataCache(cacheKey);
+            if (cachedPayload) {
+                applyRemotePayload(cachedPayload);
+                refreshUIAfterLoad();
+            }
+
             const expensesPromise = apiRequest('/expenses').catch(error => {
-                if (error.status === 403) {
-                    return { items: [] };
-                }
-                throw error;
+                console.error('[Lusciana] Echec chargement depenses', error);
+                return { items: [] };
             });
 
             const usersPromise = canManageUsers()
                 ? apiRequest('/users').catch(error => {
-                    if (error.status === 403) {
-                        return { items: [] };
-                    }
-                    throw error;
+                    console.error('[Lusciana] Echec chargement utilisateurs', error);
+                    return { items: [] };
                 })
                 : Promise.resolve({ items: [] });
 
             const accountPromise = canManageOwnAccount()
                 ? apiRequest('/account').catch(error => {
-                    if (error.status === 404 || error.status === 403) {
-                        return null;
-                    }
-                    throw error;
+                    console.error('[Lusciana] Echec chargement compte', error);
+                    return null;
                 })
                 : Promise.resolve(null);
 
+            const safeList = async (path, label) => {
+                try {
+                    return await apiRequest(path);
+                } catch (error) {
+                    console.error(`[Lusciana] Echec chargement ${label}`, path, error);
+                    return { items: [] };
+                }
+            };
+
             const [agentsResponse, commissionsResponse, expensesResponse, usersResponse, todosResponse, accountResponse] = await Promise.all([
-                apiRequest('/agents'),
-                apiRequest('/commissions'),
+                safeList('/agents', 'agents'),
+                safeList('/commissions', 'commissions'),
                 expensesPromise,
                 usersPromise,
-                apiRequest('/todos'),
+                safeList('/todos', 'todos'),
                 accountPromise
             ]);
 
@@ -1748,7 +2269,16 @@ const API_BASE_URL = (() => {
             usersCache = Array.isArray(usersResponse.items) ? usersResponse.items : [];
             todosCache = Array.isArray(todosResponse.items) ? todosResponse.items : [];
             accountProfile = accountResponse;
+            writeSessionRemoteDataCache(cacheKey, {
+                agents: agentsCache,
+                commissions: commissionsCache,
+                expenses: expensesCache,
+                users: usersCache,
+                todos: todosCache,
+                accountProfile
+            });
             refreshUIAfterLoad();
+            applyTabFromHash();
         }
 
         async function refreshUsersData() {
@@ -1767,8 +2297,40 @@ const API_BASE_URL = (() => {
             usersCache = Array.isArray(response.items) ? response.items : [];
         }
 
+        const PRIMARY_TAB_NAMES = ['list', 'agents', 'users', 'todos', 'account', 'analyst', 'data'];
+
+        function syncPrimaryTabHash(tabName) {
+            if (!accessToken || typeof history.replaceState !== 'function') {
+                return;
+            }
+            const next = '#' + tabName;
+            if (location.hash !== next) {
+                history.replaceState(null, '', next);
+            }
+        }
+
+        function applyTabFromHash() {
+            if (!accessToken) {
+                return;
+            }
+            const raw = (location.hash || '#list').replace(/^#/, '').trim();
+            const tabName = PRIMARY_TAB_NAMES.includes(raw) ? raw : 'list';
+            const tabBtnIds = {
+                list: 'tabListBtn',
+                agents: 'tabAgentsBtn',
+                users: 'tabUsersBtn',
+                todos: 'tabTodosBtn',
+                account: 'tabAccountBtn',
+                analyst: 'tabAnalystBtn',
+                data: 'tabDataBtn'
+            };
+            const btn = document.getElementById(tabBtnIds[tabName]);
+            void showTab(tabName, btn, { syncHash: false });
+        }
+
         // Gestion des onglets
-        async function showTab(tabName, element) {
+        async function showTab(tabName, element, options) {
+            const opts = options || {};
             if (!accessToken) {
                 return;
             }
@@ -1795,6 +2357,10 @@ const API_BASE_URL = (() => {
             }
             
             document.getElementById(tabName + '-tab').classList.add('active');
+
+            if (opts.syncHash !== false) {
+                syncPrimaryTabHash(tabName);
+            }
             
             if (tabName === 'list') {
                 displayCommissions();
@@ -2348,6 +2914,7 @@ const API_BASE_URL = (() => {
                 const assignmentBlock = assignedAgentNames.length > 0
                     ? `<ul class="user-assignment-list">${assignedAgentNames.map(name => `<li>${name}</li>`).join('')}</ul>`
                     : `<p style="font-size: 13px; color: #64748b; margin-top: 10px;">${t('users.noAssignedAgents')}</p>`;
+                const loginEventsBlock = renderRecentLoginEvents(user.recentLoginEvents || []);
                 const canEditThisUser = !(user.role === 'superadmin' && getCurrentRole() !== 'superadmin');
                 const toggleLabel = user.isActive ? t('users.deactivate') : t('users.reactivate');
 
@@ -2361,6 +2928,10 @@ const API_BASE_URL = (() => {
                         <div style="margin-top: 14px;">
                             <p style="font-weight: 600; color: #334155;">${t('users.assignedAgentsTitle')}</p>
                             ${assignmentBlock}
+                        </div>
+                        <div class="user-login-events">
+                            <p class="user-login-events-title">${t('users.recentLogins')}</p>
+                            ${loginEventsBlock}
                         </div>
                         ${canEditThisUser ? `
                         <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
@@ -2521,12 +3092,14 @@ const API_BASE_URL = (() => {
             const status = document.getElementById('todoFilterStatus');
             const assignee = document.getElementById('todoFilterAssignee');
             const overdue = document.getElementById('todoFilterOverdue');
+            const archived = document.getElementById('todoFilterArchived');
             const sort = document.getElementById('todoSort');
 
             if (search) search.value = '';
             if (status) status.value = '';
             if (assignee) assignee.value = '';
             if (overdue) overdue.checked = false;
+            if (archived) archived.checked = false;
             if (sort) sort.value = 'deadline';
 
             displayTodos();
@@ -2538,11 +3111,65 @@ const API_BASE_URL = (() => {
             return Number.isNaN(date.getTime()) ? t('common.none') : date.toLocaleDateString(getCurrentLocale());
         }
 
+        function formatTodoDeadline(todo) {
+            if (!todo?.deadline) return t('common.none');
+
+            const date = formatTodoDate(todo.deadline);
+            return todo.deadlineTime ? `${date} ${todo.deadlineTime}` : date;
+        }
+
+        function getTodoDeadlineTimestamp(todo) {
+            if (!todo?.deadline) {
+                return Number.MAX_SAFE_INTEGER;
+            }
+
+            const time = todo.deadlineTime || '23:59';
+            const date = new Date(`${todo.deadline}T${time}:00`);
+            return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+        }
+
         function formatDateTime(value) {
             if (!value) return t('common.never');
 
             const date = new Date(value);
             return Number.isNaN(date.getTime()) ? t('common.never') : date.toLocaleString(getCurrentLocale());
+        }
+
+        function formatLoginEventDetails(event) {
+            const ipAddress = event?.ipAddress || t('common.none');
+            return `${t('users.ipAddress')}: ${ipAddress}`;
+        }
+
+        function renderLoginEventItem(event) {
+            return `
+                <li class="user-login-event-item">
+                    <p class="user-login-event-meta">${escapeHtml(t('users.siteLoginLine', { date: formatDateTime(event.occurredAt) }))}</p>
+                    <p class="user-login-event-details">${escapeHtml(formatLoginEventDetails(event))}</p>
+                </li>
+            `;
+        }
+
+        function renderRecentLoginEvents(events = []) {
+            if (!Array.isArray(events) || events.length === 0) {
+                return `<p class="user-login-empty">${t('users.noLoginHistory')}</p>`;
+            }
+
+            const previewEvents = events.slice(0, 3);
+            const remainingEvents = events.slice(3);
+
+            return `
+                <ul class="user-login-event-list">
+                    ${previewEvents.map(renderLoginEventItem).join('')}
+                </ul>
+                ${remainingEvents.length > 0 ? `
+                    <details class="user-login-more">
+                        <summary>${t('users.seeMoreLogins')} (${remainingEvents.length})</summary>
+                        <ul class="user-login-event-list extra">
+                            ${remainingEvents.map(renderLoginEventItem).join('')}
+                        </ul>
+                    </details>
+                ` : ''}
+            `;
         }
 
         function escapeHtml(value) {
@@ -2557,12 +3184,19 @@ const API_BASE_URL = (() => {
                 return false;
             }
 
-            const deadline = new Date(`${todo.deadline}T23:59:59`);
-            if (Number.isNaN(deadline.getTime())) {
+            return getTodoDeadlineTimestamp(todo) < Date.now();
+        }
+
+        function isTodoDueToday(todo) {
+            if (!todo || todo.status === 'done' || !todo.deadline) {
                 return false;
             }
 
-            return deadline.getTime() < Date.now();
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return todo.deadline === `${year}-${month}-${day}`;
         }
 
         function getTodoMetrics(todos) {
@@ -2571,9 +3205,11 @@ const API_BASE_URL = (() => {
                 if (todo.status === 'todo') metrics.todo += 1;
                 if (todo.status === 'in_progress') metrics.in_progress += 1;
                 if (todo.status === 'done') metrics.done += 1;
+                if (todo.archived) metrics.archived += 1;
+                if (isTodoDueToday(todo)) metrics.dueToday += 1;
                 if (isTodoOverdue(todo)) metrics.overdue += 1;
                 return metrics;
-            }, { total: 0, todo: 0, in_progress: 0, done: 0, overdue: 0 });
+            }, { total: 0, todo: 0, in_progress: 0, done: 0, archived: 0, dueToday: 0, overdue: 0 });
         }
 
         function updateTodoSummary(metrics) {
@@ -2582,6 +3218,8 @@ const API_BASE_URL = (() => {
                 todoTodoCount: metrics.todo,
                 todoInProgressCount: metrics.in_progress,
                 todoDoneCount: metrics.done,
+                todoArchivedCount: metrics.archived,
+                todoDueTodayCount: metrics.dueToday,
                 todoOverdueCount: metrics.overdue
             };
 
@@ -2619,9 +3257,14 @@ const API_BASE_URL = (() => {
             const status = document.getElementById('todoFilterStatus')?.value || '';
             const assignee = document.getElementById('todoFilterAssignee')?.value || '';
             const overdueOnly = Boolean(document.getElementById('todoFilterOverdue')?.checked);
+            const includeArchived = Boolean(document.getElementById('todoFilterArchived')?.checked);
             const sort = document.getElementById('todoSort')?.value || 'deadline';
 
             const filtered = getTodos().filter(todo => {
+                if (!includeArchived && todo.archived) {
+                    return false;
+                }
+
                 const searchable = [
                     todo.title,
                     todo.description,
@@ -2662,8 +3305,8 @@ const API_BASE_URL = (() => {
                     return createdB - createdA;
                 }
 
-                const dateA = a.deadline ? new Date(`${a.deadline}T12:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
-                const dateB = b.deadline ? new Date(`${b.deadline}T12:00:00`).getTime() : Number.MAX_SAFE_INTEGER;
+                const dateA = getTodoDeadlineTimestamp(a);
+                const dateB = getTodoDeadlineTimestamp(b);
                 if (dateA !== dateB) {
                     return dateA - dateB;
                 }
@@ -2697,6 +3340,9 @@ const API_BASE_URL = (() => {
                     const updatedAt = todo.updatedAt
                         ? `<span>${t('todos.updatedAt', { date: formatDateTime(todo.updatedAt) })}</span>`
                         : '';
+                    const archiveButton = todo.status === 'done'
+                        ? `<button type="button" class="secondary" onclick="toggleTodoArchive('${todo.id}', ${todo.archived ? 'false' : 'true'})">${t(todo.archived ? 'todos.restore' : 'todos.archive')}</button>`
+                        : '';
 
                     return `
                         <div class="todo-card ${todo.status} ${isTodoOverdue(todo) ? 'overdue' : ''}">
@@ -2705,7 +3351,7 @@ const API_BASE_URL = (() => {
                                 <span class="todo-badge ${todo.status}">${getTodoStatusLabel(todo.status)}</span>
                             </div>
                             <div class="todo-meta">
-                                <span class="todo-badge ${todo.status}">${t('todos.deadlineLabel', { date: formatTodoDate(todo.deadline) })}</span>
+                                <span class="todo-badge ${todo.status}">${t('todos.deadlineLabel', { date: formatTodoDeadline(todo) })}</span>
                                 <span class="todo-badge todo">${t('todos.assignedLabel', { name: assignedTo })}</span>
                                 ${overdueBadge}
                             </div>
@@ -2722,6 +3368,7 @@ const API_BASE_URL = (() => {
                                     <option value="in_progress" ${todo.status === 'in_progress' ? 'selected' : ''}>${t('todos.in_progress')}</option>
                                     <option value="done" ${todo.status === 'done' ? 'selected' : ''}>${t('todos.done')}</option>
                                 </select>
+                                ${archiveButton}
                                 <button type="button" onclick="editTodo('${todo.id}')">${t('todos.edit')}</button>
                                 <button type="button" class="danger" onclick="deleteTodo('${todo.id}')">${t('todos.delete')}</button>
                             </div>
@@ -2800,6 +3447,7 @@ const API_BASE_URL = (() => {
             document.getElementById('todoDescription').value = todo.description || '';
             document.getElementById('todoStatus').value = todo.status || 'todo';
             document.getElementById('todoDeadline').value = todo.deadline || '';
+            document.getElementById('todoDeadlineTime').value = todo.deadlineTime || '';
             document.getElementById('todoAssignedTo').value = todo.assignedTo || '';
             document.getElementById('todoSectionTitle').textContent = t('todos.editTitle');
 
@@ -2820,12 +3468,29 @@ const API_BASE_URL = (() => {
             try {
                 const response = await apiRequest(`/todos/${todoId}`, {
                     method: 'PATCH',
-                    body: { status }
+                    body: status === 'done' ? { status } : { status, archived: false }
                 });
                 saveTodos(getTodos().map(item => item.id === todoId ? response.item : item));
                 displayTodos();
             } catch (error) {
                 alert(t('alerts.todoStatusFailed', { error: error.message }));
+            }
+        }
+
+        async function toggleTodoArchive(todoId, archived) {
+            if (!requirePermission(canManageTodos, t('alerts.permissionTodos'))) {
+                return;
+            }
+
+            try {
+                const response = await apiRequest(`/todos/${todoId}`, {
+                    method: 'PATCH',
+                    body: { archived }
+                });
+                saveTodos(getTodos().map(item => item.id === todoId ? response.item : item));
+                displayTodos();
+            } catch (error) {
+                alert(t('alerts.todoArchiveFailed', { error: error.message }));
             }
         }
 
@@ -2869,6 +3534,7 @@ const API_BASE_URL = (() => {
                 description: document.getElementById('todoDescription').value.trim(),
                 status: document.getElementById('todoStatus').value,
                 deadline: document.getElementById('todoDeadline').value,
+                deadlineTime: document.getElementById('todoDeadlineTime').value,
                 assignedTo: document.getElementById('todoAssignedTo').value.trim()
             };
 
@@ -2928,6 +3594,7 @@ const API_BASE_URL = (() => {
                 category: selectedCategory,
                 commissionRate: document.getElementById('agentCommissionRate').value ? parseFloat(document.getElementById('agentCommissionRate').value) : 0,
                 memberSince: document.getElementById('agentMemberSince').value || '',
+                isCurrentTeamMember: document.getElementById('agentIsCurrentTeamMember').value !== 'false',
                 isCompany: isCompany,
                 iban: isCompany ? (companyIbanInput?.value || '') : '',
                 country: isCompany ? (companyCountryInput?.value || '') : '',
@@ -2971,6 +3638,51 @@ const API_BASE_URL = (() => {
                 alert(t('alerts.agentSaveFailed', { error: error.message }));
             }
         });
+
+        bindElementEvent('engagementEventForm', 'submit', async function (e) {
+            e.preventDefault();
+            if (!requirePermission(canManageOperationalData, t('alerts.permissionAgents'))) {
+                return;
+            }
+
+            const agentId = document.getElementById('engagementAgentSelect')?.value || '';
+            if (!agentId) {
+                return;
+            }
+
+            const dateInput = document.getElementById('engagementEventDate')?.value || '';
+            const body = {
+                type: document.getElementById('engagementEventType').value,
+                note: document.getElementById('engagementEventNote').value.trim(),
+                externalRef: document.getElementById('engagementExternalRef').value.trim(),
+            };
+            if (dateInput) {
+                const parsed = new Date(dateInput);
+                if (!Number.isNaN(parsed.getTime())) {
+                    body.occurredAt = parsed.toISOString();
+                }
+            }
+
+            try {
+                const response = await apiRequest(`/agents/${agentId}/engagement-events`, {
+                    method: 'POST',
+                    body
+                });
+                const list = getAgents();
+                const idx = list.findIndex((a) => a.id === agentId);
+                if (idx >= 0 && response.engagement) {
+                    list[idx].engagement = response.engagement;
+                    saveAgents(list);
+                }
+                document.getElementById('engagementEventNote').value = '';
+                document.getElementById('engagementExternalRef').value = '';
+                document.getElementById('engagementEventDate').value = '';
+                alert(t('agents.engagement.eventSaved'));
+                displayAgents();
+            } catch (error) {
+                alert(t('agents.engagement.eventFailed', { error: error.message }));
+            }
+        });
         
         bindElementEvent('agentCategory', 'change', function() {
             const clientFields = document.getElementById('clientFields');
@@ -2982,7 +3694,7 @@ const API_BASE_URL = (() => {
                 commissionRateFields.classList.add('hidden');
                 memberSinceFields.classList.add('hidden');
                 document.getElementById('agentCommissionRate').removeAttribute('required');
-            } else if (this.value === 'manager' || this.value === 'builder') {
+            } else if (this.value === 'manager' || this.value === 'builder' || this.value === 'apprentice') {
                 commissionRateFields.classList.remove('hidden');
                 memberSinceFields.classList.remove('hidden');
                 clientFields.classList.add('hidden');
@@ -3013,16 +3725,97 @@ const API_BASE_URL = (() => {
             });
         }
         
+        function engagementSortRank(status) {
+            const order = { sanction: 0, warn: 1, attention: 2, active: 3 };
+            return order[status] ?? 3;
+        }
+
+        function sortAgentsActiveFirst(agentList) {
+            return [...agentList].sort((a, b) => {
+                const aInactive = a.isCurrentTeamMember === false ? 1 : 0;
+                const bInactive = b.isCurrentTeamMember === false ? 1 : 0;
+                if (aInactive !== bInactive) {
+                    return aInactive - bInactive;
+                }
+                const ae = engagementSortRank(a.engagement?.status);
+                const be = engagementSortRank(b.engagement?.status);
+                if (ae !== be) {
+                    return ae - be;
+                }
+                return (a.pseudo || '').localeCompare(b.pseudo || '', undefined, { sensitivity: 'base' });
+            });
+        }
+
+        function syncEngagementTypeOptions() {
+            const sel = document.getElementById('engagementEventType');
+            if (!sel) {
+                return;
+            }
+            const previous = sel.value;
+            const types = ['meeting_absence', 'survey_no_response', 'task_missed', 'other_inactivity'];
+            sel.innerHTML = types.map((type) => (
+                `<option value="${type}">${t(`agents.engagement.types.${type}`)}</option>`
+            )).join('');
+            if (types.includes(previous)) {
+                sel.value = previous;
+            }
+        }
+
+        function fillEngagementAgentSelect() {
+            const sel = document.getElementById('engagementAgentSelect');
+            if (!sel) {
+                return;
+            }
+            const previous = sel.value;
+            const placeholder = t('agents.engagement.selectAgent');
+            sel.innerHTML = `<option value="">${placeholder}</option>`;
+            sortAgentsActiveFirst(getAgents()).forEach((a) => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = `${a.pseudo} (${getRoleLabel(a.category)})`;
+                sel.appendChild(opt);
+            });
+            if (previous && [...sel.options].some((o) => o.value === previous)) {
+                sel.value = previous;
+            }
+        }
+
         function displayAgents() {
             const agents = getAgents();
             const list = document.getElementById('agentList');
             if (!list) return;
             list.innerHTML = '';
             
-            const buildersManagers = agents.filter(a => a.category === 'manager' || a.category === 'builder');
-            const clients = agents.filter(a => a.category === 'client');
+            const buildersManagers = sortAgentsActiveFirst(
+                agents.filter(a => a.category === 'manager' || a.category === 'builder' || a.category === 'apprentice')
+            );
+            const clients = sortAgentsActiveFirst(agents.filter(a => a.category === 'client'));
             
             function renderAgentCard(agent) {
+                const isCurrentTeamMember = agent.isCurrentTeamMember !== false;
+                const eng = agent.engagement;
+                const engStatus = eng?.status || 'active';
+                const engCount = typeof eng?.negativeCount === 'number' ? eng.negativeCount : 0;
+                const engDays = typeof eng?.windowDays === 'number' ? eng.windowDays : 60;
+                const periodStart = eng?.periodStart;
+                let periodLine = '';
+                if (periodStart) {
+                    try {
+                        const d = new Date(periodStart);
+                        periodLine = `<span class="engagement-period">${t('agents.engagement.periodFrom', {
+                            date: d.toLocaleDateString(getCurrentLocale(), { dateStyle: 'medium' })
+                        })}</span>`;
+                    } catch {
+                        periodLine = '';
+                    }
+                }
+                const engagementHtml = `
+                    <div class="engagement-line">
+                        <span class="badge engagement-${engStatus}">${t(`agents.engagement.status.${engStatus}`)}</span>
+                        <span>${t('agents.engagement.incidentCount', { count: engCount, days: engDays })}</span>
+                        ${periodLine}
+                    </div>
+                `;
                 let paymentText = t('common.none');
                 if (agent.paymentMethods && agent.paymentMethods.length > 0) {
                     paymentText = agent.paymentMethods.map(pm => {
@@ -3033,14 +3826,16 @@ const API_BASE_URL = (() => {
                     paymentText = agent.payment;
                 }
                 return `
-                    <div class="agent-card">
+                    <div class="agent-card ${isCurrentTeamMember ? '' : 'inactive-team-member'}">
                         <h3>${agent.pseudo}</h3>
                         <p><strong>Discord:</strong> ${agent.discord}</p>
                         <p><strong>${t('agents.payment')}:</strong> ${paymentText}</p>
                         <p><strong>${t('agents.portfolio')}:</strong> ${agent.pf || t('common.none')}</p>
                         ${agent.commissionRate ? `<p><strong>${t('agents.commissionRateShort')}:</strong> ${agent.commissionRate}%</p>` : ''}
-                        ${(agent.category === 'manager' || agent.category === 'builder') && agent.memberSince ? `<p><strong>${t('agents.memberSinceShort')}:</strong> ${new Date(agent.memberSince + 'T12:00:00').toLocaleDateString(getCurrentLocale())}</p>` : ''}
+                        ${(agent.category === 'manager' || agent.category === 'builder' || agent.category === 'apprentice') && agent.memberSince ? `<p><strong>${t('agents.memberSinceShort')}:</strong> ${new Date(agent.memberSince + 'T12:00:00').toLocaleDateString(getCurrentLocale())}</p>` : ''}
                         <span class="badge ${agent.category}">${getRoleLabel(agent.category)}</span>
+                        ${isCurrentTeamMember ? '' : `<span class="badge inactive-team">${t('agents.inactiveTeamBadge')}</span>`}
+                        ${engagementHtml}
                         ${agent.isCompany ? `<p><strong>${t('agents.companyShort')}:</strong> ${agent.companyName}</p>` : ''}
                         ${canEditUi() ? `
                         <div style="margin-top: 15px; display: flex; gap: 10px;">
@@ -3075,6 +3870,8 @@ const API_BASE_URL = (() => {
             if (agents.length === 0) {
                 list.innerHTML = `<p style="color: #64748b; padding: 24px;">${t('agents.noAgents')}</p>`;
             }
+
+            fillEngagementAgentSelect();
         }
         
         let editingAgentId = null;
@@ -3087,8 +3884,18 @@ const API_BASE_URL = (() => {
             const agents = getAgents();
             const agent = agents.find(a => a.id === agentId);
             if (!agent) return;
+            const clientFields = document.getElementById('clientFields');
+            const commissionRateFields = document.getElementById('commissionRateFields');
+            const memberSinceFields = document.getElementById('memberSinceFields');
+            const companyFields = document.getElementById('companyFields');
+            const sectionTitle = document.getElementById('agentSectionTitle');
             
             editingAgentId = agentId;
+
+            if (clientFields) clientFields.classList.add('hidden');
+            if (commissionRateFields) commissionRateFields.classList.add('hidden');
+            if (memberSinceFields) memberSinceFields.classList.add('hidden');
+            if (companyFields) companyFields.classList.add('hidden');
             
             // Pré-remplir le formulaire
             document.getElementById('agentPseudo').value = agent.pseudo;
@@ -3097,6 +3904,7 @@ const API_BASE_URL = (() => {
             document.getElementById('agentCategory').value = agent.category;
             document.getElementById('agentCommissionRate').value = agent.commissionRate || '';
             document.getElementById('agentMemberSince').value = agent.memberSince || '';
+            document.getElementById('agentIsCurrentTeamMember').value = agent.isCurrentTeamMember === false ? 'false' : 'true';
             
             // Restaurer les moyens de paiement
             const paymentList = document.getElementById('paymentMethodsList');
@@ -3117,18 +3925,22 @@ const API_BASE_URL = (() => {
             
             // Gérer les champs conditionnels
             if (agent.category === 'client') {
-                document.getElementById('clientFields').classList.remove('hidden');
+                if (clientFields) clientFields.classList.remove('hidden');
                 document.getElementById('isCompany').checked = agent.isCompany || false;
                 if (agent.isCompany) {
-                    document.getElementById('companyFields').classList.remove('hidden');
+                    if (companyFields) companyFields.classList.remove('hidden');
                     document.getElementById('companyIBAN').value = agent.iban || '';
                     document.getElementById('companyCountry').value = agent.country || '';
                     document.getElementById('companyAddress').value = agent.address || '';
                     document.getElementById('companyName').value = agent.companyName || '';
                 }
-            } else if (agent.category === 'manager' || agent.category === 'builder') {
-                document.getElementById('commissionRateFields').classList.remove('hidden');
-                document.getElementById('memberSinceFields').classList.remove('hidden');
+            } else if (agent.category === 'manager' || agent.category === 'builder' || agent.category === 'apprentice') {
+                if (commissionRateFields) commissionRateFields.classList.remove('hidden');
+                if (memberSinceFields) memberSinceFields.classList.remove('hidden');
+            }
+
+            if (sectionTitle) {
+                sectionTitle.textContent = t('agents.editAgent');
             }
             
             // Changer le texte du bouton
@@ -3138,9 +3950,14 @@ const API_BASE_URL = (() => {
             }
             
             // Aller à l'onglet agents
-            const agentsTab = document.querySelector('.tab[onclick*="agents"]');
+            const agentsTab = document.querySelector('#tabAgentsBtn');
             if (agentsTab) {
-                showTab('agents', agentsTab);
+                if (typeof showTab === 'function') {
+                    showTab('agents', agentsTab);
+                } else if (agentsTab.href) {
+                    window.location.href = agentsTab.href;
+                    return;
+                }
             }
             document.getElementById('agentForm').scrollIntoView({ behavior: 'smooth' });
         }
@@ -3204,10 +4021,15 @@ const API_BASE_URL = (() => {
             companyFields.classList.add('hidden');
             paymentMethodsList.innerHTML = '';
             editingAgentId = null;
+            document.getElementById('agentIsCurrentTeamMember').value = 'true';
 
             const submitBtn = document.querySelector('#agentForm button[type="submit"]');
             if (submitBtn) {
                 submitBtn.textContent = t('agents.addAgent');
+            }
+            const sectionTitle = document.getElementById('agentSectionTitle');
+            if (sectionTitle) {
+                sectionTitle.textContent = t('agents.addTitle');
             }
         }
         
@@ -3423,17 +4245,27 @@ const API_BASE_URL = (() => {
             updateTotalAmount();
         }
         
-        // Gestion du feedback client
-        document.querySelector('#hasFeedback').previousElementSibling.querySelectorAll('.yes-no-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const feedbackGroup = document.getElementById('feedbackGroup');
-                if (this.dataset.value === 'yes') {
-                    feedbackGroup.classList.remove('hidden');
-                } else {
-                    feedbackGroup.classList.add('hidden');
-                }
+        // Gestion du feedback client (uniquement sur la page avec le formulaire commission)
+        (function initClientFeedbackYesNo() {
+            const hasFeedbackEl = document.querySelector('#hasFeedback');
+            const row = hasFeedbackEl ? hasFeedbackEl.previousElementSibling : null;
+            if (!row) {
+                return;
+            }
+            row.querySelectorAll('.yes-no-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const feedbackGroup = document.getElementById('feedbackGroup');
+                    if (!feedbackGroup) {
+                        return;
+                    }
+                    if (this.dataset.value === 'yes') {
+                        feedbackGroup.classList.remove('hidden');
+                    } else {
+                        feedbackGroup.classList.add('hidden');
+                    }
+                });
             });
-        });
+        })();
         
         // Génération du texte showcase
         function generateShowcaseText(commission) {
@@ -3881,7 +4713,7 @@ Version : ${version}`;
                 clearSessionData();
                 setAuthenticatedState(false);
                 setAuthStatus(t('alerts.authDenied'), true);
-                alert(t('alerts.authLoginFailed', { error: error.message }));
+                alert(t('alerts.authLoginFailed', { error: formatFetchError(error) }));
             }
         });
 
@@ -3913,6 +4745,7 @@ Version : ${version}`;
                 updateAuthUI();
                 displayAgents();
                 displayUsers();
+                persistAuthSession();
                 alert(t('alerts.accountSaved'));
             } catch (error) {
                 alert(t('alerts.accountSaveFailed', { error: error.message }));
@@ -3948,8 +4781,10 @@ Version : ${version}`;
 
         function initializeApp() {
             currentLanguage = getInitialLanguage();
-            clearSessionData();
-            setAuthenticatedState(false);
+            migrateLegacyAuthStorage();
+            resetDataCaches();
+            const hasSession = hydrateAuthFromSessionStorage();
+            setAuthenticatedState(hasSession);
             applyStaticTranslations();
             refreshUIAfterLoad();
             resetUserForm();
@@ -4248,7 +5083,7 @@ Version : ${version}`;
                 });
             }
             
-            const builderManagers = agents.filter(a => a.category === 'manager' || a.category === 'builder');
+            const builderManagers = agents.filter(a => a.category === 'manager' || a.category === 'builder' || a.category === 'apprentice');
             const tableRows = builderManagers
                 .map(a => {
                     const net = byAgent[a.pseudo] || 0;
@@ -4266,7 +5101,7 @@ Version : ${version}`;
                         ${tableRows.length ? tableRows.map(r => `
                             <tr>
                                 <td>${r.pseudo}</td>
-                                <td><span class="badge ${r.category}">${r.category}</span></td>
+                                <td><span class="badge ${r.category}">${getRoleLabel(r.category)}</span></td>
                                 <td><strong>${r.net.toFixed(2)} €</strong></td>
                             </tr>
                         `).join('') : '<tr><td colspan="3">Aucun builder/manager ou aucune commission.</td></tr>'}
@@ -4439,6 +5274,7 @@ Version : ${version}`;
                 commissionsCache = [];
                 expensesCache = [];
                 todosCache = [];
+                clearSessionRemoteDataCache();
                 
                 loadAgentsIntoSelects();
                 loadAgentsIntoSelector();
@@ -4520,7 +5356,20 @@ Version : ${version}`;
         }
         
         // Mettre à jour la répartition quand le % commission change
-        document.addEventListener('DOMContentLoaded', function() {
+        function runWhenDomReady(fn) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fn);
+            } else {
+                fn();
+            }
+        }
+
+        runWhenDomReady(function() {
+            bindSessionActivityListeners();
+            void tryRestoreAuthSession();
+            window.addEventListener('hashchange', function() {
+                applyTabFromHash();
+            });
             const commissionInput = document.getElementById('commissionPercent');
             if (commissionInput) {
                 commissionInput.addEventListener('input', updateWhoTookWhat);
@@ -4530,11 +5379,3 @@ Version : ${version}`;
         
         // Initialisation (données chargées après connexion Google dans showApp)
         loadMinecraftVersions();
-        
-        setTimeout(function() {
-            const commissionInput = document.getElementById('commissionPercent');
-            if (commissionInput) {
-                commissionInput.addEventListener('input', updateWhoTookWhat);
-                commissionInput.addEventListener('input', updateTotalAmount);
-            }
-        }, 100);

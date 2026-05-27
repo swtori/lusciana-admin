@@ -32,16 +32,23 @@ final class Config
             }
         }
 
+        $frontendRaw = self::env('FRONTEND_URL', 'http://localhost:8080');
+        $frontendOrigins = self::parseCommaSeparatedList($frontendRaw);
+        if ($frontendOrigins === []) {
+            throw new RuntimeException('FRONTEND_URL doit contenir au moins une origine (URL de base du front, sans chemin). Plusieurs origines: separees par une virgule.');
+        }
+
         return [
             'app_env' => self::env('APP_ENV', 'production'),
             'app_url' => self::env('APP_URL', 'http://localhost:4000'),
-            'frontend_url' => self::env('FRONTEND_URL', 'http://localhost:8080'),
+            'frontend_url' => $frontendOrigins[0],
+            'frontend_origins' => $frontendOrigins,
             'mongodb_uri' => self::env('MONGODB_URI'),
             'database_name' => self::env('MONGODB_DATABASE', 'lusciana'),
             'jwt_access_secret' => self::env('JWT_ACCESS_SECRET'),
             'jwt_refresh_secret' => self::env('JWT_REFRESH_SECRET'),
             'jwt_access_ttl' => (int) self::env('JWT_ACCESS_TTL', '900'),
-            'jwt_refresh_ttl' => (int) self::env('JWT_REFRESH_TTL', '604800'),
+            'jwt_refresh_ttl' => (int) self::env('JWT_REFRESH_TTL', '28800'),
             'superadmin_email' => self::env('SUPERADMIN_EMAIL'),
             'superadmin_password' => self::env('SUPERADMIN_PASSWORD'),
             'superadmin_name' => self::env('SUPERADMIN_NAME', 'Lusciana Owner'),
@@ -57,5 +64,21 @@ final class Config
         }
 
         return $value;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function parseCommaSeparatedList(string $raw): array
+    {
+        $out = [];
+        foreach (explode(',', $raw) as $part) {
+            $item = rtrim(trim((string) $part), '/');
+            if ($item !== '') {
+                $out[] = $item;
+            }
+        }
+
+        return $out;
     }
 }

@@ -8,6 +8,7 @@ use App\Exceptions\HttpException;
 use App\Http\JsonResponse;
 use App\Http\Request;
 use App\Repositories\AgentRepository;
+use App\Repositories\LoginEventRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
 use App\Support\MongoSerializer;
@@ -20,6 +21,7 @@ final class UsersController
     public function __construct(
         private readonly UserRepository $users,
         private readonly AgentRepository $agents,
+        private readonly LoginEventRepository $loginEvents,
         private readonly AuthService $auth
     ) {
     }
@@ -32,6 +34,22 @@ final class UsersController
             fn (array $user) => $this->auth->publicUser($user),
             $this->users->findAll()
         );
+
+        $loginEventsByUserId = $this->loginEvents->findRecentByUserIds(
+            array_map(
+                static fn (array $item): string => (string) ($item['id'] ?? ''),
+                $items
+            )
+        );
+
+        $items = array_map(function (array $item) use ($loginEventsByUserId): array {
+            $item['recentLoginEvents'] = array_map(
+                static fn (array $event): array => MongoSerializer::normalize($event),
+                $loginEventsByUserId[(string) ($item['id'] ?? '')] ?? []
+            );
+
+            return $item;
+        }, $items);
 
         return new JsonResponse(['items' => $items]);
     }
@@ -163,8 +181,11 @@ final class UsersController
             }
 
             $normalizedAgent = MongoSerializer::normalize($agent);
-            $expectedCategory = $role === Roles::MANAGER ? Roles::AGENT_MANAGER : Roles::AGENT_BUILDER;
-            if (($normalizedAgent['category'] ?? null) !== $expectedCategory) {
+            $agentCategory = (string) ($normalizedAgent['category'] ?? '');
+            $matchesRole = $role === Roles::MANAGER
+                ? $agentCategory === Roles::AGENT_MANAGER
+                : in_array($agentCategory, [Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER], true);
+            if (!$matchesRole) {
                 throw new HttpException('La categorie de l agent ne correspond pas au role du compte', 422);
             }
 
