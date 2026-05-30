@@ -29,6 +29,8 @@ const API_BASE_URL = (() => {
         let expensesCache = [];
         let usersCache = [];
         let todosCache = [];
+        let activeTodoSummaryFilter = 'all';
+        const expandedTodoIds = new Set();
         let accountProfile = null;
         let accessToken = null;
         let refreshToken = null;
@@ -653,7 +655,26 @@ const API_BASE_URL = (() => {
                     moveTodo: 'À faire',
                     moveInProgress: 'En cours',
                     moveDone: 'Terminé',
-                    delete: '🗑️ Supprimer'
+                    delete: '🗑️ Supprimer',
+                    newTask: 'Nouvelle tâche',
+                    formEyebrow: 'Gestion des tâches',
+                    workspaceBadge: 'Espace équipe',
+                    closeForm: 'Fermer',
+                    filterOverdueShort: 'Retards uniquement',
+                    filterArchivedShort: 'Inclure archivées',
+                    archivedBadge: 'Archivée',
+                    noDeadline: 'Sans deadline',
+                    dueToday: 'Aujourd\'hui',
+                    dueTomorrow: 'Demain',
+                    dueInDays: 'Dans {days} j',
+                    overdueDays: '{days}j de retard',
+                    relativeDue: '{date}',
+                    kanbanView: 'Compact',
+                    filterToggle: 'Filtrer',
+                    resetFilters: 'Réinitialiser',
+                    dueTodayShort: 'Auj.',
+                    dueTomorrowShort: '1j',
+                    noDescription: 'Aucune description pour cette tâche.'
                 },
                 data: {
                     title: 'Gestion des Données',
@@ -1041,7 +1062,26 @@ const API_BASE_URL = (() => {
                     moveTodo: 'To do',
                     moveInProgress: 'In progress',
                     moveDone: 'Done',
-                    delete: '🗑️ Delete'
+                    delete: '🗑️ Delete',
+                    newTask: 'New task',
+                    formEyebrow: 'Task management',
+                    workspaceBadge: 'Team workspace',
+                    closeForm: 'Close',
+                    filterOverdueShort: 'Overdue only',
+                    filterArchivedShort: 'Include archived',
+                    archivedBadge: 'Archived',
+                    noDeadline: 'No deadline',
+                    dueToday: 'Today',
+                    dueTomorrow: 'Tomorrow',
+                    dueInDays: 'In {days} d',
+                    overdueDays: '{days}d overdue',
+                    relativeDue: '{date}',
+                    kanbanView: 'Compact',
+                    filterToggle: 'Filter',
+                    resetFilters: 'Reset',
+                    dueTodayShort: 'Today',
+                    dueTomorrowShort: '1d',
+                    noDescription: 'No description for this task.'
                 },
                 data: {
                     title: 'Data',
@@ -1429,7 +1469,26 @@ const API_BASE_URL = (() => {
                     moveTodo: 'Offen',
                     moveInProgress: 'In Arbeit',
                     moveDone: 'Erledigt',
-                    delete: '🗑️ Löschen'
+                    delete: '🗑️ Löschen',
+                    newTask: 'Neue Aufgabe',
+                    formEyebrow: 'Aufgabenverwaltung',
+                    workspaceBadge: 'Team-Bereich',
+                    closeForm: 'Schließen',
+                    filterOverdueShort: 'Nur überfällig',
+                    filterArchivedShort: 'Archivierte einbeziehen',
+                    archivedBadge: 'Archiviert',
+                    noDeadline: 'Keine Deadline',
+                    dueToday: 'Heute',
+                    dueTomorrow: 'Morgen',
+                    dueInDays: 'In {days} T',
+                    overdueDays: '{days}T überfällig',
+                    relativeDue: '{date}',
+                    kanbanView: 'Kompakt',
+                    filterToggle: 'Filter',
+                    resetFilters: 'Zurücksetzen',
+                    dueTodayShort: 'Heute',
+                    dueTomorrowShort: '1T',
+                    noDescription: 'Keine Beschreibung für diese Aufgabe.'
                 },
                 data: {
                     title: 'Daten',
@@ -1739,8 +1798,15 @@ const API_BASE_URL = (() => {
             setText('label[for="todoDescription"]', 'todos.description');
             setPlaceholder('#todoDescription', 'todos.descriptionPlaceholder');
             setText('#todoTeamTitle', 'todos.teamTitle');
-            setText('#todoTeamSubtitle', 'todos.teamSubtitle');
+            setText('#todoNewTaskLabel', 'todos.newTask');
+            setText('#todoKanbanViewLabel', 'todos.kanbanView');
+            setText('#todoFilterToggleLabel', 'todos.filterToggle');
+            setText('#todoClearFiltersLabel', 'todos.resetFilters');
             setText('#todoClearFilters', 'todos.clearFilters');
+            const todoCloseFormBtn = document.getElementById('todoCloseFormBtn');
+            if (todoCloseFormBtn) {
+                todoCloseFormBtn.setAttribute('aria-label', t('todos.closeForm'));
+            }
             setText('#todoSearchLabel', 'todos.search');
             setPlaceholder('#todoSearch', 'todos.searchPlaceholder');
             setText('#todoFilterStatusLabel', 'todos.filterStatus');
@@ -1758,19 +1824,25 @@ const API_BASE_URL = (() => {
             setText('#todoTodoLabel', 'todos.todo');
             setText('#todoInProgressLabel', 'todos.in_progress');
             setText('#todoDoneLabel', 'todos.done');
-            setText('#todoDueTodayLabel', 'todos.summaryDueToday');
+            setText('#todoDueTodayLabel', 'todos.dueToday');
             setText('#todoOverdueLabel', 'todos.summaryOverdue');
             setText('#todoArchivedLabel', 'todos.summaryArchived');
             const todoOverdueFilterText = document.querySelector('#todoFilterOverdueLabel span');
             if (todoOverdueFilterText) {
-                todoOverdueFilterText.textContent = t('todos.filterOverdue');
+                todoOverdueFilterText.textContent = t('todos.filterOverdueShort');
             }
             const todoArchivedFilterText = document.querySelector('#todoFilterArchivedLabel span');
             if (todoArchivedFilterText) {
-                todoArchivedFilterText.textContent = t('todos.filterArchived');
+                todoArchivedFilterText.textContent = t('todos.filterArchivedShort');
             }
-            setText('#todoForm button[type="button"].secondary', 'todos.reset');
-            setText('#todoForm button[type="submit"]', editingTodoId ? 'todos.update' : 'todos.add');
+            const todoSubmitBtn = document.querySelector('#todoForm button[type="submit"]');
+            if (todoSubmitBtn) {
+                todoSubmitBtn.textContent = editingTodoId ? t('todos.update') : t('todos.add');
+            }
+            const todoResetBtn = document.querySelector('#todoForm button[type="button"].todo-secondary-btn');
+            if (todoResetBtn) {
+                todoResetBtn.textContent = t('todos.reset');
+            }
 
             setText('#accountSectionTitle', 'account.title');
             setText('#accountSectionSubtitle', 'account.subtitle');
@@ -1942,7 +2014,8 @@ const API_BASE_URL = (() => {
             const userFormSection = document.getElementById('userFormSection');
             const userRole = document.getElementById('userRole');
             const todoFormSection = document.getElementById('todoFormSection');
-            const todoBoard = document.querySelector('#todos-tab .todo-board');
+            const todoNewTaskBtn = document.getElementById('todoNewTaskBtn');
+            const todoWorkspace = document.querySelector('#todos-tab .todo-workspace');
             const expenseControls = document.getElementById('expenseControls');
             const dataImportSection = document.getElementById('dataImportSection');
             const isAuthenticated = Boolean(accessToken && currentUser);
@@ -1996,8 +2069,12 @@ const API_BASE_URL = (() => {
                 todoFormSection.style.display = isAuthenticated && canWriteTodos ? '' : 'none';
             }
 
-            if (todoBoard) {
-                todoBoard.classList.toggle('readonly-layout', !(isAuthenticated && canWriteTodos));
+            if (todoNewTaskBtn) {
+                todoNewTaskBtn.style.display = isAuthenticated && canWriteTodos ? '' : 'none';
+            }
+
+            if (todoWorkspace) {
+                todoWorkspace.classList.toggle('readonly-layout', !(isAuthenticated && canWriteTodos));
             }
 
             if (userRole) {
@@ -2224,6 +2301,7 @@ const API_BASE_URL = (() => {
             if (cachedPayload) {
                 applyRemotePayload(cachedPayload);
                 refreshUIAfterLoad();
+                applyTabFromHash();
             }
 
             const expensesPromise = apiRequest('/expenses').catch(error => {
@@ -3074,7 +3152,7 @@ const API_BASE_URL = (() => {
 
         let editingTodoId = null;
 
-        function resetTodoForm() {
+        function resetTodoForm(shouldClose = true) {
             const form = document.getElementById('todoForm');
             const title = document.getElementById('todoSectionTitle');
             const submitBtn = document.querySelector('#todoForm button[type="submit"]');
@@ -3085,6 +3163,10 @@ const API_BASE_URL = (() => {
             title.textContent = t('todos.createTitle');
             document.getElementById('todoStatus').value = 'todo';
             submitBtn.textContent = t('todos.add');
+
+            if (shouldClose) {
+                closeTodoForm();
+            }
         }
 
         function resetTodoFilters() {
@@ -3095,6 +3177,7 @@ const API_BASE_URL = (() => {
             const archived = document.getElementById('todoFilterArchived');
             const sort = document.getElementById('todoSort');
 
+            activeTodoSummaryFilter = 'all';
             if (search) search.value = '';
             if (status) status.value = '';
             if (assignee) assignee.value = '';
@@ -3102,7 +3185,206 @@ const API_BASE_URL = (() => {
             if (archived) archived.checked = false;
             if (sort) sort.value = 'deadline';
 
+            updateTodoSummaryActiveState();
             displayTodos();
+        }
+
+        function openTodoForm() {
+            if (!requirePermission(canManageTodos, t('alerts.permissionTodos'))) {
+                return;
+            }
+
+            const drawer = document.getElementById('todoFormSection');
+            const backdrop = document.getElementById('todoFormBackdrop');
+            if (!drawer || !backdrop) {
+                return;
+            }
+
+            drawer.classList.add('is-open');
+            drawer.setAttribute('aria-hidden', 'false');
+            backdrop.hidden = false;
+            document.body.style.overflow = 'hidden';
+
+            const titleInput = document.getElementById('todoTitle');
+            if (titleInput) {
+                titleInput.focus();
+            }
+        }
+
+        function closeTodoForm() {
+            const drawer = document.getElementById('todoFormSection');
+            const backdrop = document.getElementById('todoFormBackdrop');
+            if (!drawer || !backdrop) {
+                return;
+            }
+
+            drawer.classList.remove('is-open');
+            drawer.setAttribute('aria-hidden', 'true');
+            backdrop.hidden = true;
+            document.body.style.overflow = '';
+            resetTodoForm(false);
+        }
+
+        function applyTodoSummaryFilter(filter) {
+            activeTodoSummaryFilter = filter;
+
+            const status = document.getElementById('todoFilterStatus');
+            const overdue = document.getElementById('todoFilterOverdue');
+            const archived = document.getElementById('todoFilterArchived');
+
+            if (status) status.value = '';
+            if (overdue) overdue.checked = false;
+            if (archived) archived.checked = false;
+
+            if (filter === 'todo' || filter === 'in_progress' || filter === 'done') {
+                if (status) status.value = filter;
+            } else if (filter === 'overdue') {
+                if (overdue) overdue.checked = true;
+            } else if (filter === 'archived') {
+                if (archived) archived.checked = true;
+            }
+
+            updateTodoSummaryActiveState();
+            displayTodos();
+        }
+
+        function syncTodoSummaryFilterFromControls() {
+            const status = document.getElementById('todoFilterStatus')?.value || '';
+            const overdue = Boolean(document.getElementById('todoFilterOverdue')?.checked);
+            const archived = Boolean(document.getElementById('todoFilterArchived')?.checked);
+
+            if (overdue) {
+                activeTodoSummaryFilter = 'overdue';
+            } else if (archived) {
+                activeTodoSummaryFilter = 'archived';
+            } else if (status === 'todo' || status === 'in_progress' || status === 'done') {
+                activeTodoSummaryFilter = status;
+            } else if (activeTodoSummaryFilter === 'due-today') {
+                // Conserver le filtre "aujourd'hui" tant qu'aucun autre filtre explicite n'est choisi.
+            } else {
+                activeTodoSummaryFilter = 'all';
+            }
+
+            updateTodoSummaryActiveState();
+        }
+
+        function toggleTodoFiltersPanel() {
+            const panel = document.getElementById('todoBoardFilters');
+            const toggle = document.getElementById('todoFiltersToggle');
+            if (!panel || !toggle) {
+                return;
+            }
+
+            panel.hidden = !panel.hidden;
+            toggle.setAttribute('aria-expanded', String(!panel.hidden));
+        }
+
+        function updateTodoSummaryActiveState() {
+            document.querySelectorAll('.todo-quick-filter[data-todo-filter]').forEach((card) => {
+                card.classList.toggle('is-active', card.dataset.todoFilter === activeTodoSummaryFilter);
+            });
+        }
+
+        function getTodoAssigneeInitials(name) {
+            const value = String(name || '').trim();
+            if (!value) {
+                return '?';
+            }
+
+            const parts = value.split(/[\s/|,-]+/).filter(Boolean);
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+
+            return value.slice(0, 2).toUpperCase();
+        }
+
+        function getTodoDeadlineMeta(todo) {
+            if (!todo?.deadline) {
+                return {
+                    text: t('todos.noDeadline'),
+                    chipClass: 'is-muted'
+                };
+            }
+
+            if (todo.status === 'done') {
+                return {
+                    text: formatTodoDeadline(todo),
+                    chipClass: 'is-done'
+                };
+            }
+
+            if (isTodoOverdue(todo)) {
+                const diffMs = Date.now() - getTodoDeadlineTimestamp(todo);
+                const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                return {
+                    text: t('todos.overdueDays', { days }),
+                    chipClass: 'is-overdue'
+                };
+            }
+
+            if (isTodoDueToday(todo)) {
+                return {
+                    text: t('todos.dueToday'),
+                    chipClass: 'is-due-today'
+                };
+            }
+
+            const deadlineTs = getTodoDeadlineTimestamp(todo);
+            const diffDays = Math.ceil((deadlineTs - Date.now()) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1) {
+                return {
+                    text: t('todos.dueTomorrow'),
+                    chipClass: ''
+                };
+            }
+
+            if (diffDays > 1 && diffDays <= 14) {
+                return {
+                    text: t('todos.dueInDays', { days: diffDays }),
+                    chipClass: ''
+                };
+            }
+
+            return {
+                text: t('todos.relativeDue', { date: formatTodoDeadline(todo) }),
+                chipClass: ''
+            };
+        }
+
+        function getTodoDeadlineShort(todo) {
+            if (!todo?.deadline || todo.status === 'done') {
+                return '';
+            }
+
+            if (isTodoOverdue(todo)) {
+                const diffMs = Date.now() - getTodoDeadlineTimestamp(todo);
+                const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                return `−${days}j`;
+            }
+
+            if (isTodoDueToday(todo)) {
+                return t('todos.dueTodayShort');
+            }
+
+            const deadlineTs = getTodoDeadlineTimestamp(todo);
+            const diffDays = Math.ceil((deadlineTs - Date.now()) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1) {
+                return t('todos.dueTomorrowShort');
+            }
+
+            if (diffDays <= 14) {
+                return `${diffDays}j`;
+            }
+
+            const date = new Date(`${todo.deadline}T12:00:00`);
+            if (Number.isNaN(date.getTime())) {
+                return '';
+            }
+
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${day}/${month}`;
         }
 
         function formatTodoDate(dateString) {
@@ -3289,6 +3571,10 @@ const API_BASE_URL = (() => {
                     return false;
                 }
 
+                if (activeTodoSummaryFilter === 'due-today' && !isTodoDueToday(todo)) {
+                    return false;
+                }
+
                 return true;
             });
 
@@ -3325,70 +3611,101 @@ const API_BASE_URL = (() => {
             return filtered;
         }
 
+        function toggleTodoRow(todoId) {
+            const wrap = document.querySelector(`.todo-row-wrap[data-todo-id="${todoId}"]`);
+            if (!wrap) {
+                return;
+            }
+
+            const willExpand = !wrap.classList.contains('is-expanded');
+            wrap.classList.toggle('is-expanded', willExpand);
+
+            const row = wrap.querySelector('.todo-row');
+            if (row) {
+                row.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
+            }
+
+            const chevron = wrap.querySelector('.todo-row-chevron');
+            if (chevron) {
+                chevron.textContent = willExpand ? '▾' : '▸';
+            }
+
+            if (willExpand) {
+                expandedTodoIds.add(todoId);
+            } else {
+                expandedTodoIds.delete(todoId);
+            }
+        }
+
         function renderTodoColumn(status, todos, canEdit) {
-            const cards = todos.length > 0
+            const rows = todos.length > 0
                 ? todos.map(todo => {
-                    const description = todo.description
-                        ? `<p class="todo-description">${escapeHtml(todo.description)}</p>`
-                        : '';
-                    const assignedTo = escapeHtml(todo.assignedTo || t('common.none'));
+                    const assignedToRaw = (todo.assignedTo || '').trim();
+                    const assignedTo = escapeHtml(assignedToRaw || t('common.none'));
+                    const deadlineShort = getTodoDeadlineShort(todo);
+                    const isExpanded = expandedTodoIds.has(todo.id);
+                    const rowClasses = [
+                        'todo-row',
+                        `status-${todo.status}`,
+                        isTodoOverdue(todo) ? 'is-overdue' : '',
+                        isTodoDueToday(todo) ? 'is-due-today' : '',
+                        todo.archived ? 'is-archived' : ''
+                    ].filter(Boolean).join(' ');
+                    const wrapClasses = ['todo-row-wrap', isExpanded ? 'is-expanded' : ''].filter(Boolean).join(' ');
+
+                    const descriptionHtml = todo.description
+                        ? `<p class="todo-row-description">${escapeHtml(todo.description)}</p>`
+                        : `<p class="todo-row-description is-empty">${escapeHtml(t('todos.noDescription'))}</p>`;
                     const createdBy = escapeHtml(todo.createdByName || t('common.none'));
                     const updatedBy = escapeHtml(todo.updatedByName || todo.createdByName || t('common.none'));
-                    const overdueBadge = isTodoOverdue(todo)
-                        ? `<span class="todo-badge overdue">${t('todos.overdueBadge')}</span>`
-                        : '';
-                    const updatedAt = todo.updatedAt
-                        ? `<span>${t('todos.updatedAt', { date: formatDateTime(todo.updatedAt) })}</span>`
-                        : '';
-                    const archiveButton = todo.status === 'done'
-                        ? `<button type="button" class="secondary" onclick="toggleTodoArchive('${todo.id}', ${todo.archived ? 'false' : 'true'})">${t(todo.archived ? 'todos.restore' : 'todos.archive')}</button>`
-                        : '';
+                    const deadlineFull = escapeHtml(formatTodoDeadline(todo));
+
+                    const menuItems = canEdit ? `
+                        <button type="button" onclick="event.stopPropagation(); handleTodoStatusChange('${todo.id}', 'todo')">${t('todos.moveTodo')}</button>
+                        <button type="button" onclick="event.stopPropagation(); handleTodoStatusChange('${todo.id}', 'in_progress')">${t('todos.moveInProgress')}</button>
+                        <button type="button" onclick="event.stopPropagation(); handleTodoStatusChange('${todo.id}', 'done')">${t('todos.moveDone')}</button>
+                        ${todo.status === 'done' ? `<button type="button" onclick="event.stopPropagation(); toggleTodoArchive('${todo.id}', ${todo.archived ? 'false' : 'true'})">${t(todo.archived ? 'todos.restore' : 'todos.archive')}</button>` : ''}
+                        <button type="button" onclick="event.stopPropagation(); editTodo('${todo.id}')">${t('todos.edit')}</button>
+                        <button type="button" class="danger" onclick="event.stopPropagation(); deleteTodo('${todo.id}')">${t('todos.delete')}</button>
+                    ` : '';
+                    const menu = canEdit
+                        ? `<details class="todo-row-menu" onclick="event.stopPropagation()"><summary aria-label="${t('todos.changeStatus')}">⋯</summary><div class="todo-row-menu-panel">${menuItems}</div></details>`
+                        : '<span aria-hidden="true"></span>';
+                    const avatarClass = assignedToRaw ? '' : ' is-empty';
+                    const avatarLabel = assignedToRaw ? escapeHtml(getTodoAssigneeInitials(assignedToRaw)) : '';
 
                     return `
-                        <div class="todo-card ${todo.status} ${isTodoOverdue(todo) ? 'overdue' : ''}">
-                            <div class="todo-card-header">
-                                <h3>${escapeHtml(todo.title)}</h3>
-                                <span class="todo-badge ${todo.status}">${getTodoStatusLabel(todo.status)}</span>
+                        <div class="${wrapClasses}" data-todo-id="${todo.id}">
+                            <div class="${rowClasses}" role="button" tabindex="0" aria-expanded="${isExpanded ? 'true' : 'false'}" onclick="toggleTodoRow('${todo.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTodoRow('${todo.id}');}">
+                                <span class="todo-row-chevron" aria-hidden="true">${isExpanded ? '▾' : '▸'}</span>
+                                <span class="todo-row-dot" aria-hidden="true"></span>
+                                <span class="todo-row-title">${escapeHtml(todo.title)}</span>
+                                <span class="todo-row-deadline">${escapeHtml(deadlineShort)}</span>
+                                <span class="todo-row-avatar${avatarClass}" title="${escapeHtml(assignedToRaw)}">${avatarLabel}</span>
+                                ${menu}
                             </div>
-                            <div class="todo-meta">
-                                <span class="todo-badge ${todo.status}">${t('todos.deadlineLabel', { date: formatTodoDeadline(todo) })}</span>
-                                <span class="todo-badge todo">${t('todos.assignedLabel', { name: assignedTo })}</span>
-                                ${overdueBadge}
+                            <div class="todo-row-detail">
+                                ${descriptionHtml}
+                                <div class="todo-row-detail-meta">
+                                    <span>${t('todos.assignedLabel', { name: assignedTo })}</span>
+                                    <span>${t('todos.deadlineLabel', { date: deadlineFull })}</span>
+                                    <span>${t('todos.createdBy', { name: createdBy })}</span>
+                                    <span>${t('todos.updatedBy', { name: updatedBy })}</span>
+                                </div>
                             </div>
-                            ${description}
-                            <div class="todo-footer">
-                                <span>${t('todos.createdBy', { name: createdBy })}</span>
-                                <span>${t('todos.updatedBy', { name: updatedBy })}</span>
-                                ${updatedAt}
-                            </div>
-                            ${canEdit ? `
-                            <div class="todo-actions">
-                                <select aria-label="${t('todos.changeStatus')}" onchange="handleTodoStatusChange('${todo.id}', this.value)">
-                                    <option value="todo" ${todo.status === 'todo' ? 'selected' : ''}>${t('todos.todo')}</option>
-                                    <option value="in_progress" ${todo.status === 'in_progress' ? 'selected' : ''}>${t('todos.in_progress')}</option>
-                                    <option value="done" ${todo.status === 'done' ? 'selected' : ''}>${t('todos.done')}</option>
-                                </select>
-                                ${archiveButton}
-                                <button type="button" onclick="editTodo('${todo.id}')">${t('todos.edit')}</button>
-                                <button type="button" class="danger" onclick="deleteTodo('${todo.id}')">${t('todos.delete')}</button>
-                            </div>
-                            ` : ''}
                         </div>
                     `;
                 }).join('')
                 : `<p class="todo-column-empty">${t('todos.columnEmpty')}</p>`;
 
             return `
-                <div class="todo-column ${status}">
+                <section class="todo-column ${status}">
                     <div class="todo-column-header">
-                        <div class="todo-column-title">
-                            <span class="todo-column-indicator"></span>
-                            <h3>${getTodoStatusLabel(status)}</h3>
-                        </div>
+                        <h3>${getTodoStatusLabel(status)}</h3>
                         <span class="todo-column-count">${todos.length}</span>
                     </div>
-                    <div class="todo-column-body">${cards}</div>
-                </div>
+                    <div class="todo-column-body">${rows}</div>
+                </section>
             `;
         }
 
@@ -3397,10 +3714,13 @@ const API_BASE_URL = (() => {
             const resultsMeta = document.getElementById('todoResultsMeta');
             if (!list) return;
 
+            list.classList.add('is-pending');
+
             const allTodos = getTodos();
             const metrics = getTodoMetrics(allTodos);
             updateTodoSummary(metrics);
             updateTodoFilterOptions(allTodos);
+            updateTodoSummaryActiveState();
 
             const todos = getFilteredTodos();
             if (resultsMeta) {
@@ -3412,11 +3732,13 @@ const API_BASE_URL = (() => {
 
             if (allTodos.length === 0) {
                 list.innerHTML = `<div class="todo-empty">${t('todos.empty')}</div>`;
+                list.classList.remove('is-pending');
                 return;
             }
 
             if (todos.length === 0) {
                 list.innerHTML = `<div class="todo-empty">${t('todos.noResults')}</div>`;
+                list.classList.remove('is-pending');
                 return;
             }
 
@@ -3432,6 +3754,7 @@ const API_BASE_URL = (() => {
                 renderTodoColumn('in_progress', grouped.in_progress, canEdit),
                 renderTodoColumn('done', grouped.done, canEdit)
             ].join('');
+            list.classList.remove('is-pending');
         }
 
         function editTodo(todoId) {
@@ -3457,7 +3780,7 @@ const API_BASE_URL = (() => {
             }
 
             showTab('todos');
-            document.getElementById('todoForm').scrollIntoView({ behavior: 'smooth' });
+            openTodoForm();
         }
 
         async function updateTodoStatus(todoId, status) {
@@ -4786,6 +5109,9 @@ Version : ${version}`;
             const hasSession = hydrateAuthFromSessionStorage();
             setAuthenticatedState(hasSession);
             applyStaticTranslations();
+            if (hasSession) {
+                applyTabFromHash();
+            }
             refreshUIAfterLoad();
             resetUserForm();
             resetTodoForm();

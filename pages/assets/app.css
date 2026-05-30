@@ -1,4 +1,4 @@
-* {
+﻿* {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -486,372 +486,29 @@
         }
 
         .user-login-more summary::before {
-            content: "▸ ";
+            content: "â–¸ ";
         }
 
         .user-login-more[open] summary::before {
-            content: "▾ ";
+            content: "â–¾ ";
         }
 
         .user-login-event-list.extra {
             margin-top: 10px;
         }
 
-        .todo-board {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            gap: 24px;
-            align-items: start;
-        }
-
-        .todo-board.readonly-layout {
-            grid-template-columns: minmax(0, 1fr);
-        }
-
-        .todo-form-panel,
-        .todo-panel {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            padding: 24px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-        }
-
-        .todo-form-panel {
-            position: static;
-        }
-
-        .todo-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        .todo-panel-subtitle {
-            color: #64748b;
-            margin: 8px 0 0;
-            max-width: 720px;
-        }
-
-        .todo-clear-filters-btn {
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
             white-space: nowrap;
+            border: 0;
         }
 
-        .todo-summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 12px;
-            margin: 20px 0;
-        }
-
-        .todo-summary-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 14px 16px;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        }
-
-        .todo-summary-value {
-            display: block;
-            font-size: 28px;
-            font-weight: 700;
-            line-height: 1.1;
-            color: #0f172a;
-        }
-
-        .todo-summary-label {
-            display: block;
-            margin-top: 6px;
-            color: #64748b;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .todo-summary-card.overdue .todo-summary-value {
-            color: #b91c1c;
-        }
-
-        .todo-summary-card.archived .todo-summary-value {
-            color: #475569;
-        }
-
-        .todo-summary-card.due-today {
-            border-color: #7f1d1d;
-            background: linear-gradient(180deg, #fff5f5 0%, #fee2e2 100%);
-        }
-
-        .todo-summary-card.due-today .todo-summary-value {
-            color: #7f1d1d;
-        }
-
-        .todo-summary-card.due-today .todo-summary-label {
-            color: #991b1b;
-            font-weight: 700;
-        }
-
-        .todo-summary-card.due-today .todo-summary-label::before {
-            content: "⚠ ";
-        }
-
-        .todo-toolbar {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 14px;
-            padding: 18px;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            background: #f8fafc;
-        }
-
-        .todo-toolbar .form-group {
-            margin-bottom: 0;
-        }
-
-        .todo-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-height: 48px;
-            margin-top: 32px;
-            color: #334155;
-            font-weight: 500;
-        }
-
-        .todo-toggle input[type="checkbox"] {
-            width: auto;
-            accent-color: #667eea;
-        }
-
-        .todo-results-meta {
-            margin: 14px 2px 18px;
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        .todo-list {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 16px;
-            align-items: start;
-        }
-
-        .todo-column {
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            background: #f8fafc;
-            padding: 16px;
-        }
-
-        .todo-column-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 14px;
-        }
-
-        .todo-column-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
-        }
-
-        .todo-column-indicator {
-            width: 10px;
-            height: 10px;
-            border-radius: 999px;
-            flex-shrink: 0;
-        }
-
-        .todo-column.todo .todo-column-indicator {
-            background: #94a3b8;
-        }
-
-        .todo-column.in_progress .todo-column-indicator {
-            background: #f59e0b;
-        }
-
-        .todo-column.done .todo-column-indicator {
-            background: #10b981;
-        }
-
-        .todo-column h3 {
-            margin: 0;
-            color: #0f172a;
-            font-size: 16px;
-        }
-
-        .todo-column-count {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 30px;
-            height: 30px;
-            padding: 0 10px;
-            border-radius: 999px;
-            background: #e2e8f0;
-            color: #334155;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .todo-column-body {
-            display: grid;
-            gap: 12px;
-        }
-
-        .todo-column-empty {
-            margin: 0;
-            padding: 18px 14px;
-            border: 1px dashed #cbd5e1;
-            border-radius: 12px;
-            color: #64748b;
-            font-size: 13px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.7);
-        }
-
-        .todo-card {
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 16px;
-            background: #fff;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-        }
-
-        .todo-card.todo {
-            border-left-color: #94a3b8;
-        }
-
-        .todo-card.in_progress {
-            border-left-color: #f59e0b;
-        }
-
-        .todo-card.done {
-            border-left-color: #10b981;
-            background: #f8fffb;
-        }
-
-        .todo-card.overdue {
-            box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.12), 0 6px 18px rgba(220, 38, 38, 0.08);
-        }
-
-        .todo-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .todo-card-header h3 {
-            margin: 0;
-            color: #1e293b;
-            font-size: 17px;
-            line-height: 1.35;
-        }
-
-        .todo-meta {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .todo-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .todo-badge.todo {
-            background: #e2e8f0;
-            color: #475569;
-        }
-
-        .todo-badge.in_progress {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .todo-badge.done {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .todo-badge.overdue {
-            background: #fee2e2;
-            color: #b91c1c;
-        }
-
-        .todo-description {
-            color: #475569;
-            margin-bottom: 14px;
-            white-space: pre-wrap;
-            line-height: 1.5;
-        }
-
-        .todo-footer {
-            display: grid;
-            gap: 6px;
-            font-size: 13px;
-            color: #64748b;
-            margin-bottom: 14px;
-        }
-
-        .todo-actions {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto auto;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .todo-actions select,
-        .todo-actions button {
-            width: 100%;
-        }
-
-        .todo-actions button {
-            padding: 10px 14px;
-            font-size: 13px;
-        }
-
-        .todo-empty {
-            color: #64748b;
-            padding: 24px;
-            text-align: center;
-            border: 1px dashed #cbd5e1;
-            border-radius: 16px;
-            background: #f8fafc;
-        }
-
-        @media (max-width: 1180px) {
-            .todo-list {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .todo-panel-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .todo-clear-filters-btn {
-                width: 100%;
-            }
-
-            .todo-actions {
-                grid-template-columns: 1fr;
-            }
-        }
         
         .agent-list-section {
             margin-bottom: 32px;
@@ -1344,65 +1001,13 @@
             .agent-list-section .agent-grid,
             .commission-list,
             .user-list,
-            .analyst-kpi-grid,
-            .todo-summary,
-            .todo-toolbar,
-            .todo-list {
+            .analyst-kpi-grid {
                 grid-template-columns: 1fr;
             }
 
-            .todo-form-panel,
-            .todo-panel,
-            .user-card,
-            .agent-card,
-            .commission-card-body,
-            .payment-method-item,
-            .master-slider-container {
-                padding-left: 14px;
-                padding-right: 14px;
-            }
-
-            .todo-panel,
-            .todo-form-panel {
-                padding-top: 18px;
-                padding-bottom: 18px;
-            }
-
-            .todo-toolbar {
-                padding: 14px;
-            }
-
-            .todo-toggle {
-                margin-top: 0;
-                min-height: auto;
-            }
-
-            .todo-card {
-                padding: 14px;
-            }
-
-            .todo-card-header,
-            .todo-meta,
-            .commission-card-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .todo-meta {
-                gap: 8px;
-            }
-
-            .todo-badge,
-            .commission-card-price,
-            .commission-card-badge {
-                max-width: 100%;
-                word-break: break-word;
-            }
-
-            .todo-actions,
             .commission-card .info-grid,
             .payment-method-item .form-row {
-                grid-template-columns: 1fr;
+                flex-direction: column;
             }
 
             .commission-card-header,

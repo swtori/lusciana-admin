@@ -4,8 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lusciana - Commissions</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="../pages/assets/app.css">
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        #todoList.is-pending { visibility: hidden; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../pages/assets/app.css?v=20260531">
+    <link rel="stylesheet" href="../pages/assets/todos-board.css?v=20260531">
 </head>
 <body>
     <div id="appContainer" class="container">
@@ -408,108 +416,51 @@
         </div>
 
         <div id="todos-tab" class="tab-content">
-            <div class="todo-board">
-                <div id="todoFormSection" class="form-section todo-form-panel">
-                    <h2 id="todoSectionTitle">Créer une tâche</h2>
-                    <form id="todoForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="todoTitle">Titre</label>
-                                <input type="text" id="todoTitle" name="todoTitle" required placeholder="Ex: Finaliser les paiements de mars">
-                            </div>
-                            <div class="form-group">
-                                <label for="todoStatus">Statut</label>
-                                <select id="todoStatus" name="todoStatus" required>
-                                    <option value="todo">À faire</option>
-                                    <option value="in_progress">En cours</option>
-                                    <option value="done">Terminé</option>
-                                </select>
+            <div class="todo-workspace">
+                <div class="todo-board-shell">
+                    <div class="todo-board-toolbar">
+                        <div class="todo-board-toolbar-left">
+                            <button id="todoNewTaskBtn" type="button" class="todo-add-btn" onclick="openTodoForm()">
+                                <span aria-hidden="true">+</span>
+                                <span id="todoNewTaskLabel">Add new</span>
+                            </button>
+                            <div class="todo-view-switch" aria-hidden="true">
+                                <span class="todo-view-pill is-active" id="todoKanbanViewLabel">Compact</span>
                             </div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="todoAssignedTo">Assigné à</label>
-                                <input type="text" id="todoAssignedTo" name="todoAssignedTo" placeholder="Ex: Antoine / Manager / Builder Team">
+                        <div class="todo-board-toolbar-right">
+                            <div class="todo-search-wrap todo-search-compact">
+                                <span class="todo-search-icon" aria-hidden="true">⌕</span>
+                                <input type="text" id="todoSearch" aria-labelledby="todoSearchLabel" placeholder="Search tasks..." oninput="displayTodos()">
+                                <label id="todoSearchLabel" class="visually-hidden" for="todoSearch">Recherche</label>
                             </div>
-                            <div class="form-group">
-                                <label for="todoDeadline">Deadline</label>
-                                <input type="date" id="todoDeadline" name="todoDeadline">
-                            </div>
-                            <div class="form-group">
-                                <label for="todoDeadlineTime">Heure</label>
-                                <input type="time" id="todoDeadlineTime" name="todoDeadlineTime">
-                            </div>
+                            <button id="todoFiltersToggle" type="button" class="todo-toolbar-btn" onclick="toggleTodoFiltersPanel()" aria-expanded="false" aria-controls="todoBoardFilters">
+                                <span aria-hidden="true">▾</span>
+                                <span id="todoFilterToggleLabel">Filter</span>
+                            </button>
+                            <button id="todoClearFilters" type="button" class="todo-toolbar-btn" onclick="resetTodoFilters()">
+                                <span id="todoClearFiltersLabel">Reset</span>
+                            </button>
                         </div>
-                        <div class="form-group">
-                            <label for="todoDescription">Description</label>
-                            <textarea id="todoDescription" name="todoDescription" placeholder="Contexte, blocages, prochaine action..."></textarea>
-                        </div>
-                        <div class="button-group">
-                            <button type="submit">➕ Ajouter la tâche</button>
-                            <button type="button" class="secondary" onclick="resetTodoForm()">🔄 Réinitialiser</button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
 
-                <div class="form-section todo-panel">
-                    <div class="todo-panel-header">
-                        <div>
-                            <h2 id="todoTeamTitle">Suivi de l'équipe</h2>
-                            <p id="todoTeamSubtitle" class="todo-panel-subtitle">Un espace partagé pour suivre l'avancement, les deadlines et les blocages.</p>
-                        </div>
-                        <button id="todoClearFilters" type="button" class="secondary todo-clear-filters-btn" onclick="resetTodoFilters()">Effacer les filtres</button>
-                    </div>
-                    <div id="todoSummary" class="todo-summary">
-                        <div class="todo-summary-card">
-                            <span id="todoTotalCount" class="todo-summary-value">0</span>
-                            <span id="todoTotalLabel" class="todo-summary-label">Total</span>
-                        </div>
-                        <div class="todo-summary-card">
-                            <span id="todoTodoCount" class="todo-summary-value">0</span>
-                            <span id="todoTodoLabel" class="todo-summary-label">À faire</span>
-                        </div>
-                        <div class="todo-summary-card">
-                            <span id="todoInProgressCount" class="todo-summary-value">0</span>
-                            <span id="todoInProgressLabel" class="todo-summary-label">En cours</span>
-                        </div>
-                        <div class="todo-summary-card">
-                            <span id="todoDoneCount" class="todo-summary-value">0</span>
-                            <span id="todoDoneLabel" class="todo-summary-label">Terminé</span>
-                        </div>
-                        <div class="todo-summary-card archived">
-                            <span id="todoArchivedCount" class="todo-summary-value">0</span>
-                            <span id="todoArchivedLabel" class="todo-summary-label">Archivées</span>
-                        </div>
-                        <div class="todo-summary-card due-today">
-                            <span id="todoDueTodayCount" class="todo-summary-value">0</span>
-                            <span id="todoDueTodayLabel" class="todo-summary-label">Attention aujourd'hui</span>
-                        </div>
-                        <div class="todo-summary-card overdue">
-                            <span id="todoOverdueCount" class="todo-summary-value">0</span>
-                            <span id="todoOverdueLabel" class="todo-summary-label">En retard</span>
-                        </div>
-                    </div>
-                    <div class="todo-toolbar">
-                        <div class="form-group">
-                            <label id="todoSearchLabel" for="todoSearch">Recherche</label>
-                            <input type="text" id="todoSearch" placeholder="Titre, description, assignation..." oninput="displayTodos()">
-                        </div>
-                        <div class="form-group">
+                    <div id="todoBoardFilters" class="todo-board-filters" hidden>
+                        <div class="todo-filter-group">
                             <label id="todoFilterStatusLabel" for="todoFilterStatus">Statut</label>
-                            <select id="todoFilterStatus" onchange="displayTodos()">
+                            <select id="todoFilterStatus" onchange="syncTodoSummaryFilterFromControls(); displayTodos();">
                                 <option value="">Tous les statuts</option>
                                 <option value="todo">À faire</option>
                                 <option value="in_progress">En cours</option>
                                 <option value="done">Terminé</option>
                             </select>
                         </div>
-                        <div class="form-group">
+                        <div class="todo-filter-group">
                             <label id="todoFilterAssigneeLabel" for="todoFilterAssignee">Assigné à</label>
                             <select id="todoFilterAssignee" onchange="displayTodos()">
                                 <option value="">Toutes les assignations</option>
                             </select>
                         </div>
-                        <div class="form-group">
+                        <div class="todo-filter-group">
                             <label id="todoSortLabel" for="todoSort">Tri</label>
                             <select id="todoSort" onchange="displayTodos()">
                                 <option value="deadline">Deadline proche</option>
@@ -517,19 +468,104 @@
                                 <option value="created">Création récente</option>
                             </select>
                         </div>
-                        <label id="todoFilterOverdueLabel" class="todo-toggle" for="todoFilterOverdue">
-                            <input type="checkbox" id="todoFilterOverdue" onchange="displayTodos()">
-                            <span>Afficher seulement les retards</span>
+                        <label id="todoFilterOverdueLabel" class="todo-chip-toggle" for="todoFilterOverdue">
+                            <input type="checkbox" id="todoFilterOverdue" onchange="syncTodoSummaryFilterFromControls(); displayTodos();">
+                            <span>Retards uniquement</span>
                         </label>
-                        <label id="todoFilterArchivedLabel" class="todo-toggle" for="todoFilterArchived">
-                            <input type="checkbox" id="todoFilterArchived" onchange="displayTodos()">
-                            <span>Afficher aussi les archivées</span>
+                        <label id="todoFilterArchivedLabel" class="todo-chip-toggle" for="todoFilterArchived">
+                            <input type="checkbox" id="todoFilterArchived" onchange="syncTodoSummaryFilterFromControls(); displayTodos();">
+                            <span>Inclure archivées</span>
                         </label>
                     </div>
-                    <div id="todoResultsMeta" class="todo-results-meta"></div>
-                    <div id="todoList" class="todo-list"></div>
+
+                    <div class="todo-board-heading">
+                        <h2 id="todoTeamTitle">Suivi de l'équipe</h2>
+                        <div id="todoResultsMeta" class="todo-results-meta"></div>
+                    </div>
+
+                    <div id="todoSummary" class="todo-quick-filters">
+                        <button type="button" class="todo-quick-filter" data-todo-filter="all" onclick="applyTodoSummaryFilter('all')">
+                            <span id="todoTotalLabel">Total</span>
+                            <span id="todoTotalCount" class="todo-quick-count">0</span>
+                        </button>
+                        <button type="button" class="todo-quick-filter" data-todo-filter="todo" onclick="applyTodoSummaryFilter('todo')">
+                            <span id="todoTodoLabel">À faire</span>
+                            <span id="todoTodoCount" class="todo-quick-count">0</span>
+                        </button>
+                        <button type="button" class="todo-quick-filter" data-todo-filter="in_progress" onclick="applyTodoSummaryFilter('in_progress')">
+                            <span id="todoInProgressLabel">En cours</span>
+                            <span id="todoInProgressCount" class="todo-quick-count">0</span>
+                        </button>
+                        <button type="button" class="todo-quick-filter" data-todo-filter="done" onclick="applyTodoSummaryFilter('done')">
+                            <span id="todoDoneLabel">Terminé</span>
+                            <span id="todoDoneCount" class="todo-quick-count">0</span>
+                        </button>
+                        <button type="button" class="todo-quick-filter todo-quick-filter-alert" data-todo-filter="due-today" onclick="applyTodoSummaryFilter('due-today')">
+                            <span id="todoDueTodayLabel">Aujourd'hui</span>
+                            <span id="todoDueTodayCount" class="todo-quick-count">0</span>
+                        </button>
+                        <button type="button" class="todo-quick-filter todo-quick-filter-danger" data-todo-filter="overdue" onclick="applyTodoSummaryFilter('overdue')">
+                            <span id="todoOverdueLabel">En retard</span>
+                            <span id="todoOverdueCount" class="todo-quick-count">0</span>
+                        </button>
+                        <button type="button" class="todo-quick-filter" data-todo-filter="archived" onclick="applyTodoSummaryFilter('archived')">
+                            <span id="todoArchivedLabel">Archivées</span>
+                            <span id="todoArchivedCount" class="todo-quick-count">0</span>
+                        </button>
+                    </div>
+
+                    <div id="todoList" class="todo-kanban is-pending"></div>
                 </div>
             </div>
+
+            <div id="todoFormBackdrop" class="todo-form-backdrop" onclick="closeTodoForm()" hidden></div>
+            <aside id="todoFormSection" class="todo-form-drawer" aria-hidden="true">
+                <div class="todo-form-drawer-header">
+                    <div>
+                        <p id="todoFormEyebrow" class="todo-form-eyebrow">Gestion des tâches</p>
+                        <h2 id="todoSectionTitle">Créer une tâche</h2>
+                    </div>
+                    <button id="todoCloseFormBtn" type="button" class="todo-icon-btn" onclick="closeTodoForm()" aria-label="Fermer">×</button>
+                </div>
+                <form id="todoForm" class="todo-form-drawer-body">
+                    <div class="form-group">
+                        <label for="todoTitle">Titre</label>
+                        <input type="text" id="todoTitle" name="todoTitle" required placeholder="Ex: Finaliser les paiements de mars">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="todoStatus">Statut</label>
+                            <select id="todoStatus" name="todoStatus" required>
+                                <option value="todo">À faire</option>
+                                <option value="in_progress">En cours</option>
+                                <option value="done">Terminé</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="todoAssignedTo">Assigné à</label>
+                            <input type="text" id="todoAssignedTo" name="todoAssignedTo" placeholder="Ex: Antoine / Manager / Builder Team">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="todoDeadline">Deadline</label>
+                            <input type="date" id="todoDeadline" name="todoDeadline">
+                        </div>
+                        <div class="form-group">
+                            <label for="todoDeadlineTime">Heure</label>
+                            <input type="time" id="todoDeadlineTime" name="todoDeadlineTime">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="todoDescription">Description</label>
+                        <textarea id="todoDescription" name="todoDescription" rows="5" placeholder="Contexte, blocages, prochaine action..."></textarea>
+                    </div>
+                    <div class="todo-form-actions">
+                        <button type="submit" class="todo-primary-btn">Ajouter la tâche</button>
+                        <button type="button" class="todo-secondary-btn" onclick="resetTodoForm()">Réinitialiser</button>
+                    </div>
+                </form>
+            </aside>
         </div>
 
         <div id="account-tab" class="tab-content">
@@ -709,6 +745,7 @@
         </div>
     </div>
 
-    <script src="../pages/assets/app.js"></script>
+    <script src="../pages/assets/app.js?v=20260531"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </body>
 </html>
