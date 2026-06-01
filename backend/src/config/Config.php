@@ -52,7 +52,24 @@ final class Config
             'superadmin_email' => self::env('SUPERADMIN_EMAIL'),
             'superadmin_password' => self::env('SUPERADMIN_PASSWORD'),
             'superadmin_name' => self::env('SUPERADMIN_NAME', 'Lusciana Owner'),
+            'schematics_upload_dir' => self::env(
+                'SCHEMATICS_UPLOAD_DIR',
+                '/home/luna/luna-minecraft/plugins/FastAsyncWorldEdit/schematics'
+            ),
+            'schematics_max_mb' => max(1, (int) self::env('SCHEMATICS_MAX_MB', '64')),
+            'discord_bot_token' => self::optionalEnv('DISCORD_BOT_TOKEN'),
+            'discord_guild_id' => self::optionalEnv('DISCORD_GUILD_ID'),
+            'discord_ticket_name_prefix' => self::optionalEnv('DISCORD_TICKET_NAME_PREFIX', 'ticket-'),
+            'discord_ticket_category_id' => self::optionalEnv('DISCORD_TICKET_CATEGORY_ID'),
+            'discord_tickets_ingest_secret' => self::optionalEnv('DISCORD_TICKETS_INGEST_SECRET'),
         ];
+    }
+
+    private static function optionalEnv(string $key, string $default = ''): string
+    {
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? $default;
+
+        return is_string($value) ? trim($value) : $default;
     }
 
     private static function env(string $key, ?string $default = null): string

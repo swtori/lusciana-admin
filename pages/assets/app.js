@@ -29,6 +29,11 @@ const API_BASE_URL = (() => {
         let expensesCache = [];
         let usersCache = [];
         let todosCache = [];
+        let discordTicketsCache = [];
+        let discordTicketsConfigured = false;
+        const discordTicketWlDrafts = {};
+        let discordBotIngestConfigured = false;
+        let discordIntegrationMode = 'none';
         let activeTodoSummaryFilter = 'all';
         const expandedTodoIds = new Set();
         let accountProfile = null;
@@ -111,6 +116,10 @@ const API_BASE_URL = (() => {
             expensesCache = Array.isArray(p.expenses) ? p.expenses : [];
             usersCache = Array.isArray(p.users) ? p.users : [];
             todosCache = Array.isArray(p.todos) ? p.todos : [];
+            discordTicketsCache = Array.isArray(p.discordTickets) ? p.discordTickets : [];
+            discordTicketsConfigured = Boolean(p.discordTicketsConfigured);
+            discordBotIngestConfigured = Boolean(p.discordBotIngestConfigured);
+            discordIntegrationMode = p.discordIntegrationMode || 'none';
             accountProfile = p.accountProfile !== undefined ? p.accountProfile : null;
         }
 
@@ -249,6 +258,10 @@ const API_BASE_URL = (() => {
             expensesCache = [];
             usersCache = [];
             todosCache = [];
+            discordTicketsCache = [];
+            discordTicketsConfigured = false;
+            discordBotIngestConfigured = false;
+            discordIntegrationMode = 'none';
             accountProfile = null;
         }
 
@@ -358,9 +371,52 @@ const API_BASE_URL = (() => {
                     agentsList: 'Liste des Agents',
                     users: 'Utilisateurs',
                     todos: 'Todo List',
+                    tickets: 'Tickets Discord',
                     account: 'Mon compte',
                     analyst: 'Data Analyst',
                     data: 'Gestion des Données'
+                },
+                discordTickets: {
+                    title: 'Tickets Discord',
+                    subtitle: 'Suivi des tickets — alimenté par ton bot Discord via l\'API.',
+                    sync: '↻ Import secours (API Discord)',
+                    syncing: 'Import…',
+                    filterActive: 'Actifs (non archivés)',
+                    filterOpen: 'Non traités',
+                    filterInProgress: 'En cours',
+                    filterQuoted: 'Devis à faire',
+                    filterHandled: 'Traités',
+                    filterArchived: 'Archivés (salon supprimé)',
+                    filterAll: 'Tous',
+                    colTicket: 'Ticket',
+                    colMinecraftNicknames: 'Pseudos MC (whitelist)',
+                    colMinecraftNicknamesPlaceholder: 'Steve, Alex…',
+                    colMinecraftNicknamesActionPlaceholder: 'Pseudo à traiter…',
+                    colMinecraftNicknamesHint: 'Saisis un pseudo, puis Whitelist ou Déwhitelist. Les pseudos enregistrés sont affichés au-dessus.',
+                    whitelistBtn: 'Whitelist',
+                    dewhitelistBtn: 'Déwhitelist',
+                    whitelistEmpty: 'Entrez au moins un pseudo Minecraft (ex. Steve).',
+                    whitelistSaved: 'Whitelist envoyée ! Le bot exécute la commande sous ~1 min — vérifie le salon Discord du ticket.',
+                    dewhitelistSaved: 'Déwhitelist envoyée ! Le bot retire le(s) pseudo(s) sous ~1 min — vérifie le salon Discord du ticket.',
+                    colStatus: 'Statut',
+                    colDesc: 'Description',
+                    colClientWl: 'Client WL',
+                    statusOpen: 'Non traité',
+                    statusInProgress: 'En cours',
+                    statusQuoted: 'Devis à faire',
+                    statusHandled: 'Traité',
+                    statusArchived: 'Archivé',
+                    wlNone: '—',
+                    wlWhitelist: 'Whitelist',
+                    wlBlacklist: 'Blacklist',
+                    openDiscord: 'Ouvrir',
+                    empty: 'Aucun ticket reçu. Ton bot doit appeler POST /api/discord-tickets/ingest.',
+                    configMissing: 'Configure DISCORD_TICKETS_INGEST_SECRET et DISCORD_GUILD_ID dans backend/.env, puis redémarre l\'API.',
+                    botModeHint: 'Mode bot actif : ton bot envoie les tickets à l\'admin. Les changements statut / WL faits ici sont récupérables via GET /api/discord-tickets/pending.',
+                    syncSuccess: 'Import terminé : {created} créés, {updated} mis à jour, {archived} archivés ({total} salons actifs).',
+                    syncError: 'Échec de la synchronisation Discord.',
+                    descPlaceholder: 'Note interne…',
+                    permissionSync: 'Seuls les managers peuvent lancer l\'import secours Discord.'
                 },
                 common: {
                     yes: 'Oui',
@@ -392,7 +448,27 @@ const API_BASE_URL = (() => {
                     version: 'Version :',
                     selectVersion: 'Sélectionner une version',
                     priceDistribution: 'Répartition du Prix',
-                    priceDistributionHint: 'Répartition (€) = part totale. % = taxe que l\'agent paie. Prix total = somme des répartitions. La taxe pré-remplit avec le taux de l\'agent.',
+                    priceDistributionHint: '1) Saisissez le prix total. 2) Cochez les builders. 3) Indiquez la part de chacun en % (ex. 50 / 50) ou en €. La taxe Lusciana (%) est pré-remplie avec le taux de l\'agent.',
+                    totalPriceLabel: 'Prix total de la commission (€)',
+                    totalPricePlaceholder: 'ex. 1500',
+                    enterTotalFirst: 'Saisissez d\'abord le prix total, puis sélectionnez les builders.',
+                    agentSharePercentLabel: 'Part du total (%)',
+                    agentSharePercentPlaceholder: 'ex. 50',
+                    agentShareLabel: 'Montant (€)',
+                    agentSharePlaceholder: 'Calculé auto.',
+                    agentTaxLabel: 'Taxe Lusciana (%)',
+                    splitEqually: 'Répartir à parts égales',
+                    priceSummaryShareTotal: 'Parts builders : {amount} %',
+                    priceSummaryShareRemaining: 'Reste à attribuer : {amount} %',
+                    priceSummaryShareBalanced: 'Parts builders : 100 % ✓',
+                    priceSummaryShareOverflow: 'Dépassement de {amount} %',
+                    priceSummaryTotal: 'Prix total : {price} €',
+                    priceSummaryDistributed: 'Réparti entre les builders : {amount} €',
+                    priceSummaryRemaining: 'Reste à répartir : {amount} €',
+                    priceSummaryBalanced: 'Répartition complète ✓',
+                    priceSummaryOverflow: 'Dépassement de {amount} €',
+                    submitPriceRequired: 'Le prix total de la commission est obligatoire.',
+                    submitDistributionMismatch: 'La somme des parts ({distributed} €) doit correspondre au prix total ({total} €).',
                     selectAgents: 'Sélectionner les agents :',
                     whoTookWhat: 'Qui a pris combien ?',
                     dates: 'Dates',
@@ -440,6 +516,15 @@ const API_BASE_URL = (() => {
                     infoVersion: 'Version',
                     infoStart: 'Début',
                     infoEnd: 'Fin',
+                    colWorldName: 'WorldName',
+                    colPrice: 'Price',
+                    colSize: 'Size',
+                    colStart: 'Début',
+                    colEnd: 'Fin',
+                    colClientName: 'ClientName',
+                    colBuilders: 'Builder(s)',
+                    colState: 'State',
+                    colEdit: 'Edit',
                     generatedPrice: 'Prix total (calculé) : {price} €',
                     showcaseCopied: 'Le texte showcase a été copié dans le presse-papiers.',
                     showcaseNotCopied: 'Le texte showcase n\'a pas pu être copié automatiquement.'
@@ -776,9 +861,52 @@ const API_BASE_URL = (() => {
                     agentsList: 'Agents',
                     users: 'Users',
                     todos: 'Todo List',
+                    tickets: 'Discord Tickets',
                     account: 'My account',
                     analyst: 'Analytics',
                     data: 'Data'
+                },
+                discordTickets: {
+                    title: 'Discord Tickets',
+                    subtitle: 'Ticket tracking — fed by your Discord bot via the API.',
+                    sync: '↻ Fallback import (Discord API)',
+                    syncing: 'Importing…',
+                    filterActive: 'Active (not archived)',
+                    filterOpen: 'Not handled',
+                    filterInProgress: 'In progress',
+                    filterQuoted: 'Needs quote',
+                    filterHandled: 'Handled',
+                    filterArchived: 'Archived (channel removed)',
+                    filterAll: 'All',
+                    colTicket: 'Ticket',
+                    colMinecraftNicknames: 'MC nicknames (whitelist)',
+                    colMinecraftNicknamesPlaceholder: 'Steve, Alex…',
+                    colMinecraftNicknamesActionPlaceholder: 'Nickname to apply…',
+                    colMinecraftNicknamesHint: 'Enter a nickname, then Whitelist or Dewhitelist. Saved nicknames are shown above.',
+                    whitelistBtn: 'Whitelist',
+                    dewhitelistBtn: 'Dewhitelist',
+                    whitelistEmpty: 'Enter at least one Minecraft username (e.g. Steve).',
+                    whitelistSaved: 'Whitelist queued! The bot runs the command within ~1 min — check the Discord ticket channel.',
+                    dewhitelistSaved: 'Dewhitelist queued! The bot removes the player(s) within ~1 min — check the Discord ticket channel.',
+                    colStatus: 'Status',
+                    colDesc: 'Description',
+                    colClientWl: 'Client WL',
+                    statusOpen: 'Not handled',
+                    statusInProgress: 'In progress',
+                    statusQuoted: 'Needs quote',
+                    statusHandled: 'Handled',
+                    statusArchived: 'Archived',
+                    wlNone: '—',
+                    wlWhitelist: 'Whitelist',
+                    wlBlacklist: 'Blacklist',
+                    openDiscord: 'Open',
+                    empty: 'No tickets yet. Your bot must call POST /api/discord-tickets/ingest.',
+                    configMissing: 'Set DISCORD_TICKETS_INGEST_SECRET and DISCORD_GUILD_ID in backend/.env, then restart the API.',
+                    botModeHint: 'Bot mode active: your bot pushes tickets to the admin. Admin changes can be pulled via GET /api/discord-tickets/pending.',
+                    syncSuccess: 'Sync done: {created} created, {updated} updated, {archived} archived ({total} active channels).',
+                    syncError: 'Discord sync failed.',
+                    descPlaceholder: 'Internal note…',
+                    permissionSync: 'Only managers can sync Discord tickets.'
                 },
                 common: {
                     yes: 'Yes', no: 'No', cancel: 'Cancel', add: 'Add', edit: 'Edit', delete: 'Delete', reset: 'Reset',
@@ -799,7 +927,27 @@ const API_BASE_URL = (() => {
                     version: 'Version:',
                     selectVersion: 'Select a version',
                     priceDistribution: 'Price Distribution',
-                    priceDistributionHint: 'Split (€) = full share. % = fee paid by the agent. Total price = sum of all splits. Fee is prefilled from the agent rate.',
+                    priceDistributionHint: '1) Enter total price. 2) Select builders. 3) Set each share in % (e.g. 50 / 50) or €. Lusciana fee (%) is prefilled from the agent rate.',
+                    totalPriceLabel: 'Total commission price (€)',
+                    totalPricePlaceholder: 'e.g. 1500',
+                    enterTotalFirst: 'Enter the total price first, then select builders.',
+                    agentSharePercentLabel: 'Share of total (%)',
+                    agentSharePercentPlaceholder: 'e.g. 50',
+                    agentShareLabel: 'Amount (€)',
+                    agentSharePlaceholder: 'Auto-calculated',
+                    agentTaxLabel: 'Lusciana fee (%)',
+                    splitEqually: 'Split equally',
+                    priceSummaryShareTotal: 'Builder shares: {amount} %',
+                    priceSummaryShareRemaining: 'Remaining to assign: {amount} %',
+                    priceSummaryShareBalanced: 'Builder shares: 100 % ✓',
+                    priceSummaryShareOverflow: 'Over by {amount} %',
+                    priceSummaryTotal: 'Total price: {price} €',
+                    priceSummaryDistributed: 'Distributed to builders: {amount} €',
+                    priceSummaryRemaining: 'Remaining to allocate: {amount} €',
+                    priceSummaryBalanced: 'Fully allocated ✓',
+                    priceSummaryOverflow: 'Over by {amount} €',
+                    submitPriceRequired: 'Total commission price is required.',
+                    submitDistributionMismatch: 'Builder shares ({distributed} €) must match total price ({total} €).',
                     selectAgents: 'Select agents:',
                     whoTookWhat: 'Who gets what?',
                     dates: 'Dates',
@@ -847,6 +995,15 @@ const API_BASE_URL = (() => {
                     infoVersion: 'Version',
                     infoStart: 'Start',
                     infoEnd: 'End',
+                    colWorldName: 'WorldName',
+                    colPrice: 'Price',
+                    colSize: 'Size',
+                    colStart: 'Start',
+                    colEnd: 'End',
+                    colClientName: 'ClientName',
+                    colBuilders: 'Builder(s)',
+                    colState: 'State',
+                    colEdit: 'Edit',
                     generatedPrice: 'Calculated total price: {price} €',
                     showcaseCopied: 'The showcase text was copied to the clipboard.',
                     showcaseNotCopied: 'The showcase text could not be copied automatically.'
@@ -1183,9 +1340,52 @@ const API_BASE_URL = (() => {
                     agentsList: 'Agenten',
                     users: 'Benutzer',
                     todos: 'Aufgabenliste',
+                    tickets: 'Discord-Tickets',
                     account: 'Mein Konto',
                     analyst: 'Analyse',
                     data: 'Daten'
+                },
+                discordTickets: {
+                    title: 'Discord-Tickets',
+                    subtitle: 'Ticket-Verfolgung — dein Discord-Bot liefert die Daten per API.',
+                    sync: '↻ Fallback-Import (Discord-API)',
+                    syncing: 'Import…',
+                    filterActive: 'Aktiv (nicht archiviert)',
+                    filterOpen: 'Nicht bearbeitet',
+                    filterInProgress: 'In Bearbeitung',
+                    filterQuoted: 'Angebot nötig',
+                    filterHandled: 'Erledigt',
+                    filterArchived: 'Archiviert (Kanal entfernt)',
+                    filterAll: 'Alle',
+                    colTicket: 'Ticket',
+                    colMinecraftNicknames: 'MC-Namen (Whitelist)',
+                    colMinecraftNicknamesPlaceholder: 'Steve, Alex…',
+                    colMinecraftNicknamesActionPlaceholder: 'Name zum Bearbeiten…',
+                    colMinecraftNicknamesHint: 'Name eingeben, dann Whitelist oder Dewhitelist. Gespeicherte Namen stehen darüber.',
+                    whitelistBtn: 'Whitelist',
+                    dewhitelistBtn: 'Dewhitelist',
+                    whitelistEmpty: 'Mindestens einen Minecraft-Namen eingeben (z. B. Steve).',
+                    whitelistSaved: 'Whitelist gesendet! Der Bot führt den Befehl in ~1 Min aus — Discord-Ticket prüfen.',
+                    dewhitelistSaved: 'Dewhitelist gesendet! Der Bot entfernt die Spieler in ~1 Min — Discord-Ticket prüfen.',
+                    colStatus: 'Status',
+                    colDesc: 'Beschreibung',
+                    colClientWl: 'Kunden-WL',
+                    statusOpen: 'Nicht bearbeitet',
+                    statusInProgress: 'In Bearbeitung',
+                    statusQuoted: 'Angebot nötig',
+                    statusHandled: 'Erledigt',
+                    statusArchived: 'Archiviert',
+                    wlNone: '—',
+                    wlWhitelist: 'Whitelist',
+                    wlBlacklist: 'Blacklist',
+                    openDiscord: 'Öffnen',
+                    empty: 'Noch keine Tickets. Der Bot muss POST /api/discord-tickets/ingest aufrufen.',
+                    configMissing: 'DISCORD_TICKETS_INGEST_SECRET und DISCORD_GUILD_ID in backend/.env setzen und API neu starten.',
+                    botModeHint: 'Bot-Modus aktiv: Der Bot sendet Tickets an das Admin. Änderungen abrufbar über GET /api/discord-tickets/pending.',
+                    syncSuccess: 'Sync abgeschlossen: {created} neu, {updated} aktualisiert, {archived} archiviert ({total} aktive Kanäle).',
+                    syncError: 'Discord-Synchronisierung fehlgeschlagen.',
+                    descPlaceholder: 'Interne Notiz…',
+                    permissionSync: 'Nur Manager können Discord-Tickets synchronisieren.'
                 },
                 common: {
                     yes: 'Ja', no: 'Nein', cancel: 'Abbrechen', add: 'Hinzufügen', edit: 'Bearbeiten', delete: 'Löschen',
@@ -1206,7 +1406,27 @@ const API_BASE_URL = (() => {
                     version: 'Version:',
                     selectVersion: 'Version auswählen',
                     priceDistribution: 'Preisverteilung',
-                    priceDistributionHint: 'Verteilung (€) = voller Anteil. % = Gebühr, die der Agent zahlt. Gesamtpreis = Summe aller Anteile. Die Gebühr wird mit dem Satz des Agenten vorausgefüllt.',
+                    priceDistributionHint: '1) Gesamtpreis eingeben. 2) Builder auswählen. 3) Anteil in % (z. B. 50 / 50) oder €. Lusciana-Gebühr (%) wird mit dem Agentensatz vorausgefüllt.',
+                    totalPriceLabel: 'Gesamtpreis der Commission (€)',
+                    totalPricePlaceholder: 'z. B. 1500',
+                    enterTotalFirst: 'Zuerst den Gesamtpreis eingeben, dann Builder auswählen.',
+                    agentSharePercentLabel: 'Anteil am Gesamt (%)',
+                    agentSharePercentPlaceholder: 'z. B. 50',
+                    agentShareLabel: 'Betrag (€)',
+                    agentSharePlaceholder: 'Auto-berechnet',
+                    agentTaxLabel: 'Lusciana-Gebühr (%)',
+                    splitEqually: 'Gleichmäßig aufteilen',
+                    priceSummaryShareTotal: 'Builder-Anteile: {amount} %',
+                    priceSummaryShareRemaining: 'Noch zuzuweisen: {amount} %',
+                    priceSummaryShareBalanced: 'Builder-Anteile: 100 % ✓',
+                    priceSummaryShareOverflow: 'Überschuss: {amount} %',
+                    priceSummaryTotal: 'Gesamtpreis: {price} €',
+                    priceSummaryDistributed: 'Auf Builder verteilt: {amount} €',
+                    priceSummaryRemaining: 'Noch zu verteilen: {amount} €',
+                    priceSummaryBalanced: 'Vollständig verteilt ✓',
+                    priceSummaryOverflow: 'Überschuss: {amount} €',
+                    submitPriceRequired: 'Der Gesamtpreis ist Pflicht.',
+                    submitDistributionMismatch: 'Summe der Anteile ({distributed} €) muss dem Gesamtpreis ({total} €) entsprechen.',
                     selectAgents: 'Agenten auswählen:',
                     whoTookWhat: 'Wer bekommt wie viel?',
                     dates: 'Termine',
@@ -1254,6 +1474,15 @@ const API_BASE_URL = (() => {
                     infoVersion: 'Version',
                     infoStart: 'Start',
                     infoEnd: 'Ende',
+                    colWorldName: 'WorldName',
+                    colPrice: 'Price',
+                    colSize: 'Size',
+                    colStart: 'Start',
+                    colEnd: 'Ende',
+                    colClientName: 'ClientName',
+                    colBuilders: 'Builder(s)',
+                    colState: 'Status',
+                    colEdit: 'Edit',
                     generatedPrice: 'Berechneter Gesamtpreis: {price} €',
                     showcaseCopied: 'Der Showcase-Text wurde in die Zwischenablage kopiert.',
                     showcaseNotCopied: 'Der Showcase-Text konnte nicht automatisch kopiert werden.'
@@ -1649,9 +1878,30 @@ const API_BASE_URL = (() => {
 
             setText('#tabUsersBtn', 'tabs.users');
             setText('#tabTodosBtn', 'tabs.todos');
+            setText('#tabTicketsBtn', 'tabs.tickets');
             setText('#tabAccountBtn', 'tabs.account');
             setText('#tabAnalystBtn', 'tabs.analyst');
             setText('#tabDataBtn', 'tabs.data');
+
+            setText('#discordTicketsTitle', 'discordTickets.title');
+            setText('#discordTicketsSubtitle', 'discordTickets.subtitle');
+            setText('#discordTicketSyncBtn', 'discordTickets.sync');
+            const filterEl = document.getElementById('discordTicketFilterStatus');
+            if (filterEl) {
+                const filterKeys = {
+                    active: 'discordTickets.filterActive',
+                    open: 'discordTickets.filterOpen',
+                    in_progress: 'discordTickets.filterInProgress',
+                    quoted: 'discordTickets.filterQuoted',
+                    handled: 'discordTickets.filterHandled',
+                    archived: 'discordTickets.filterArchived',
+                    all: 'discordTickets.filterAll'
+                };
+                Array.from(filterEl.options).forEach(opt => {
+                    const key = filterKeys[opt.value];
+                    if (key) opt.textContent = t(key);
+                });
+            }
 
             setText('#commissionListView > div h2', 'commissions.listTitle');
             setText('#newCommissionButton', 'commissions.new');
@@ -1665,9 +1915,11 @@ const API_BASE_URL = (() => {
             setPlaceholder('#clientWants', 'commissions.descriptionPlaceholder');
             setText('label[for="version"]', 'commissions.version');
             setText('#version option[value=""]', 'commissions.selectVersion');
-            setText('#commissionForm .form-group > label:not([for]):first-of-type', 'commissions.priceDistribution');
-            setText('#commissionForm .form-group p', 'commissions.priceDistributionHint');
-            setText('#commissionForm .form-group div label[style*="font-size: 14px"]', 'commissions.selectAgents');
+            setText('#commissionForm .form-group.commission-price-section > label:first-of-type', 'commissions.priceDistribution');
+            setText('#commissionPriceFlowHint', 'commissions.priceDistributionHint');
+            setText('label[for="commissionTotalPrice"]', 'commissions.totalPriceLabel');
+            setPlaceholder('#commissionTotalPrice', 'commissions.totalPricePlaceholder');
+            setText('#agentSelectorLabel', 'commissions.selectAgents');
             setText('#commissionForm .form-group h3', 'commissions.whoTookWhat');
             setText('#commissionForm .form-section:nth-of-type(2) h2', 'commissions.dates');
             setText('label[for="buildStart"]', 'commissions.buildStart');
@@ -2006,6 +2258,7 @@ const API_BASE_URL = (() => {
             const tabAgentsBtn = document.getElementById('tabAgentsBtn');
             const tabUsersBtn = document.getElementById('tabUsersBtn');
             const tabTodosBtn = document.getElementById('tabTodosBtn');
+            const tabTicketsBtn = document.getElementById('tabTicketsBtn');
             const tabAccountBtn = document.getElementById('tabAccountBtn');
             const newCommissionButton = document.getElementById('newCommissionButton');
             const commissionFormView = document.getElementById('commissionFormView');
@@ -2016,6 +2269,7 @@ const API_BASE_URL = (() => {
             const todoFormSection = document.getElementById('todoFormSection');
             const todoNewTaskBtn = document.getElementById('todoNewTaskBtn');
             const todoWorkspace = document.querySelector('#todos-tab .todo-workspace');
+            const discordTicketSyncBtn = document.getElementById('discordTicketSyncBtn');
             const expenseControls = document.getElementById('expenseControls');
             const dataImportSection = document.getElementById('dataImportSection');
             const isAuthenticated = Boolean(accessToken && currentUser);
@@ -2034,6 +2288,10 @@ const API_BASE_URL = (() => {
 
             if (tabTodosBtn) {
                 tabTodosBtn.style.display = isAuthenticated ? '' : 'none';
+            }
+
+            if (tabTicketsBtn) {
+                tabTicketsBtn.style.display = isAuthenticated ? '' : 'none';
             }
 
             if (tabAccountBtn) {
@@ -2077,6 +2335,13 @@ const API_BASE_URL = (() => {
                 todoWorkspace.classList.toggle('readonly-layout', !(isAuthenticated && canWriteTodos));
             }
 
+            if (discordTicketSyncBtn) {
+                const showFallbackSync = isAuthenticated && isManagerLike
+                    && discordTicketsConfigured
+                    && discordIntegrationMode !== 'bot';
+                discordTicketSyncBtn.style.display = showFallbackSync ? '' : 'none';
+            }
+
             if (userRole) {
                 const superadminOption = userRole.querySelector('option[value="superadmin"]');
                 if (superadminOption) {
@@ -2093,6 +2358,11 @@ const API_BASE_URL = (() => {
 
             if (dataImportSection) {
                 dataImportSection.style.display = isAuthenticated && isDangerousAdminLike ? '' : 'none';
+            }
+
+            const schematicLogsSection = document.getElementById('schematicLogsSection');
+            if (schematicLogsSection) {
+                schematicLogsSection.style.display = isAuthenticated && isManagerLike ? '' : 'none';
             }
         }
 
@@ -2123,6 +2393,10 @@ const API_BASE_URL = (() => {
             expensesCache = [];
             usersCache = [];
             todosCache = [];
+            discordTicketsCache = [];
+            discordTicketsConfigured = false;
+            discordBotIngestConfigured = false;
+            discordIntegrationMode = 'none';
             accountProfile = null;
             clearSessionIdleTimer();
             clearAuthSessionStorage();
@@ -2332,12 +2606,18 @@ const API_BASE_URL = (() => {
                 }
             };
 
-            const [agentsResponse, commissionsResponse, expensesResponse, usersResponse, todosResponse, accountResponse] = await Promise.all([
+            const ticketsPromise = apiRequest('/discord-tickets').catch(error => {
+                console.error('[Lusciana] Echec chargement tickets Discord', error);
+                return { items: [], discordConfigured: false };
+            });
+
+            const [agentsResponse, commissionsResponse, expensesResponse, usersResponse, todosResponse, ticketsResponse, accountResponse] = await Promise.all([
                 safeList('/agents', 'agents'),
                 safeList('/commissions', 'commissions'),
                 expensesPromise,
                 usersPromise,
                 safeList('/todos', 'todos'),
+                ticketsPromise,
                 accountPromise
             ]);
 
@@ -2346,6 +2626,10 @@ const API_BASE_URL = (() => {
             expensesCache = Array.isArray(expensesResponse.items) ? expensesResponse.items : [];
             usersCache = Array.isArray(usersResponse.items) ? usersResponse.items : [];
             todosCache = Array.isArray(todosResponse.items) ? todosResponse.items : [];
+            discordTicketsCache = Array.isArray(ticketsResponse.items) ? ticketsResponse.items : [];
+            discordTicketsConfigured = Boolean(ticketsResponse.discordConfigured);
+            discordBotIngestConfigured = Boolean(ticketsResponse.botIngestConfigured);
+            discordIntegrationMode = ticketsResponse.integrationMode || 'none';
             accountProfile = accountResponse;
             writeSessionRemoteDataCache(cacheKey, {
                 agents: agentsCache,
@@ -2353,6 +2637,10 @@ const API_BASE_URL = (() => {
                 expenses: expensesCache,
                 users: usersCache,
                 todos: todosCache,
+                discordTickets: discordTicketsCache,
+                discordTicketsConfigured,
+                discordBotIngestConfigured,
+                discordIntegrationMode,
                 accountProfile
             });
             refreshUIAfterLoad();
@@ -2375,7 +2663,7 @@ const API_BASE_URL = (() => {
             usersCache = Array.isArray(response.items) ? response.items : [];
         }
 
-        const PRIMARY_TAB_NAMES = ['list', 'agents', 'users', 'todos', 'account', 'analyst', 'data'];
+        const PRIMARY_TAB_NAMES = ['list', 'agents', 'users', 'todos', 'tickets', 'account', 'analyst', 'data'];
 
         function syncPrimaryTabHash(tabName) {
             if (!accessToken || typeof history.replaceState !== 'function') {
@@ -2398,6 +2686,7 @@ const API_BASE_URL = (() => {
                 agents: 'tabAgentsBtn',
                 users: 'tabUsersBtn',
                 todos: 'tabTodosBtn',
+                tickets: 'tabTicketsBtn',
                 account: 'tabAccountBtn',
                 analyst: 'tabAnalystBtn',
                 data: 'tabDataBtn'
@@ -2424,6 +2713,7 @@ const API_BASE_URL = (() => {
                     agents: 'tabAgentsBtn',
                     users: 'tabUsersBtn',
                     todos: 'tabTodosBtn',
+                    tickets: 'tabTicketsBtn',
                     account: 'tabAccountBtn',
                     analyst: 'tabAnalystBtn',
                     data: 'tabDataBtn'
@@ -2453,12 +2743,15 @@ const API_BASE_URL = (() => {
                 displayUsers();
             } else if (tabName === 'todos') {
                 displayTodos();
+            } else if (tabName === 'tickets') {
+                displayDiscordTickets();
             } else if (tabName === 'account') {
                 populateAccountForm();
             } else if (tabName === 'analyst') {
                 refreshAnalyst();
             } else if (tabName === 'data') {
                 updateDataStats();
+                void refreshSchematicUploadLogs();
             }
         }
         
@@ -2501,6 +2794,320 @@ const API_BASE_URL = (() => {
 
         function saveTodos(todos) {
             todosCache = todos;
+        }
+
+        function getDiscordTickets() {
+            return discordTicketsCache;
+        }
+
+        function saveDiscordTickets(tickets) {
+            discordTicketsCache = Array.isArray(tickets) ? tickets : [];
+        }
+
+        const DISCORD_TICKET_STATUS_KEYS = {
+            open: 'discordTickets.statusOpen',
+            in_progress: 'discordTickets.statusInProgress',
+            quoted: 'discordTickets.statusQuoted',
+            handled: 'discordTickets.statusHandled',
+            archived: 'discordTickets.statusArchived'
+        };
+
+        const DISCORD_TICKET_WL_KEYS = {
+            none: 'discordTickets.wlNone',
+            whitelist: 'discordTickets.wlWhitelist',
+            blacklist: 'discordTickets.wlBlacklist'
+        };
+
+        function discordTicketStatusLabel(status) {
+            return t(DISCORD_TICKET_STATUS_KEYS[status] || DISCORD_TICKET_STATUS_KEYS.open);
+        }
+
+        function discordTicketWlLabel(wl) {
+            return t(DISCORD_TICKET_WL_KEYS[wl] || DISCORD_TICKET_WL_KEYS.none);
+        }
+
+        function getDiscordTicketWlDraft(id) {
+            return discordTicketWlDrafts[id] ?? '';
+        }
+
+        function setDiscordTicketWlDraft(id, value) {
+            discordTicketWlDrafts[id] = String(value ?? '');
+        }
+
+        function clearDiscordTicketWlDraft(id) {
+            delete discordTicketWlDrafts[id];
+        }
+
+        function fillDiscordTicketWlInput(id, nickname) {
+            const input = document.getElementById(`discordNicknames_${id}`);
+            if (!input) return;
+            input.value = nickname;
+            setDiscordTicketWlDraft(id, nickname);
+            input.focus();
+        }
+
+        function captureDiscordTicketWlDrafts() {
+            document.querySelectorAll('.discord-ticket-nicknames').forEach(input => {
+                const id = input.id.replace(/^discordNicknames_/, '');
+                if (id) {
+                    setDiscordTicketWlDraft(id, input.value);
+                }
+            });
+        }
+
+        function formatMinecraftNicknames(ticket) {
+            return Array.isArray(ticket.minecraftNicknames) ? ticket.minecraftNicknames : [];
+        }
+
+        function renderDiscordTicketSavedNicknames(ticket, escapeHtml) {
+            const nicknames = formatMinecraftNicknames(ticket);
+            if (nicknames.length === 0) {
+                return '';
+            }
+            const chips = nicknames.map(nickname =>
+                `<button type="button" class="discord-ticket-wl-chip" title="${escapeHtml(t('discordTickets.colMinecraftNicknamesHint'))}" data-nickname="${escapeHtml(nickname)}" onclick="fillDiscordTicketWlInput('${ticket.id}', this.dataset.nickname)">${escapeHtml(nickname)}</button>`
+            ).join('');
+            return `<div class="discord-ticket-wl-saved-list">${chips}</div>`;
+        }
+
+        function parseMinecraftNicknamesInput(raw) {
+            return String(raw || '')
+                .split(/[\s,;]+/)
+                .map(p => p.trim())
+                .filter(Boolean)
+                .filter((p, i, arr) => arr.indexOf(p) === i);
+        }
+
+        function nicknamesArraysEqual(a, b) {
+            const left = Array.isArray(a) ? [...a].sort() : [];
+            const right = Array.isArray(b) ? [...b].sort() : [];
+            if (left.length !== right.length) return false;
+            return left.every((val, idx) => val === right[idx]);
+        }
+
+        function filterDiscordTickets(tickets) {
+            const filter = document.getElementById('discordTicketFilterStatus')?.value || 'active';
+            return tickets.filter(ticket => {
+                const archived = ticket.channelArchived === true || ticket.status === 'archived';
+                if (filter === 'all') return true;
+                if (filter === 'active') return !archived;
+                if (filter === 'archived') return archived;
+                if (filter === 'open') return ticket.status === 'open' && !archived;
+                return ticket.status === filter && !archived;
+            });
+        }
+
+        function updateDiscordTicketsConfigHint() {
+            const hint = document.getElementById('discordTicketsConfigHint');
+            if (!hint) return;
+
+            if (discordBotIngestConfigured) {
+                hint.textContent = t('discordTickets.botModeHint');
+                hint.className = 'discord-tickets-config-hint is-bot-mode';
+                hint.classList.remove('hidden');
+                return;
+            }
+
+            if (discordTicketsConfigured || getDiscordTickets().length > 0) {
+                hint.classList.add('hidden');
+                hint.textContent = '';
+                return;
+            }
+
+            hint.textContent = t('discordTickets.configMissing');
+            hint.className = 'discord-tickets-config-hint';
+            hint.classList.remove('hidden');
+        }
+
+        function displayDiscordTickets() {
+            const list = document.getElementById('discordTicketList');
+            if (!list) return;
+
+            captureDiscordTicketWlDrafts();
+            updateDiscordTicketsConfigHint();
+
+            const tickets = filterDiscordTickets(getDiscordTickets());
+            if (tickets.length === 0) {
+                list.innerHTML = `<p class="commission-table-empty">${t('discordTickets.empty')}</p>`;
+                return;
+            }
+
+            const escapeHtml = (s) => {
+                if (s == null) return '';
+                const div = document.createElement('div');
+                div.textContent = s;
+                return div.innerHTML;
+            };
+
+            const canEdit = canManageOperationalData();
+
+            const rows = tickets.map(ticket => {
+                const archived = ticket.channelArchived === true;
+                const rowClass = archived ? 'is-archived' : `is-status-${ticket.status || 'open'}`;
+                const discordUrl = ticket.discordUrl || '';
+                const ticketNameCell = discordUrl
+                    ? `<div class="discord-ticket-name-cell"><code>#${escapeHtml(ticket.ticketName || 'ticket')}</code><a class="discord-ticket-link" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer">${t('discordTickets.openDiscord')} ↗</a></div>`
+                    : `<code>#${escapeHtml(ticket.ticketName || 'ticket')}</code>`;
+
+                const currentStatus = ticket.status || 'open';
+                const savedNicknames = formatMinecraftNicknames(ticket);
+                const actionDraft = getDiscordTicketWlDraft(ticket.id);
+
+                const nicknamesCell = canEdit
+                    ? `<div class="discord-ticket-wl-cell">
+                        ${renderDiscordTicketSavedNicknames(ticket, escapeHtml)}
+                        <div class="discord-ticket-wl-row">
+                            <input type="text" id="discordNicknames_${ticket.id}" class="discord-ticket-nicknames" value="${escapeHtml(actionDraft)}" placeholder="${escapeHtml(t('discordTickets.colMinecraftNicknamesActionPlaceholder'))}" title="${escapeHtml(t('discordTickets.colMinecraftNicknamesHint'))}" oninput="setDiscordTicketWlDraft('${ticket.id}', this.value)">
+                            <div class="discord-ticket-wl-actions">
+                                <button type="button" class="discord-ticket-wl-btn discord-ticket-wl-btn--add" onclick="applyDiscordTicketWl('${ticket.id}', 'add')">${t('discordTickets.whitelistBtn')}</button>
+                                <button type="button" class="discord-ticket-wl-btn discord-ticket-wl-btn--remove" onclick="applyDiscordTicketWl('${ticket.id}', 'remove')">${t('discordTickets.dewhitelistBtn')}</button>
+                            </div>
+                        </div>
+                    </div>`
+                    : `<span>${escapeHtml(savedNicknames.join(', ') || '—')}</span>`;
+
+                const statusCell = canEdit
+                    ? `<select class="discord-ticket-select" onchange="saveDiscordTicketField('${ticket.id}', 'status', this.value, { refresh: false })">${['open', 'in_progress', 'quoted', 'handled', 'archived'].map(value =>
+                        `<option value="${value}"${value === currentStatus ? ' selected' : ''}>${escapeHtml(discordTicketStatusLabel(value))}</option>`
+                    ).join('')}</select>`
+                    : `<span class="discord-ticket-badge status-${currentStatus}">${escapeHtml(discordTicketStatusLabel(currentStatus))}</span>`;
+
+                const descCell = canEdit
+                    ? `<textarea class="discord-ticket-desc" rows="2" placeholder="${escapeHtml(t('discordTickets.descPlaceholder'))}" onblur="saveDiscordTicketField('${ticket.id}', 'description', this.value, { refresh: false })">${escapeHtml(ticket.description || '')}</textarea>`
+                    : `<span class="discord-ticket-desc-read">${escapeHtml(ticket.description || '—')}</span>`;
+
+                return `<tr class="discord-ticket-row ${rowClass}">
+                    <td class="discord-ticket-name">${ticketNameCell}</td>
+                    <td>${nicknamesCell}</td>
+                    <td>${statusCell}</td>
+                    <td>${descCell}</td>
+                </tr>`;
+            }).join('');
+
+            list.innerHTML = `
+                <div class="commission-table-wrap">
+                    <table class="commission-table discord-ticket-table">
+                        <thead>
+                            <tr>
+                                <th>${t('discordTickets.colTicket')}</th>
+                                <th>${t('discordTickets.colMinecraftNicknames')}</th>
+                                <th>${t('discordTickets.colStatus')}</th>
+                                <th>${t('discordTickets.colDesc')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function applyDiscordTicketWl(id, action) {
+            const input = document.getElementById(`discordNicknames_${id}`);
+            if (!input) return;
+
+            const pseudos = parseMinecraftNicknamesInput(input.value);
+            if (pseudos.length === 0) {
+                alert(t('discordTickets.whitelistEmpty'));
+                input.focus();
+                return;
+            }
+
+            if (!requirePermission(canManageOperationalData, t('alerts.permissionAgents'))) {
+                return false;
+            }
+
+            const successKey = action === 'remove' ? 'discordTickets.dewhitelistSaved' : 'discordTickets.whitelistSaved';
+
+            try {
+                const response = await apiRequest(`/discord-tickets/${id}`, {
+                    method: 'PATCH',
+                    body: {
+                        wlAction: action,
+                        minecraftNicknames: pseudos
+                    }
+                });
+                const next = getDiscordTickets().map(item => item.id === id ? response.item : item);
+                saveDiscordTickets(next);
+                clearDiscordTicketWlDraft(id);
+                displayDiscordTickets();
+                alert(t(successKey));
+                return true;
+            } catch (error) {
+                alert(error.message || t('discordTickets.syncError'));
+                displayDiscordTickets();
+                return false;
+            }
+        }
+
+        async function saveDiscordTicketField(id, field, value, options) {
+            const opts = options || {};
+            if (!requirePermission(canManageOperationalData, t('alerts.permissionAgents'))) {
+                if (opts.refresh !== false) {
+                    displayDiscordTickets();
+                }
+                return false;
+            }
+
+            const ticket = getDiscordTickets().find(item => item.id === id);
+            if (!ticket) return false;
+
+            const normalizedValue = field === 'description' ? String(value || '').trim() : value;
+            if (String(ticket[field] ?? '') === String(normalizedValue)) {
+                return true;
+            }
+
+            try {
+                const response = await apiRequest(`/discord-tickets/${id}`, {
+                    method: 'PATCH',
+                    body: { [field]: normalizedValue }
+                });
+                const next = getDiscordTickets().map(item => item.id === id ? response.item : item);
+                saveDiscordTickets(next);
+                if (opts.refresh !== false) {
+                    displayDiscordTickets();
+                }
+                return true;
+            } catch (error) {
+                alert(error.message || t('discordTickets.syncError'));
+                if (opts.refresh !== false) {
+                    displayDiscordTickets();
+                }
+                return false;
+            }
+        }
+
+        async function syncDiscordTickets() {
+            if (!requirePermission(canManageOperationalData, t('discordTickets.permissionSync'))) {
+                return;
+            }
+
+            const btn = document.getElementById('discordTicketSyncBtn');
+            const previousLabel = btn ? btn.textContent : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = t('discordTickets.syncing');
+            }
+
+            try {
+                const response = await apiRequest('/discord-tickets/sync', { method: 'POST' });
+                saveDiscordTickets(response.items || []);
+                discordTicketsConfigured = true;
+                const stats = response.stats || {};
+                alert(t('discordTickets.syncSuccess', {
+                    created: stats.created ?? 0,
+                    updated: stats.updated ?? 0,
+                    archived: stats.archived ?? 0,
+                    total: stats.total ?? 0
+                }));
+                displayDiscordTickets();
+            } catch (error) {
+                alert(error.message || t('discordTickets.syncError'));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = previousLabel || t('discordTickets.sync');
+                }
+            }
         }
         
         async function addExpense() {
@@ -4371,19 +4978,174 @@ const API_BASE_URL = (() => {
         
         // Stockage de la répartition actuelle
         let currentDistribution = {};
+
+        function getCommissionTotalPrice() {
+            const input = document.getElementById('commissionTotalPrice');
+            if (!input) return 0;
+            const value = parseFloat(input.value);
+            return Number.isFinite(value) && value > 0 ? value : 0;
+        }
+
+        function getDistributedAmountSum() {
+            const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+            let total = 0;
+            selectedAgents.forEach(agent => {
+                const d = currentDistribution[agent];
+                const amount = (d && typeof d === 'object' ? d.amount : d) || 0;
+                total += amount;
+            });
+            return total;
+        }
+
+        function getDistributedSharePercentSum() {
+            const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+            let total = 0;
+            selectedAgents.forEach(agent => {
+                const d = currentDistribution[agent];
+                const sharePercent = (d && typeof d === 'object' ? d.sharePercent : 0) || 0;
+                total += sharePercent;
+            });
+            return Math.round(total * 100) / 100;
+        }
+
+        function syncAmountFromSharePercent(agent) {
+            const totalPrice = getCommissionTotalPrice();
+            const d = currentDistribution[agent];
+            if (!d || totalPrice <= 0) return;
+            if (d.sharePercent > 0) {
+                d.amount = Math.round(totalPrice * d.sharePercent / 100 * 100) / 100;
+            }
+            const amountInput = document.getElementById(`amount_${agent}`);
+            if (amountInput) {
+                amountInput.value = d.amount > 0 ? d.amount : '';
+            }
+        }
+
+        function syncSharePercentFromAmount(agent) {
+            const totalPrice = getCommissionTotalPrice();
+            const d = currentDistribution[agent];
+            if (!d || totalPrice <= 0) return;
+            d.sharePercent = d.amount > 0
+                ? Math.round(d.amount / totalPrice * 10000) / 100
+                : 0;
+            const shareInput = document.getElementById(`share_${agent}`);
+            if (shareInput) {
+                shareInput.value = d.sharePercent > 0 ? d.sharePercent : '';
+            }
+        }
+
+        function syncAllAmountsFromSharePercents() {
+            const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+            selectedAgents.forEach(agent => syncAmountFromSharePercent(agent));
+            updateCommissionPriceSummary();
+            updateWhoTookWhat();
+        }
+
+        function splitBuilderSharesEqually() {
+            const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
+                .map(cb => cb.value);
+            if (selectedAgents.length === 0) return;
+            const equalShare = Math.round(10000 / selectedAgents.length) / 100;
+            let assigned = 0;
+            selectedAgents.forEach((agent, index) => {
+                if (!currentDistribution[agent] || typeof currentDistribution[agent] !== 'object') {
+                    currentDistribution[agent] = { amount: 0, sharePercent: 0, percent: 0, paid: false };
+                }
+                const share = index === selectedAgents.length - 1
+                    ? Math.round((100 - assigned) * 100) / 100
+                    : equalShare;
+                currentDistribution[agent].sharePercent = share;
+                assigned += share;
+                syncAmountFromSharePercent(agent);
+                const shareInput = document.getElementById(`share_${agent}`);
+                if (shareInput) shareInput.value = share;
+            });
+            updateCommissionPriceSummary();
+            updateWhoTookWhat();
+        }
+
+        function onCommissionTotalPriceChange() {
+            syncAllAmountsFromSharePercents();
+            const totalPrice = getCommissionTotalPrice();
+            const depositEl = document.getElementById('depositAmount');
+            if (depositEl && totalPrice > 0 && (depositEl.value === '' || parseFloat(depositEl.value) === 0)) {
+                depositEl.value = (totalPrice / 2).toFixed(2);
+            }
+        }
+
+        function updateCommissionPriceSummary() {
+            const summary = document.getElementById('commissionPriceSummary');
+            if (!summary) return;
+
+            const totalPrice = getCommissionTotalPrice();
+            if (totalPrice <= 0) {
+                summary.innerHTML = '';
+                summary.className = 'commission-price-summary';
+                return;
+            }
+
+            const distributed = getDistributedAmountSum();
+            const shareTotal = getDistributedSharePercentSum();
+            const remaining = Math.round((totalPrice - distributed) * 100) / 100;
+            const shareRemaining = Math.round((100 - shareTotal) * 100) / 100;
+            let statusClass = 'is-pending';
+            let statusText = t('commissions.priceSummaryRemaining', { amount: remaining.toFixed(2) });
+            let shareStatusText = shareTotal > 0
+                ? t('commissions.priceSummaryShareTotal', { amount: shareTotal.toFixed(2) })
+                : '';
+
+            if (Math.abs(remaining) < 0.01) {
+                statusClass = 'is-balanced';
+                statusText = t('commissions.priceSummaryBalanced');
+            } else if (remaining < 0) {
+                statusClass = 'is-overflow';
+                statusText = t('commissions.priceSummaryOverflow', { amount: Math.abs(remaining).toFixed(2) });
+            }
+
+            if (shareTotal > 0) {
+                if (Math.abs(shareRemaining) < 0.01) {
+                    shareStatusText = t('commissions.priceSummaryShareBalanced');
+                } else if (shareRemaining > 0) {
+                    shareStatusText = t('commissions.priceSummaryShareRemaining', { amount: shareRemaining.toFixed(2) });
+                } else {
+                    shareStatusText = t('commissions.priceSummaryShareOverflow', { amount: Math.abs(shareRemaining).toFixed(2) });
+                }
+            }
+
+            summary.className = `commission-price-summary ${statusClass}`;
+            summary.innerHTML = `
+                <p><strong>${t('commissions.priceSummaryTotal', { price: totalPrice.toFixed(2) })}</strong></p>
+                <p>${t('commissions.priceSummaryDistributed', { amount: distributed.toFixed(2) })}</p>
+                <p class="commission-price-summary-status">${statusText}</p>
+                ${shareStatusText ? `<p class="commission-price-summary-share">${shareStatusText}</p>` : ''}
+            `;
+        }
         
-        // Gestion de la répartition des prix (montants en € par agent) — les agents sélectionnés = "réalisé par"
+        // Gestion de la répartition des prix — prix total d'abord, puis parts par builder
         function updatePriceDistribution() {
             const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
             const distribution = document.getElementById('priceDistribution');
+            if (!distribution) return;
             distribution.innerHTML = '';
-            
-            if (selectedAgents.length === 0) {
+
+            updateCommissionPriceSummary();
+
+            const totalPrice = getCommissionTotalPrice();
+            if (totalPrice <= 0) {
+                distribution.innerHTML = `<p class="commission-price-wait">${t('commissions.enterTotalFirst')}</p>`;
+                updateWhoTookWhat();
                 return;
             }
             
-            // currentDistribution[agent] = { amount, percent } — par défaut percent = taux commission de l'agent
+            if (selectedAgents.length === 0) {
+                updateWhoTookWhat();
+                return;
+            }
+            
             const agents = getAgents();
             selectedAgents.forEach(agentPseudo => {
                 if (currentDistribution[agentPseudo] === undefined || typeof currentDistribution[agentPseudo] === 'number') {
@@ -4391,6 +5153,7 @@ const API_BASE_URL = (() => {
                     const defaultPercent = agentData?.commissionRate ?? 0;
                     currentDistribution[agentPseudo] = {
                         amount: typeof currentDistribution[agentPseudo] === 'number' ? currentDistribution[agentPseudo] : 0,
+                        sharePercent: currentDistribution[agentPseudo]?.sharePercent ?? 0,
                         percent: defaultPercent,
                         paid: false
                     };
@@ -4403,25 +5166,41 @@ const API_BASE_URL = (() => {
                 if (!selectedAgents.includes(agent)) delete currentDistribution[agent];
             });
             
+            if (selectedAgents.length > 1) {
+                const splitBtn = document.createElement('button');
+                splitBtn.type = 'button';
+                splitBtn.className = 'commission-split-equally-btn';
+                splitBtn.textContent = t('commissions.splitEqually');
+                splitBtn.onclick = splitBuilderSharesEqually;
+                distribution.appendChild(splitBtn);
+            }
+
             selectedAgents.forEach((agent, index) => {
                 const div = document.createElement('div');
                 div.className = 'price-item';
-                const data = currentDistribution[agent] || { amount: 0, percent: 0, paid: false };
+                const data = currentDistribution[agent] || { amount: 0, sharePercent: 0, percent: 0, paid: false };
                 const amountVal = typeof data === 'object' ? (data.amount ?? 0) : data;
+                const sharePercentVal = typeof data === 'object' ? (data.sharePercent ?? 0) : 0;
                 const percentVal = typeof data === 'object' ? (data.percent ?? 0) : 0;
                 const paidVal = typeof data === 'object' && data.paid === true;
+                const amountDisplay = amountVal > 0 ? amountVal : '';
+                const shareDisplay = sharePercentVal > 0 ? sharePercentVal : '';
                 div.innerHTML = `
-                    <label>Agent ${index + 1} - ${agent}</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 6px; align-items: end;">
+                    <label>Builder ${index + 1} — ${agent}</label>
+                    <div class="price-item-fields">
                         <div>
-                            <label style="font-size: 12px; color: #666;">Répartition (€)</label>
-                            <input type="number" id="amount_${agent}" min="0" step="0.01" value="${amountVal}" placeholder="0.00" oninput="updateDistributionForAgent('${agent}', 'amount', this.value)" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                            <label style="font-size: 12px; color: #666;">${t('commissions.agentSharePercentLabel')}</label>
+                            <input type="number" id="share_${agent}" min="0" max="100" step="0.01" value="${shareDisplay}" placeholder="${t('commissions.agentSharePercentPlaceholder')}" oninput="updateDistributionForAgent('${agent}', 'sharePercent', this.value)" style="width: 100%; padding: 10px; border: 2px solid #667eea; border-radius: 8px; font-size: 14px;">
                         </div>
                         <div>
-                            <label style="font-size: 12px; color: #666;">Taxe (%)</label>
+                            <label style="font-size: 12px; color: #666;">${t('commissions.agentShareLabel')}</label>
+                            <input type="number" id="amount_${agent}" min="0" step="0.01" value="${amountDisplay}" placeholder="${t('commissions.agentSharePlaceholder')}" oninput="updateDistributionForAgent('${agent}', 'amount', this.value)" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666;">${t('commissions.agentTaxLabel')}</label>
                             <input type="number" id="percent_${agent}" min="0" max="100" step="0.01" value="${percentVal}" placeholder="0" oninput="updateDistributionForAgent('${agent}', 'percent', this.value)" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 2px;">
+                        <div class="price-item-paid">
                             <input type="checkbox" id="paid_${agent}" ${paidVal ? 'checked' : ''} onchange="updateDistributionForAgent('${agent}', 'paid', this.checked)" style="width: 18px; height: 18px; cursor: pointer;">
                             <label for="paid_${agent}" style="font-size: 13px; color: #666; margin: 0; cursor: pointer; white-space: nowrap;">Payé ?</label>
                         </div>
@@ -4430,23 +5209,22 @@ const API_BASE_URL = (() => {
                 distribution.appendChild(div);
             });
             
-            // Ajouter l'affichage du total
-            const totalDiv = document.createElement('div');
-            totalDiv.id = 'totalAmount';
-            totalDiv.className = 'total-percentage valid';
-            distribution.appendChild(totalDiv);
-            
             updateTotalAmount();
             updateWhoTookWhat();
         }
         
         function updateDistributionForAgent(agent, field, newValue) {
             if (!currentDistribution[agent] || typeof currentDistribution[agent] !== 'object') {
-                currentDistribution[agent] = { amount: 0, percent: 0, paid: false };
+                currentDistribution[agent] = { amount: 0, sharePercent: 0, percent: 0, paid: false };
             }
-            if (field === 'amount') {
+            if (field === 'sharePercent') {
+                const num = parseFloat(newValue) || 0;
+                currentDistribution[agent].sharePercent = Math.max(0, Math.min(100, num));
+                syncAmountFromSharePercent(agent);
+            } else if (field === 'amount') {
                 const num = parseFloat(newValue) || 0;
                 currentDistribution[agent].amount = Math.max(0, num);
+                syncSharePercentFromAmount(agent);
             } else if (field === 'percent') {
                 const num = parseFloat(newValue) || 0;
                 currentDistribution[agent].percent = Math.max(0, Math.min(100, num));
@@ -4454,64 +5232,51 @@ const API_BASE_URL = (() => {
                 currentDistribution[agent].paid = newValue === true || newValue === 'true';
                 return;
             }
-            updateTotalAmount();
+            updateCommissionPriceSummary();
             updateWhoTookWhat();
         }
         
-        // Prix total = somme des répartitions (la taxe n'est pas incluse dans le total)
         function getCalculatedPrice() {
-            const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
-                .map(cb => cb.value);
-            let total = 0;
-            selectedAgents.forEach(agent => {
-                const d = currentDistribution[agent];
-                const amount = (d && typeof d === 'object' ? d.amount : d) || 0;
-                total += amount;
-            });
-            return total;
+            return getCommissionTotalPrice();
         }
         
         function updateTotalAmount() {
             const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
-            let sumAmounts = 0;
             
             selectedAgents.forEach(agent => {
                 const amountInput = document.getElementById(`amount_${agent}`);
+                const shareInput = document.getElementById(`share_${agent}`);
                 const percentInput = document.getElementById(`percent_${agent}`);
-                const amount = amountInput ? (parseFloat(amountInput.value) || 0) : (currentDistribution[agent]?.amount ?? 0);
+                const amount = amountInput && amountInput.value !== ''
+                    ? (parseFloat(amountInput.value) || 0)
+                    : (currentDistribution[agent]?.amount ?? 0);
+                const sharePercent = shareInput && shareInput.value !== ''
+                    ? (parseFloat(shareInput.value) || 0)
+                    : (currentDistribution[agent]?.sharePercent ?? 0);
                 const percent = percentInput ? (parseFloat(percentInput.value) || 0) : (currentDistribution[agent]?.percent ?? 0);
                 if (!currentDistribution[agent] || typeof currentDistribution[agent] !== 'object') {
-                    currentDistribution[agent] = { amount: 0, percent: 0 };
+                    currentDistribution[agent] = { amount: 0, sharePercent: 0, percent: 0, paid: false };
                 }
                 currentDistribution[agent].amount = amount;
+                currentDistribution[agent].sharePercent = Math.min(100, Math.max(0, sharePercent));
                 currentDistribution[agent].percent = Math.min(100, Math.max(0, percent));
-                sumAmounts += amount;
             });
-            
-            const calculatedPrice = getCalculatedPrice();
-            const totalDiv = document.getElementById('totalAmount');
-            if (totalDiv) {
-                totalDiv.textContent = `Prix total (calculé) : ${calculatedPrice.toFixed(2)} €`;
-                totalDiv.className = 'total-percentage valid';
-            }
-            const depositEl = document.getElementById('depositAmount');
-            if (depositEl && calculatedPrice > 0 && (depositEl.value === '' || parseFloat(depositEl.value) === 0)) {
-                depositEl.value = (calculatedPrice / 2).toFixed(2);
-            }
+
+            updateCommissionPriceSummary();
         }
         
         function updateWhoTookWhat() {
             const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
             const whoTookWhat = document.getElementById('whoTookWhat');
+            if (!whoTookWhat) return;
             
-            // Prix total = somme des répartitions
-            const totalPrice = getCalculatedPrice();
+            const totalPrice = getCommissionTotalPrice();
             
             whoTookWhat.innerHTML = '';
             
-            if (totalPrice === 0) {
+            if (totalPrice <= 0 || selectedAgents.length === 0) {
                 return;
             }
             
@@ -4521,15 +5286,18 @@ const API_BASE_URL = (() => {
             selectedAgents.forEach(agent => {
                 const d = currentDistribution[agent];
                 const amount = (d && typeof d === 'object' ? d.amount : d) || 0;
-                const percent = (d && typeof d === 'object' ? d.percent : 0) || 0;
+                const sharePercent = (d && typeof d === 'object' ? d.sharePercent : 0) || 0;
+                const taxPercent = (d && typeof d === 'object' ? d.percent : 0) || 0;
                 if (amount > 0) {
-                    const tax = amount * (percent / 100);
+                    const tax = amount * (taxPercent / 100);
                     luscianaCommission += tax;
                     agentDetails.push({
                         name: agent,
-                        amount: amount * (1 - percent / 100),
+                        sharePercent: sharePercent.toFixed(1),
+                        netAmount: amount * (1 - taxPercent / 100),
+                        grossAmount: amount,
                         taxPaid: tax,
-                        percent: percent.toFixed(1)
+                        taxPercent: taxPercent.toFixed(1)
                     });
                 }
             });
@@ -4538,7 +5306,13 @@ const API_BASE_URL = (() => {
             const container = document.createElement('div');
             container.style.cssText = 'padding: 15px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e0e0e0;';
             
-            let html = '<h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">💰 Répartition des gains</h3>';
+            let html = `<h3 style="margin-bottom: 15px; color: #333; font-size: 18px;">💰 Répartition des gains</h3>`;
+            html += `
+                <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #333;">
+                    <p style="margin: 0; font-weight: 600; color: #333; font-size: 16px;">Prix total de la commission</p>
+                    <p style="margin: 5px 0 0 0; font-size: 18px; color: #333;"><strong>${totalPrice.toFixed(2)}€</strong></p>
+                </div>
+            `;
             
             // Afficher Lusciana (taxe perçue = ce que les agents paient)
             html += `
@@ -4549,18 +5323,30 @@ const API_BASE_URL = (() => {
             `;
             
             // Afficher les agents (builders/managers)
+            html += '<div style="margin-top: 15px;"><p style="font-weight: 600; margin-bottom: 10px; color: #333;">Builders :</p>';
             if (agentDetails.length > 0) {
-                html += '<div style="margin-top: 15px;"><p style="font-weight: 600; margin-bottom: 10px; color: #333;">Agents :</p>';
                 agentDetails.forEach(agent => {
                     html += `
                         <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #28a745;">
-                            <p style="margin: 0; font-weight: 600; color: #28a745;">${agent.name} (${agent.percent}%)</p>
-                            <p style="margin: 5px 0 0 0; font-size: 16px; color: #333;"><strong>${agent.amount.toFixed(2)}€</strong></p>
+                            <p style="margin: 0; font-weight: 600; color: #28a745;">${agent.name} — ${agent.sharePercent}% du total</p>
+                            <p style="margin: 5px 0 0 0; font-size: 16px; color: #333;"><strong>${agent.netAmount.toFixed(2)}€</strong> <span style="font-size: 13px; color: #666;">(${agent.grossAmount.toFixed(2)}€ brut, taxe Lusciana ${agent.taxPercent}% : ${agent.taxPaid.toFixed(2)}€)</span></p>
                         </div>
                     `;
                 });
-                html += '</div>';
             }
+            selectedAgents.forEach(agent => {
+                const d = currentDistribution[agent];
+                const amount = (d && typeof d === 'object' ? d.amount : d) || 0;
+                if (amount <= 0) {
+                    html += `
+                        <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #ffc107;">
+                            <p style="margin: 0; font-weight: 600; color: #856404;">${agent}</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Indiquez sa part en % ci-dessus (ex. 50)</p>
+                        </div>
+                    `;
+                }
+            });
+            html += '</div>';
             
             container.innerHTML = html;
             whoTookWhat.appendChild(container);
@@ -4652,7 +5438,28 @@ Version : ${version}`;
                 return;
             }
             const selectedAgents = Array.from(document.querySelectorAll('#agentSelector input[type="checkbox"]:checked')).map(cb => cb.value);
-            const calculatedPrice = getCalculatedPrice();
+            syncAllAmountsFromSharePercents();
+            const totalPrice = getCommissionTotalPrice();
+            const distributed = getDistributedAmountSum();
+
+            if (totalPrice <= 0) {
+                alert(t('commissions.submitPriceRequired'));
+                document.getElementById('commissionTotalPrice')?.focus();
+                return;
+            }
+
+            if (selectedAgents.length === 0) {
+                alert(t('commissions.selectAgents'));
+                return;
+            }
+
+            if (Math.abs(distributed - totalPrice) > 0.01) {
+                alert(t('commissions.submitDistributionMismatch', {
+                    distributed: distributed.toFixed(2),
+                    total: totalPrice.toFixed(2)
+                }));
+                return;
+            }
             
             const commission = {
                 id: editingCommissionId || Date.now().toString(),
@@ -4662,7 +5469,7 @@ Version : ${version}`;
                 realizedBy: selectedAgents,
                 version: document.getElementById('version').value,
                 forCustomer: document.getElementById('forCustomer').value,
-                price: calculatedPrice,
+                price: totalPrice,
                 buildStart: document.getElementById('buildStart').value,
                 buildEnd: document.getElementById('buildEnd').value,
                 depositPaid: document.getElementById('depositPaid').value,
@@ -4709,7 +5516,7 @@ Version : ${version}`;
                         body: commissionPayload
                     });
                     saveCommissions(commissions.map(item => item.id === editingCommissionId ? response.item : item));
-                    alert(t('commissions.generatedPrice', { price: calculatedPrice.toFixed(2) }));
+                    alert(t('commissions.generatedPrice', { price: totalPrice.toFixed(2) }));
                     editingCommissionId = null;
                 } else {
                     const response = await apiRequest('/commissions', {
@@ -4720,8 +5527,8 @@ Version : ${version}`;
                     const showcaseCopied = await copyTextToClipboard(commission.showcaseText);
                     alert(
                         showcaseCopied
-                            ? `${t('commissions.generatedPrice', { price: calculatedPrice.toFixed(2) })}\n\n${t('commissions.showcaseCopied')}`
-                            : `${t('commissions.generatedPrice', { price: calculatedPrice.toFixed(2) })}\n\n${t('commissions.showcaseNotCopied')}`
+                            ? `${t('commissions.generatedPrice', { price: totalPrice.toFixed(2) })}\n\n${t('commissions.showcaseCopied')}`
+                            : `${t('commissions.generatedPrice', { price: totalPrice.toFixed(2) })}\n\n${t('commissions.showcaseNotCopied')}`
                     );
                 }
 
@@ -4736,6 +5543,11 @@ Version : ${version}`;
             document.getElementById('agentSelector').innerHTML = '';
             document.getElementById('priceDistribution').innerHTML = '';
             document.getElementById('whoTookWhat').innerHTML = '';
+            const priceSummary = document.getElementById('commissionPriceSummary');
+            if (priceSummary) {
+                priceSummary.innerHTML = '';
+                priceSummary.className = 'commission-price-summary';
+            }
             document.getElementById('feedbackGroup').classList.add('hidden');
             
             editingCommissionId = null;
@@ -4770,84 +5582,84 @@ Version : ${version}`;
             const list = document.getElementById('commissionList');
             if (!list) return;
             list.innerHTML = '';
-            
+
             if (commissions.length === 0) {
-                list.innerHTML = `<p style="text-align: center; color: #64748b; padding: 48px 24px; font-size: 15px;">${t('commissions.empty')}</p>`;
+                list.innerHTML = `<p class="commission-table-empty">${t('commissions.empty')}</p>`;
                 return;
             }
-            
+
             const escapeHtml = (s) => {
                 if (s == null) return '';
                 const div = document.createElement('div');
                 div.textContent = s;
                 return div.innerHTML;
             };
-            const realizedByStr = (c) => Array.isArray(c.realizedBy) ? c.realizedBy.join(', ') : (c.realizedBy || '—');
-            const formatDate = (d) => d ? new Date(d).toLocaleDateString(getCurrentLocale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-            
+
+            const formatDate = (d) => d
+                ? new Date(d).toLocaleDateString(getCurrentLocale(), { day: '2-digit', month: 'short', year: 'numeric' })
+                : '—';
+
+            const buildersStr = (c) => {
+                const realized = Array.isArray(c.realizedBy) ? c.realizedBy : [];
+                const selected = Array.isArray(c.selectedAgents) ? c.selectedAgents : [];
+                const merged = [...new Set([...realized, ...selected].map(String).filter(Boolean))];
+                return merged.length ? merged.join(', ') : '—';
+            };
+
             const isCommissionFinished = (c) => {
                 if (!c.priceDistribution || Object.keys(c.priceDistribution).length === 0) return false;
                 return Object.keys(c.priceDistribution).every(agent => c.priceDistribution[agent].paid === true);
             };
-            
+
             const sorted = [...commissions].sort((a, b) => {
                 const dateA = a.buildStart ? new Date(a.buildStart).getTime() : 0;
                 const dateB = b.buildStart ? new Date(b.buildStart).getTime() : 0;
                 return dateB - dateA;
             });
-            sorted.forEach(commission => {
-                const card = document.createElement('div');
+
+            const rows = sorted.map((commission) => {
                 const finished = isCommissionFinished(commission);
-                card.className = 'commission-card ' + (finished ? 'finished' : 'in-progress');
                 const price = commission.price != null ? Number(commission.price).toFixed(2) : '0.00';
-                const statusBadge = finished
-                    ? `<span class="commission-card-badge finished">${t('commissions.finished')}</span>`
-                    : `<span class="commission-card-badge in-progress">${t('commissions.inProgress')}</span>`;
-                card.innerHTML = `
-                    <div class="commission-card-header">
-                        <h3>${escapeHtml(commission.buildName)} ${statusBadge}</h3>
-                        <span class="commission-card-price">${price} €</span>
-                    </div>
-                    <div class="commission-card-body">
-                        <div class="info-grid">
-                            <div class="info-row">
-                                <span class="info-label">${t('commissions.infoSize')}</span>
-                                <span class="info-value">${escapeHtml(commission.buildSize)}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">${t('commissions.infoWorld')}</span>
-                                <span class="info-value">${escapeHtml(commission.worldName || '—')}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">${t('commissions.infoClient')}</span>
-                                <span class="info-value">${escapeHtml(commission.clientName)}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">${t('commissions.infoRealizedBy')}</span>
-                                <span class="info-value">${escapeHtml(realizedByStr(commission))}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">${t('commissions.infoVersion')}</span>
-                                <span class="info-value">${escapeHtml(commission.version || '—')}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">${t('commissions.infoStart')}</span>
-                                <span class="info-value">${formatDate(commission.buildStart)}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">${t('commissions.infoEnd')}</span>
-                                <span class="info-value">${formatDate(commission.buildEnd)}</span>
-                            </div>
-                        </div>
-                        <div class="commission-card-actions">
-                            <button type="button" onclick="copyShowcaseText('${commission.id}')">${t('commissions.copyShowcase')}</button>
-                            ${canEditUi() ? `<button type="button" onclick="editCommission('${commission.id}')">${t('commissions.edit')}</button>` : ''}
-                            ${canEditUi() ? `<button type="button" onclick="deleteCommission('${commission.id}')" class="danger">${t('commissions.delete')}</button>` : ''}
-                        </div>
-                    </div>
-                `;
-                list.appendChild(card);
-            });
+                const stateBadge = finished
+                    ? `<span class="commission-row-badge finished">${t('commissions.finished')}</span>`
+                    : `<span class="commission-row-badge in-progress">${t('commissions.inProgress')}</span>`;
+                const editCell = canEditUi()
+                    ? `<button type="button" class="commission-row-edit" onclick="editCommission('${commission.id}')">${t('commissions.colEdit')}</button>`
+                    : '<span class="commission-row-muted">—</span>';
+
+                return `<tr class="commission-row ${finished ? 'is-finished' : 'is-in-progress'}">
+                    <td class="commission-col-world" title="${escapeHtml(commission.worldName || '')}">${escapeHtml(commission.worldName || '—')}</td>
+                    <td class="commission-col-price">${price} €</td>
+                    <td class="commission-col-size">${escapeHtml(commission.buildSize || '—')}</td>
+                    <td class="commission-col-date">${formatDate(commission.buildStart)}</td>
+                    <td class="commission-col-date">${formatDate(commission.buildEnd)}</td>
+                    <td class="commission-col-client" title="${escapeHtml(commission.clientName || '')}">${escapeHtml(commission.clientName || '—')}</td>
+                    <td class="commission-col-builders" title="${escapeHtml(buildersStr(commission))}">${escapeHtml(buildersStr(commission))}</td>
+                    <td class="commission-col-state">${stateBadge}</td>
+                    <td class="commission-col-edit">${editCell}</td>
+                </tr>`;
+            }).join('');
+
+            list.innerHTML = `
+                <div class="commission-table-wrap">
+                    <table class="commission-table">
+                        <thead>
+                            <tr>
+                                <th>${t('commissions.colWorldName')}</th>
+                                <th>${t('commissions.colPrice')}</th>
+                                <th>${t('commissions.colSize')}</th>
+                                <th>${t('commissions.colStart')}</th>
+                                <th>${t('commissions.colEnd')}</th>
+                                <th>${t('commissions.colClientName')}</th>
+                                <th>${t('commissions.colBuilders')}</th>
+                                <th>${t('commissions.colState')}</th>
+                                <th>${t('commissions.colEdit')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
         }
         
         let editingCommissionId = null;
@@ -4871,6 +5683,12 @@ Version : ${version}`;
             document.getElementById('version').value = commission.version;
             document.getElementById('buildStart').value = commission.buildStart;
             document.getElementById('buildEnd').value = commission.buildEnd;
+            const totalPriceInput = document.getElementById('commissionTotalPrice');
+            if (totalPriceInput) {
+                totalPriceInput.value = commission.price != null && Number(commission.price) > 0
+                    ? Number(commission.price).toFixed(2)
+                    : '';
+            }
             document.getElementById('commissionPercent').value = commission.commissionPercent || '';
             document.getElementById('clientName').value = commission.clientName;
             document.getElementById('clientWants').value = commission.clientWants || '';
@@ -4897,20 +5715,28 @@ Version : ${version}`;
             // Sélectionner les agents et restaurer répartition + % par agent
             loadAgentsIntoSelector();
             setTimeout(() => {
-                if (commission.selectedAgents) {
+                const agentsToSelect = commission.selectedAgents?.length
+                    ? commission.selectedAgents
+                    : (Array.isArray(commission.realizedBy) ? commission.realizedBy : []);
+                if (agentsToSelect.length) {
                     if (commission.priceDistribution) {
+                        const totalForShare = Number(commission.price) > 0 ? Number(commission.price) : 0;
                         Object.keys(commission.priceDistribution).forEach(agent => {
                             const dist = commission.priceDistribution[agent];
                             const amount = dist && (dist.price !== undefined && dist.price !== null) ? dist.price : 0;
                             const percent = dist && (dist.percent !== undefined && dist.percent !== null) ? dist.percent : 0;
                             const paid = dist && dist.paid === true;
-                            currentDistribution[agent] = { amount: amount, percent: percent, paid: paid };
+                            const sharePercent = totalForShare > 0
+                                ? Math.round(amount / totalForShare * 10000) / 100
+                                : 0;
+                            currentDistribution[agent] = { amount, sharePercent, percent, paid };
                         });
                     }
-                    commission.selectedAgents.forEach(agent => {
+                    agentsToSelect.forEach(agent => {
                         const checkbox = document.getElementById(`agent_${agent}`);
                         if (checkbox) checkbox.checked = true;
                     });
+                    updateCommissionPriceSummary();
                     updatePriceDistribution();
                     updateWhoTookWhat();
                 }
@@ -5012,6 +5838,90 @@ Version : ${version}`;
             if (commissionCount) commissionCount.textContent = commissions.length;
             if (todoCount) todoCount.textContent = todos.length;
             if (storageSize) storageSize.textContent = accessToken ? t('data.storageRemote') : t('data.storageLoggedOut');
+        }
+
+        function formatSchematicLogDate(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return String(value);
+            return date.toLocaleString('fr-FR', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatSchematicLogBytes(bytes) {
+            const n = Number(bytes) || 0;
+            if (n < 1024) return `${n} o`;
+            if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} Ko`;
+            return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
+        }
+
+        async function refreshSchematicUploadLogs() {
+            const wrap = document.getElementById('schematicLogsTableWrap');
+            const summary = document.getElementById('schematicLogsSummary');
+            if (!wrap || !canManageOperationalData()) {
+                return;
+            }
+
+            const limit = canManageUsers() ? 500 : 200;
+            wrap.innerHTML = '<p style="color:#64748b;font-size:14px;">Chargement…</p>';
+
+            try {
+                const payload = await apiRequest(`/schematics/logs?limit=${limit}`);
+                const items = payload.items || [];
+                const total = Number(payload.total ?? items.length);
+                const shown = items.length;
+
+                if (summary) {
+                    summary.textContent = total > shown
+                        ? `${shown} derniers envois affichés sur ${total} au total.`
+                        : `${total} envoi(s) enregistré(s).`;
+                }
+
+                if (items.length === 0) {
+                    wrap.innerHTML = '<p style="color:#94a3b8;font-size:14px;">Aucun log pour le moment.</p>';
+                    return;
+                }
+
+                const rows = items.map((item) => {
+                    const ok = item.status === 'success';
+                    const file = ok
+                        ? (item.filename || item.originalFilename || '—')
+                        : (item.originalFilename || item.filename || '—');
+                    const who = item.userName || item.userEmail || item.userId || '—';
+                    const detail = ok
+                        ? formatSchematicLogBytes(item.sizeBytes)
+                        : (item.errorMessage || 'Erreur');
+                    return `<tr>
+                        <td>${formatSchematicLogDate(item.uploadedAt)}</td>
+                        <td>${ok ? '✓' : '✗'}</td>
+                        <td>${escapeHtml(file)}</td>
+                        <td>${escapeHtml(who)} <span style="color:#94a3b8">(${escapeHtml(item.userRole || '?')})</span></td>
+                        <td>${escapeHtml(detail)}</td>
+                        <td style="font-size:12px;color:#64748b">${escapeHtml(item.ipAddress || '—')}</td>
+                    </tr>`;
+                }).join('');
+
+                wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="text-align:left;border-bottom:2px solid #e2e8f0;">
+                            <th style="padding:8px 6px;">Date</th>
+                            <th style="padding:8px 6px;">OK</th>
+                            <th style="padding:8px 6px;">Fichier</th>
+                            <th style="padding:8px 6px;">Utilisateur</th>
+                            <th style="padding:8px 6px;">Détail</th>
+                            <th style="padding:8px 6px;">IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+            } catch (error) {
+                wrap.innerHTML = `<p style="color:#991b1b;font-size:14px;">${escapeHtml(error.message || 'Impossible de charger les logs')}</p>`;
+            }
         }
         
         let analystChartMonthly = null;
@@ -5600,6 +6510,10 @@ Version : ${version}`;
                 commissionsCache = [];
                 expensesCache = [];
                 todosCache = [];
+                discordTicketsCache = [];
+                discordTicketsConfigured = false;
+                discordBotIngestConfigured = false;
+                discordIntegrationMode = 'none';
                 clearSessionRemoteDataCache();
                 
                 loadAgentsIntoSelects();

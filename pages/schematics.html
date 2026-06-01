@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lusciana — Upload Schematics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/app.css?v=20260603">
+    <link rel="stylesheet" href="assets/schematics-upload.css?v=20260604">
+</head>
+<body class="schematics-body">
+    <div class="container schematics-shell">
+        <header class="schematics-topbar">
+            <div class="schematics-topbar-left">
+                <a id="schematicsBackLink" class="schematics-back-link" href="index.html">← Retour à l'admin</a>
+                <h1 class="schematics-page-title">Upload Schematic</h1>
+            </div>
+            <div id="schematicsSessionPanel" class="schematics-session hidden">
+                <span id="schematicsSessionLabel" class="schematics-user-badge"></span>
+                <button type="button" id="schematicsLogoutBtn" class="schematics-logout-btn">Déconnexion</button>
+            </div>
+        </header>
+
+        <div id="schematicsAuthPanel" class="schematics-auth">
+            <strong>Connexion requise</strong>
+            <p>Connectez-vous avec un compte builder ou supérieur pour envoyer un schematic sur le serveur.</p>
+            <form id="schematicsLoginForm">
+                <input type="email" id="schematicsLoginEmail" placeholder="Email" autocomplete="username" required>
+                <input type="password" id="schematicsLoginPassword" placeholder="Mot de passe" autocomplete="current-password" required>
+                <button type="submit">Connexion</button>
+            </form>
+        </div>
+
+        <div class="schematics-card">
+            <p class="schematics-lead">
+                Envoie un fichier directement dans le dossier FastAsyncWorldEdit du serveur Minecraft
+                (<code>plugins/FastAsyncWorldEdit/schematics</code>).
+            </p>
+
+            <div id="schematicsDropzone" class="schematics-dropzone" role="button" tabindex="0" aria-label="Zone de dépôt de fichier">
+                <div class="schematics-dropzone-icon">⬆️</div>
+                <p class="schematics-dropzone-title">Glissez un fichier ici ou cliquez pour parcourir</p>
+                <p id="schematicsMaxSizeHint" class="schematics-dropzone-hint">Formats : .schematic · .litematic · .bp · .schem</p>
+            </div>
+
+            <input
+                type="file"
+                id="schematicsFileInput"
+                class="schematics-file-input"
+                accept=".schematic,.litematic,.bp,.schem"
+            >
+
+            <div id="schematicsSelected" class="schematics-selected" style="display: none;"></div>
+
+            <div class="schematics-actions">
+                <button type="button" id="schematicsUploadBtn" class="schematics-btn-primary" disabled>Envoyer sur le serveur</button>
+                <button type="button" id="schematicsClearBtn" class="schematics-btn-secondary">Effacer</button>
+            </div>
+
+            <div id="schematicsStatus" class="schematics-status"></div>
+
+            <details id="schematicsDebugPanel" class="schematics-debug hidden">
+                <summary>Diagnostic serveur</summary>
+                <pre id="schematicsDebugOutput"></pre>
+                <p class="schematics-debug-hint">API : <code id="schematicsApiUrl"></code></p>
+            </details>
+
+            <details id="schematicsHistoryPanel" class="schematics-history hidden">
+                <summary>Historique des envois</summary>
+                <div id="schematicsHistoryList" class="schematics-history-list"></div>
+            </details>
+        </div>
+    </div>
+
+    <script src="assets/schematics-upload.js?v=20260604"></script>
+</body>
+</html>

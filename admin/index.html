@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../pages/assets/app.css?v=20260531">
+    <link rel="stylesheet" href="../pages/assets/app.css?v=20260613">
     <link rel="stylesheet" href="../pages/assets/todos-board.css?v=20260531">
 </head>
 <body>
@@ -48,9 +48,11 @@
             <a id="tabAgentsBtn" class="tab" href="#agents" onclick="event.preventDefault(); void showTab('agents', this);">Gérer les Agents</a>
             <a id="tabUsersBtn" class="tab" href="#users" onclick="event.preventDefault(); void showTab('users', this);">Utilisateurs</a>
             <a id="tabTodosBtn" class="tab" href="#todos" onclick="event.preventDefault(); void showTab('todos', this);">Todo List</a>
+            <a id="tabTicketsBtn" class="tab" href="#tickets" onclick="event.preventDefault(); void showTab('tickets', this);">Tickets Discord</a>
             <a id="tabAccountBtn" class="tab" href="#account" onclick="event.preventDefault(); void showTab('account', this);">Mon compte</a>
             <a id="tabAnalystBtn" class="tab" href="#analyst" onclick="event.preventDefault(); void showTab('analyst', this);">Data Analyst</a>
             <a id="tabDataBtn" class="tab" href="#data" onclick="event.preventDefault(); void showTab('data', this);">Gestion des Données</a>
+            <a id="tabSchematicsBtn" class="tab" href="schematics.html">Schematics</a>
         </div>
 
 <div id="list-tab" class="tab-content active">
@@ -93,11 +95,16 @@
                             <option value="">Sélectionner une version</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group commission-price-section">
                         <label>Répartition du Prix</label>
-                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">Répartition (€) = part totale. % = taxe que l'agent paie. Prix total = somme des répartitions. La taxe pré-remplit avec le taux de l'agent.</p>
-                        <div style="margin-top: 10px;">
-                            <label style="font-size: 14px; margin-bottom: 8px; display: block;">Sélectionner les agents :</label>
+                        <p id="commissionPriceFlowHint" style="font-size: 13px; color: #666; margin-bottom: 12px;">1) Saisissez le prix total. 2) Cochez les builders. 3) Indiquez la part de chacun en % (ex. 50 / 50) — le montant en € se calcule automatiquement.</p>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label for="commissionTotalPrice">Prix total de la commission (€)</label>
+                            <input type="number" id="commissionTotalPrice" step="0.01" min="0" placeholder="ex. 1500" oninput="onCommissionTotalPriceChange()" style="width: 100%; max-width: 280px; padding: 12px; border: 2px solid #667eea; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                        </div>
+                        <div id="commissionPriceSummary" class="commission-price-summary"></div>
+                        <div style="margin-top: 16px;">
+                            <label id="agentSelectorLabel" style="font-size: 14px; margin-bottom: 8px; display: block;">Sélectionner les agents :</label>
                             <div id="agentSelector" class="agent-selector"></div>
                         </div>
                         <div id="priceDistribution" class="price-distribution"></div>
@@ -692,6 +699,30 @@
             </div>
         </div>
 
+        <div id="tickets-tab" class="tab-content">
+            <div class="discord-tickets-toolbar">
+                <div>
+                    <h2 id="discordTicketsTitle" style="margin: 0;">Tickets Discord</h2>
+                    <p id="discordTicketsSubtitle" class="discord-tickets-subtitle">Suivi des tickets — alimenté par ton bot Discord via l'API.</p>
+                </div>
+                <div class="discord-tickets-actions">
+                    <label id="discordTicketFilterLabel" for="discordTicketFilterStatus" class="visually-hidden">Filtrer</label>
+                    <select id="discordTicketFilterStatus" onchange="displayDiscordTickets()">
+                        <option value="active">Actifs (non archivés)</option>
+                        <option value="open">Non traités</option>
+                        <option value="in_progress">En cours</option>
+                        <option value="quoted">Devis à faire</option>
+                        <option value="handled">Traités</option>
+                        <option value="archived">Archivés (salon supprimé)</option>
+                        <option value="all">Tous</option>
+                    </select>
+                    <button id="discordTicketSyncBtn" type="button" class="discord-ticket-sync-btn" onclick="syncDiscordTickets()">↻ Synchroniser Discord</button>
+                </div>
+            </div>
+            <p id="discordTicketsConfigHint" class="discord-tickets-config-hint hidden"></p>
+            <div id="discordTicketList" class="discord-ticket-list"></div>
+        </div>
+
         <div id="data-tab" class="tab-content">
             <h2>Gestion des Données</h2>
 
@@ -742,10 +773,23 @@
                     <button id="clearDataButton" type="button" class="danger" onclick="clearAllData()" style="background: #dc3545;">🗑️ Supprimer toutes les données</button>
                 </div>
             </div>
+
+            <div id="schematicLogsSection" class="form-section" style="display: none;">
+                <h2>📦 Logs upload schematics</h2>
+                <p style="margin-bottom: 12px; color: #64748b; font-size: 14px;">
+                    Historique des envois vers le serveur Minecraft (MongoDB · collection <code>schematic_upload_logs</code>).
+                </p>
+                <p id="schematicLogsSummary" style="margin-bottom: 12px; font-size: 14px;"></p>
+                <div class="button-group" style="margin-bottom: 12px;">
+                    <button type="button" class="secondary" onclick="refreshSchematicUploadLogs()">↻ Actualiser</button>
+                    <a class="tab" href="schematics.html" style="display: inline-block; padding: 10px 16px; text-decoration: none;">Ouvrir la page upload</a>
+                </div>
+                <div id="schematicLogsTableWrap" style="overflow-x: auto;"></div>
+            </div>
         </div>
     </div>
 
-    <script src="../pages/assets/app.js?v=20260531"></script>
+    <script src="../pages/assets/app.js?v=20260613"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </body>
 </html>

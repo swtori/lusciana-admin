@@ -187,6 +187,45 @@
         .price-distribution {
             margin-top: 15px;
         }
+
+        .commission-price-summary {
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .commission-price-summary.is-pending {
+            border-color: #ffc107;
+            background: #fffbf0;
+        }
+
+        .commission-price-summary.is-balanced {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .commission-price-summary.is-overflow {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .commission-price-summary-status {
+            margin: 6px 0 0;
+            font-weight: 600;
+        }
+
+        .commission-price-wait {
+            margin: 12px 0 0;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f0f4ff;
+            border: 1px dashed #667eea;
+            color: #555;
+            font-size: 14px;
+        }
         
         .price-item {
             margin-bottom: 15px;
@@ -201,6 +240,54 @@
             margin-bottom: 10px;
             font-weight: 600;
             color: #333;
+        }
+
+        .price-item-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 10px;
+            margin-top: 6px;
+            align-items: end;
+        }
+
+        .price-item-paid {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 2px;
+        }
+
+        .commission-split-equally-btn {
+            margin-bottom: 12px;
+            padding: 8px 14px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: #f0f4ff;
+            color: #667eea;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .commission-split-equally-btn:hover {
+            background: #667eea;
+            color: #fff;
+        }
+
+        .commission-price-summary-share {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #555;
+        }
+
+        @media (max-width: 768px) {
+            .price-item-fields {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .price-item-paid {
+                grid-column: 1 / -1;
+            }
         }
         
         .price-item .percent-display {
@@ -629,15 +716,138 @@
         }
         
         .commission-list {
-            display: grid;
-            gap: 24px;
-            margin-top: 24px;
+            margin-top: 16px;
         }
-        
-        @media (min-width: 900px) {
-            .commission-list {
-                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-            }
+
+        .commission-table-empty {
+            text-align: center;
+            color: #64748b;
+            padding: 48px 24px;
+            font-size: 15px;
+        }
+
+        .commission-table-wrap {
+            overflow-x: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .commission-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 960px;
+        }
+
+        .commission-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            text-align: left;
+            padding: 10px 12px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        .commission-table tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eef2f7;
+            color: #1e293b;
+            vertical-align: middle;
+        }
+
+        .commission-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .commission-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .commission-row.is-finished {
+            background: #f0fdf4;
+        }
+
+        .commission-row.is-in-progress {
+            background: #fff;
+        }
+
+        .commission-col-world,
+        .commission-col-client,
+        .commission-col-builders {
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .commission-col-builders {
+            max-width: 200px;
+        }
+
+        .commission-col-price {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .commission-col-date {
+            white-space: nowrap;
+            color: #475569;
+        }
+
+        .commission-col-state {
+            white-space: nowrap;
+        }
+
+        .commission-col-edit {
+            white-space: nowrap;
+            width: 72px;
+        }
+
+        .commission-row-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .commission-row-badge.finished {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .commission-row-badge.in-progress {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .commission-row-edit {
+            padding: 6px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .commission-row-edit:hover {
+            background: #667eea;
+            border-color: #667eea;
+            color: #fff;
+        }
+
+        .commission-row-muted {
+            color: #94a3b8;
         }
         
         .commission-card {
@@ -1040,5 +1250,222 @@
                 padding: 10px 8px;
                 font-size: 13px;
             }
+        }
+
+        .discord-tickets-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .discord-tickets-subtitle {
+            margin: 6px 0 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .discord-tickets-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .discord-tickets-actions select {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        .discord-ticket-sync-btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            background: #5865f2;
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .discord-ticket-sync-btn:hover:not(:disabled) {
+            background: #4752c4;
+        }
+
+        .discord-ticket-sync-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .discord-tickets-config-hint {
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .discord-tickets-config-hint.is-bot-mode {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+            color: #3730a3;
+        }
+
+        .discord-ticket-wl-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 180px;
+        }
+
+        .discord-ticket-wl-saved-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .discord-ticket-wl-chip {
+            padding: 4px 10px;
+            border: 1px solid #86efac;
+            border-radius: 999px;
+            background: #dcfce7;
+            color: #166534;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .discord-ticket-wl-chip:hover {
+            background: #bbf7d0;
+        }
+
+        .discord-ticket-wl-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .discord-ticket-nicknames {
+            flex: 1 1 120px;
+            min-width: 100px;
+            padding: 8px 10px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .discord-ticket-wl-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .discord-ticket-wl-btn {
+            flex: 0 0 auto;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .discord-ticket-wl-btn--add {
+            background: #28a745;
+        }
+
+        .discord-ticket-wl-btn--add:hover {
+            background: #218838;
+        }
+
+        .discord-ticket-wl-btn--remove {
+            background: #dc3545;
+        }
+
+        .discord-ticket-wl-btn--remove:hover {
+            background: #c82333;
+        }
+
+        .discord-ticket-wl-saved {
+            color: #28a745;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .discord-ticket-name-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-start;
+        }
+
+        .discord-ticket-link {
+            color: #5865f2;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+
+        .discord-ticket-link:hover {
+            text-decoration: underline;
+        }
+
+        .discord-ticket-table code {
+            font-size: 13px;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .discord-ticket-desc {
+            width: 100%;
+            min-width: 180px;
+            padding: 8px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .discord-ticket-select {
+            width: 100%;
+            min-width: 120px;
+            padding: 8px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            background: #fff;
+        }
+
+        .discord-ticket-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .discord-ticket-badge.status-open { background: #fee2e2; color: #991b1b; }
+        .discord-ticket-badge.status-in_progress { background: #fef3c7; color: #92400e; }
+        .discord-ticket-badge.status-quoted { background: #dbeafe; color: #1e40af; }
+        .discord-ticket-badge.status-handled { background: #dcfce7; color: #166534; }
+        .discord-ticket-badge.status-archived { background: #e2e8f0; color: #475569; }
+        .discord-ticket-badge.wl-whitelist { background: #dcfce7; color: #166534; }
+        .discord-ticket-badge.wl-blacklist { background: #fee2e2; color: #991b1b; }
+        .discord-ticket-badge.wl-none { background: #f1f5f9; color: #64748b; }
+
+        .discord-ticket-row.is-archived {
+            opacity: 0.72;
         }
 

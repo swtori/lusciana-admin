@@ -9,8 +9,10 @@ use App\Controllers\AgentsController;
 use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\CommissionsController;
+use App\Controllers\DiscordTicketsController;
 use App\Controllers\ExpensesController;
 use App\Controllers\HealthController;
+use App\Controllers\SchematicsController;
 use App\Controllers\TodosController;
 use App\Controllers\UsersController;
 use App\Exceptions\HttpException;
@@ -20,15 +22,20 @@ use App\Http\Router;
 use App\Repositories\AgentEngagementRepository;
 use App\Repositories\AgentRepository;
 use App\Repositories\CommissionRepository;
+use App\Repositories\DiscordTicketRepository;
 use App\Repositories\ExpenseRepository;
 use App\Repositories\LoginEventRepository;
+use App\Repositories\SchematicUploadLogRepository;
 use App\Repositories\RefreshTokenRepository;
 use App\Repositories\TodoRepository;
 use App\Repositories\UserRepository;
 use App\Services\AgentEngagementService;
 use App\Services\AuthService;
+use App\Services\DiscordSyncService;
+use App\Services\DiscordTicketIngestService;
 use App\Services\HistoricalImportService;
 use App\Services\JwtService;
+use App\Services\SchematicsUploadService;
 use MongoDB\Database;
 
 final class App
@@ -103,6 +110,8 @@ final class App
         $commissionRepository = new CommissionRepository($this->database);
         $expenseRepository = new ExpenseRepository($this->database);
         $todoRepository = new TodoRepository($this->database);
+        $discordTicketRepository = new DiscordTicketRepository($this->database);
+        $schematicUploadLogRepository = new SchematicUploadLogRepository($this->database);
 
         $jwt = new JwtService($this->config);
         $auth = new AuthService($this->config, $userRepository, $loginEventRepository, $refreshTokenRepository, $jwt);
@@ -120,6 +129,19 @@ final class App
         $commissions = new CommissionsController($commissionRepository, $agentRepository, $auth);
         $expenses = new ExpensesController($expenseRepository, $auth);
         $todos = new TodosController($todoRepository, $auth);
+        $discordSync = new DiscordSyncService($this->config, $discordTicketRepository);
+        $discordTicketIngest = new DiscordTicketIngestService($this->config, $discordTicketRepository);
+        $discordTickets = new DiscordTicketsController(
+            $discordTicketRepository,
+            $discordSync,
+            $discordTicketIngest,
+            $auth
+        );
+        $schematicsUpload = new SchematicsUploadService(
+            (string) $this->config['schematics_upload_dir'],
+            (int) $this->config['schematics_max_mb'] * 1024 * 1024
+        );
+        $schematics = new SchematicsController($schematicsUpload, $schematicUploadLogRepository, $auth);
 
         $this->router->add('GET', '/api/health', $health);
 
@@ -158,5 +180,16 @@ final class App
         $this->router->add('POST', '/api/todos', [$todos, 'create']);
         $this->router->add('PATCH', '/api/todos/:id', [$todos, 'update']);
         $this->router->add('DELETE', '/api/todos/:id', [$todos, 'delete']);
+
+        $this->router->add('GET', '/api/discord-tickets', [$discordTickets, 'list']);
+        $this->router->add('POST', '/api/discord-tickets/ingest', [$discordTickets, 'ingest']);
+        $this->router->add('GET', '/api/discord-tickets/pending', [$discordTickets, 'pending']);
+        $this->router->add('POST', '/api/discord-tickets/ack', [$discordTickets, 'ack']);
+        $this->router->add('POST', '/api/discord-tickets/sync', [$discordTickets, 'sync']);
+        $this->router->add('PATCH', '/api/discord-tickets/:id', [$discordTickets, 'update']);
+
+        $this->router->add('GET', '/api/schematics/info', [$schematics, 'info']);
+        $this->router->add('GET', '/api/schematics/logs', [$schematics, 'logs']);
+        $this->router->add('POST', '/api/schematics/upload', [$schematics, 'upload']);
     }
 }
