@@ -1,0 +1,10 @@
+{
+  "description": "worldName à supprimer en base (erreurs d'import seed). Sync ObsoleteCommissionWorlds.php",
+  "worldNames": [
+    "c-Scale-soymemox-guillrmo-armenta",
+    "c-Ved",
+    "c-Ved-map-tower-x3",
+    "c-WanoKuni-soymemox-guillrmo-armenta",
+    "c-soymemox-guillrmo-armenta"
+  ]
+}

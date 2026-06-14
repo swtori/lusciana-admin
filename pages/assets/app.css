@@ -1,30 +1,47 @@
-﻿* {
+﻿:root {
+            --bg: #f4f4f5;
+            --surface: #ffffff;
+            --border: #e4e4e7;
+            --border-strong: #d4d4d8;
+            --text: #18181b;
+            --text-muted: #71717a;
+            --accent: #18181b;
+            --accent-hover: #3f3f46;
+            --focus: #2563eb;
+            --radius: 4px;
+            --radius-sm: 3px;
+        }
+
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px;
+            -webkit-font-smoothing: antialiased;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 30px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
         }
         
         h1 {
-            color: #333;
-            margin-bottom: 30px;
-            text-align: center;
-            font-size: 28px;
+            color: var(--text);
+            margin-bottom: 0;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
         }
         
         .tabs {
@@ -47,12 +64,12 @@
         }
         
         .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: var(--text);
+            border-bottom-color: var(--text);
         }
         
         .tab:hover {
-            color: #667eea;
+            color: var(--text);
         }
         
         .tab-content {
@@ -90,21 +107,26 @@
         input[type="number"],
         input[type="date"],
         input[type="email"],
+        input[type="password"],
         textarea,
         select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
             font-size: 14px;
-            transition: border-color 0.3s;
+            font-family: inherit;
+            background: var(--surface);
+            color: var(--text);
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
         
         input:focus,
         textarea:focus,
         select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--focus);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
         
         textarea {
@@ -432,24 +454,32 @@
         }
         
         button {
-            padding: 14px 28px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 10px 18px;
+            background: var(--accent);
+            color: #fff;
+            border: 1px solid var(--accent);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: background 0.15s, border-color 0.15s;
         }
         
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
         }
         
         button.secondary {
-            background: #6c757d;
+            background: var(--surface);
+            color: var(--text);
+            border-color: var(--border-strong);
+        }
+
+        button.secondary:hover {
+            background: var(--bg);
+            border-color: var(--border-strong);
         }
         
         button.danger {
@@ -1076,19 +1106,240 @@
         .transaction-type-badge.expense { background: #fee2e2; color: #991b1b; }
         .transaction-type-badge.builder { background: #dcfce7; color: #166534; }
         .transaction-type-badge.manager { background: #e0e7ff; color: #3730a3; }
-        #appContainer { display: block; }
-        .header-auth { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-        .header-auth h1 { margin: 0; }
-        .header-subtitle { margin-top: 6px; color: #666; font-size: 14px; }
+        body.is-authenticated #appContainer {
+            display: block;
+        }
+        .password-field-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .password-field-wrap input {
+            width: 100%;
+            padding-right: 40px;
+            box-sizing: border-box;
+        }
+
+        .password-toggle-btn {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 6px;
+            line-height: 0;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-toggle-btn:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .password-toggle-btn:focus-visible {
+            outline: 2px solid var(--focus);
+            outline-offset: 1px;
+        }
+
+        /* ——— Login & header auth ——— */
+        .header-auth {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .app-brand-mark {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .header-subtitle {
+            margin-top: 8px;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 420px;
+        }
+
+        .auth-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            min-width: 280px;
+        }
+
         .language-switcher {
             display: flex;
             align-items: center;
-            gap: 8px;
-            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 20px;
         }
+
+        .language-switcher label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
         .language-switcher select {
-            min-width: 150px;
-            padding: 10px 12px;
+            min-width: 140px;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .login-form.hidden {
+            display: none !important;
+        }
+
+        .login-field label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .login-form .password-field-wrap {
+            max-width: none;
+            width: 100%;
+        }
+
+        .login-form .password-field-wrap input {
+            width: 100%;
+            max-width: none;
+            padding-right: 40px;
+        }
+
+        .login-submit {
+            width: 100%;
+            padding: 11px 16px;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        .auth-status {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .session-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .session-bar.hidden {
+            display: none !important;
+        }
+
+        .session-user {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .session-logout {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        /* Mode visiteur : écran de connexion centré */
+        body.is-guest {
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        body.is-guest #appContainer {
+            max-width: none;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 0;
+            background: var(--bg);
+            padding: 32px 20px;
+        }
+
+        body.is-guest .header-auth {
+            width: 100%;
+            max-width: 400px;
+            flex-direction: column;
+            align-items: stretch;
+            margin: 0;
+            padding: 32px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        body.is-guest .app-brand {
+            margin-bottom: 4px;
+        }
+
+        body.is-guest .auth-panel {
+            min-width: 0;
+            width: 100%;
+        }
+
+        body.is-guest .language-switcher {
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        body.is-guest .tabs,
+        body.is-guest .tab-content {
+            display: none !important;
+        }
+
+        body.is-authenticated .header-auth {
+            align-items: center;
+        }
+
+        body.is-authenticated .auth-panel {
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        body.is-authenticated .language-switcher {
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+
+        body.is-authenticated .session-bar {
+            justify-content: flex-end;
         }
 
         .tabs a.tab {
@@ -1103,13 +1354,11 @@
 
             .container {
                 padding: 16px;
-                border-radius: 12px;
+                border-radius: var(--radius);
             }
 
             h1 {
-                font-size: 22px;
-                margin-bottom: 18px;
-                text-align: left;
+                font-size: 20px;
             }
 
             .form-section {
@@ -1121,51 +1370,26 @@
                 margin-bottom: 16px;
             }
 
-            .header-auth {
+            body.is-guest .header-auth {
+                padding: 24px 20px;
+            }
+
+            body.is-authenticated .header-auth {
                 flex-direction: column;
                 align-items: stretch;
-                gap: 16px;
             }
 
-            .header-auth > div:first-child,
-            .header-auth > div:last-child {
-                width: 100%;
+            body.is-authenticated .auth-panel {
+                align-items: stretch;
+                text-align: left;
             }
 
-            #authPanel,
-            #loginForm,
-            #sessionInfo {
-                width: 100%;
+            .session-bar {
+                flex-direction: column;
+                align-items: stretch;
             }
 
-            #loginForm,
-            #sessionInfo {
-                justify-content: stretch !important;
-            }
-
-            #loginForm input,
-            #loginForm button,
-            #sessionInfo button {
-                width: 100%;
-                max-width: none !important;
-            }
-
-            #sessionInfo {
-                align-items: stretch !important;
-            }
-
-            #sessionUserLabel,
-            #authStatusMessage {
-                text-align: left !important;
-            }
-
-            .language-switcher {
-                justify-content: space-between;
-                flex-wrap: wrap;
-            }
-
-            .language-switcher select {
-                min-width: 0;
+            .session-logout {
                 width: 100%;
             }
 
@@ -1252,220 +1476,5 @@
             }
         }
 
-        .discord-tickets-toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .discord-tickets-subtitle {
-            margin: 6px 0 0;
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        .discord-tickets-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .discord-tickets-actions select {
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            background: #fff;
-        }
-
-        .discord-ticket-sync-btn {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            background: #5865f2;
-            color: #fff;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .discord-ticket-sync-btn:hover:not(:disabled) {
-            background: #4752c4;
-        }
-
-        .discord-ticket-sync-btn:disabled {
-            opacity: 0.7;
-            cursor: wait;
-        }
-
-        .discord-tickets-config-hint {
-            padding: 12px 14px;
-            margin-bottom: 16px;
-            border-radius: 8px;
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
-            font-size: 14px;
-        }
-
-        .discord-tickets-config-hint.is-bot-mode {
-            background: #eef2ff;
-            border-color: #c7d2fe;
-            color: #3730a3;
-        }
-
-        .discord-ticket-wl-cell {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            min-width: 180px;
-        }
-
-        .discord-ticket-wl-saved-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .discord-ticket-wl-chip {
-            padding: 4px 10px;
-            border: 1px solid #86efac;
-            border-radius: 999px;
-            background: #dcfce7;
-            color: #166534;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .discord-ticket-wl-chip:hover {
-            background: #bbf7d0;
-        }
-
-        .discord-ticket-wl-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .discord-ticket-nicknames {
-            flex: 1 1 120px;
-            min-width: 100px;
-            padding: 8px 10px;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            font-size: 13px;
-        }
-
-        .discord-ticket-wl-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .discord-ticket-wl-btn {
-            flex: 0 0 auto;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .discord-ticket-wl-btn--add {
-            background: #28a745;
-        }
-
-        .discord-ticket-wl-btn--add:hover {
-            background: #218838;
-        }
-
-        .discord-ticket-wl-btn--remove {
-            background: #dc3545;
-        }
-
-        .discord-ticket-wl-btn--remove:hover {
-            background: #c82333;
-        }
-
-        .discord-ticket-wl-saved {
-            color: #28a745;
-            font-weight: 700;
-            font-size: 16px;
-        }
-
-        .discord-ticket-name-cell {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            align-items: flex-start;
-        }
-
-        .discord-ticket-link {
-            color: #5865f2;
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-
-        .discord-ticket-link:hover {
-            text-decoration: underline;
-        }
-
-        .discord-ticket-table code {
-            font-size: 13px;
-            background: #f1f5f9;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .discord-ticket-desc {
-            width: 100%;
-            min-width: 180px;
-            padding: 8px 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 13px;
-            font-family: inherit;
-            resize: vertical;
-        }
-
-        .discord-ticket-select {
-            width: 100%;
-            min-width: 120px;
-            padding: 8px 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 13px;
-            background: #fff;
-        }
-
-        .discord-ticket-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .discord-ticket-badge.status-open { background: #fee2e2; color: #991b1b; }
-        .discord-ticket-badge.status-in_progress { background: #fef3c7; color: #92400e; }
-        .discord-ticket-badge.status-quoted { background: #dbeafe; color: #1e40af; }
-        .discord-ticket-badge.status-handled { background: #dcfce7; color: #166534; }
-        .discord-ticket-badge.status-archived { background: #e2e8f0; color: #475569; }
-        .discord-ticket-badge.wl-whitelist { background: #dcfce7; color: #166534; }
-        .discord-ticket-badge.wl-blacklist { background: #fee2e2; color: #991b1b; }
-        .discord-ticket-badge.wl-none { background: #f1f5f9; color: #64748b; }
-
-        .discord-ticket-row.is-archived {
-            opacity: 0.72;
-        }
+        /* Tickets Discord : voir discord-tickets.css */
 

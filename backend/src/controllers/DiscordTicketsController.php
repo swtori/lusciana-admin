@@ -9,6 +9,7 @@ use App\Http\JsonResponse;
 use App\Http\Request;
 use App\Repositories\DiscordTicketRepository;
 use App\Services\AuthService;
+use App\Services\DiscordBotTicketNotifyService;
 use App\Services\DiscordSyncService;
 use App\Services\DiscordTicketIngestService;
 use App\Support\MongoSerializer;
@@ -26,6 +27,7 @@ final class DiscordTicketsController
         private readonly DiscordTicketRepository $tickets,
         private readonly DiscordSyncService $discordSync,
         private readonly DiscordTicketIngestService $ticketIngest,
+        private readonly DiscordBotTicketNotifyService $botNotify,
         private readonly AuthService $auth
     ) {
     }
@@ -113,9 +115,10 @@ final class DiscordTicketsController
 
     public function update(Request $request, array $params): JsonResponse
     {
-        $this->auth->requireRole($request, Roles::MANAGER);
+        $user = $this->auth->requireRole($request, Roles::MANAGER);
         $body = $request->body;
         $payload = [];
+        $now = new UTCDateTime();
 
         if (array_key_exists('status', $body)) {
             $status = (string) $body['status'];
@@ -125,6 +128,8 @@ final class DiscordTicketsController
 
         if (array_key_exists('description', $body)) {
             $payload['description'] = trim((string) $body['description']);
+            $payload['descriptionUpdatedBy'] = self::descriptionEditorLabel($user);
+            $payload['descriptionUpdatedAt'] = $now;
         }
 
         if (array_key_exists('clientWl', $body)) {
@@ -154,7 +159,11 @@ final class DiscordTicketsController
             $current = self::normalizeMinecraftNicknames($existing['minecraftNicknames'] ?? []);
 
             $payload['pendingWlAction'] = $wlAction;
-            $payload['pendingWlNicknames'] = $nicknames;
+            $payload['pendingWlNicknames'] = self::mergePendingWlNicknames(
+                $existing,
+                $wlAction,
+                $nicknames
+            );
 
             if ($wlAction === 'add') {
                 $merged = $current;
@@ -180,18 +189,65 @@ final class DiscordTicketsController
             throw new HttpException('Aucun champ modifiable fourni', 422);
         }
 
-        $payload['updatedAt'] = new UTCDateTime();
+        $payload['updatedAt'] = $now;
         $payload['updatedBy'] = 'admin';
-        $payload['needsBotSync'] = true;
+
+        $needsBotSync = array_key_exists('status', $body)
+            || array_key_exists('clientWl', $body)
+            || array_key_exists('wlAction', $body);
+        if ($needsBotSync) {
+            $payload['needsBotSync'] = true;
+        }
 
         if (!$this->tickets->update($params['id'], $payload)) {
             throw new HttpException('Ticket introuvable', 404);
         }
 
-        return new JsonResponse([
+        $botSyncTriggered = false;
+        if ($needsBotSync) {
+            $botSyncTriggered = $this->botNotify->triggerPendingSync();
+        }
+
+        $item = MongoSerializer::normalize($this->tickets->findById($params['id']));
+        $response = [
             'message' => 'Ticket mis a jour',
-            'item' => MongoSerializer::normalize($this->tickets->findById($params['id'])),
-        ]);
+            'item' => $item,
+            'botSyncTriggered' => $botSyncTriggered,
+        ];
+
+        if (array_key_exists('wlAction', $body)) {
+            if (!$botSyncTriggered) {
+                $response['warning'] = 'Webhook bot injoignable ou RCON en echec. Verifiez DISCORD_BOT_TICKETS_WEBHOOK_URL (meme VPS que le bot) et MINECRAFT_RCON_* sur le bot.';
+            } elseif (!empty($item['needsBotSync'])) {
+                $response['warning'] = 'RCON Minecraft en echec — reessayez dans quelques secondes.';
+            }
+        }
+
+        return new JsonResponse($response);
+    }
+
+    /**
+     * @param array<string,mixed> $existing
+     * @param list<string> $newNicknames
+     * @return list<string>
+     */
+    private static function mergePendingWlNicknames(array $existing, string $wlAction, array $newNicknames): array
+    {
+        $previousAction = (string) ($existing['pendingWlAction'] ?? '');
+        $previous = self::normalizeMinecraftNicknames($existing['pendingWlNicknames'] ?? []);
+
+        if ($previousAction === $wlAction && $previous !== []) {
+            $merged = $previous;
+            foreach ($newNicknames as $nickname) {
+                if (!in_array($nickname, $merged, true)) {
+                    $merged[] = $nickname;
+                }
+            }
+
+            return $merged;
+        }
+
+        return $newNicknames;
     }
 
     /**
@@ -222,5 +278,23 @@ final class DiscordTicketsController
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string,mixed> $user
+     */
+    private static function descriptionEditorLabel(array $user): string
+    {
+        $name = trim((string) ($user['name'] ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $email = trim((string) ($user['email'] ?? ''));
+        if ($email !== '') {
+            return $email;
+        }
+
+        return 'admin';
     }
 }

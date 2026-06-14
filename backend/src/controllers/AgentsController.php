@@ -107,6 +107,7 @@ final class AgentsController
         $pseudo = (string) $request->body['pseudo'];
         Validator::ensureInArray($category, [
             Roles::AGENT_CLIENT,
+            Roles::AGENT_TRIAL,
             Roles::AGENT_APPRENTICE,
             Roles::AGENT_BUILDER,
             Roles::AGENT_MANAGER,
@@ -136,7 +137,7 @@ final class AgentsController
         ]);
 
         $credentials = null;
-        if (in_array($category, [Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
+        if (in_array($category, [Roles::AGENT_TRIAL, Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
             try {
                 $agent = MongoSerializer::normalize($this->agents->findById($id));
                 $credentials = $this->createLinkedUserForAgent($agent, $now);
@@ -186,6 +187,7 @@ final class AgentsController
         if (isset($payload['category'])) {
             Validator::ensureInArray((string) $payload['category'], [
                 Roles::AGENT_CLIENT,
+                Roles::AGENT_TRIAL,
                 Roles::AGENT_APPRENTICE,
                 Roles::AGENT_BUILDER,
                 Roles::AGENT_MANAGER,
@@ -319,7 +321,7 @@ final class AgentsController
         }
 
         $category = (string) ($agent['category'] ?? '');
-        if (!in_array($category, [Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
+        if (!in_array($category, [Roles::AGENT_TRIAL, Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER, Roles::AGENT_MANAGER], true)) {
             return;
         }
 

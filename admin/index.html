@@ -12,37 +12,50 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../pages/assets/app.css?v=20260613">
+    <link rel="stylesheet" href="../pages/assets/app.css?v=20260611login">
     <link rel="stylesheet" href="../pages/assets/todos-board.css?v=20260531">
+    <link rel="stylesheet" href="../pages/assets/discord-tickets.css?v=20260603dt">
 </head>
-<body>
+<body class="is-guest">
     <div id="appContainer" class="container">
-        <div class="header-auth">
-            <div>
-                <h1 id="headerTitle">🏗️ Commission Manager</h1>
+        <header class="header-auth" id="headerAuth">
+            <div class="app-brand">
+                <p class="app-brand-mark">Lusciana</p>
+                <h1 id="headerTitle">Commission Manager</h1>
                 <p class="header-subtitle" id="headerSubtitle">Connectez-vous pour charger les données depuis l'API MongoDB.</p>
             </div>
-            <div id="authPanel" style="display: flex; flex-direction: column; gap: 10px; min-width: 320px;">
-                <div class="language-switcher">
-                    <label for="languageSelect" id="languageLabel" style="margin: 0;">Langue</label>
+            <div id="authPanel" class="auth-panel">
+                <div class="language-switcher" id="languageSwitcher">
+                    <label for="languageSelect" id="languageLabel">Langue</label>
                     <select id="languageSelect">
                         <option value="fr">Français</option>
                         <option value="en">English</option>
                         <option value="de">Deutsch</option>
                     </select>
                 </div>
-                <form id="loginForm" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
-                    <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required style="max-width: 220px;">
-                    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required style="max-width: 220px;">
-                    <button type="submit">Connexion</button>
+                <form id="loginForm" class="login-form">
+                    <div class="login-field">
+                        <label for="loginEmail" id="loginEmailLabel">Email</label>
+                        <input type="email" id="loginEmail" placeholder="admin@lusciana.fr" autocomplete="username" required>
+                    </div>
+                    <div class="login-field">
+                        <label for="loginPassword" id="loginPasswordLabel">Mot de passe</label>
+                        <div class="password-field-wrap">
+                            <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password" required>
+                            <button type="button" class="password-toggle-btn" id="loginPasswordToggle" aria-label="Voir le mot de passe" title="Voir le mot de passe" onclick="toggleLoginPasswordVisibility()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="login-submit">Connexion</button>
+                    <p id="authStatusMessage" class="auth-status">Aucune session active.</p>
                 </form>
-                <div id="sessionInfo" class="hidden" style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-                    <span id="sessionUserLabel" style="font-size: 14px; color: #334155;"></span>
-                    <button type="button" class="secondary" onclick="logout()">Déconnexion</button>
+                <div id="sessionInfo" class="session-bar hidden">
+                    <span id="sessionUserLabel" class="session-user"></span>
+                    <button type="button" class="secondary session-logout" onclick="logout()">Déconnexion</button>
                 </div>
-                <p id="authStatusMessage" style="margin: 0; text-align: right; font-size: 13px; color: #64748b;">Aucune session active.</p>
             </div>
-        </div>
+        </header>
         <div class="tabs">
             <a id="tabListBtn" class="tab active" href="#list" onclick="event.preventDefault(); void showTab('list', this);">Liste des Commissions</a>
             <a id="tabAgentsBtn" class="tab" href="#agents" onclick="event.preventDefault(); void showTab('agents', this);">Gérer les Agents</a>
@@ -260,6 +273,7 @@
                     <select id="agentCategory" name="agentCategory" required>
                         <option value="">Sélectionner</option>
                         <option value="manager">Manager</option>
+                        <option value="trial">Trial</option>
                         <option value="apprentice">Apprentice</option>
                         <option value="builder">Builder</option>
                         <option value="client">Client</option>
@@ -700,27 +714,29 @@
         </div>
 
         <div id="tickets-tab" class="tab-content">
-            <div class="discord-tickets-toolbar">
-                <div>
-                    <h2 id="discordTicketsTitle" style="margin: 0;">Tickets Discord</h2>
-                    <p id="discordTicketsSubtitle" class="discord-tickets-subtitle">Suivi des tickets — alimenté par ton bot Discord via l'API.</p>
+            <div class="dt-board">
+                <div class="dt-toolbar">
+                    <div class="dt-toolbar-left">
+                        <h2 id="discordTicketsTitle" class="dt-title">Tickets Discord</h2>
+                        <p id="discordTicketsSubtitle" class="dt-subtitle">Suivi via bot / API</p>
+                    </div>
+                    <div class="dt-toolbar-right">
+                        <label id="discordTicketFilterLabel" for="discordTicketFilterStatus" class="visually-hidden">Filtrer</label>
+                        <select id="discordTicketFilterStatus" class="dt-filter" onchange="displayDiscordTickets()">
+                            <option value="active">Actifs (non archivés)</option>
+                            <option value="open">Non traités</option>
+                            <option value="in_progress">En cours</option>
+                            <option value="quoted">Devis à faire</option>
+                            <option value="handled">Traités</option>
+                            <option value="archived">Archivés (salon supprimé)</option>
+                            <option value="all">Tous</option>
+                        </select>
+                        <button id="discordTicketSyncBtn" type="button" class="dt-btn" onclick="syncDiscordTickets()">↻ Sync</button>
+                    </div>
                 </div>
-                <div class="discord-tickets-actions">
-                    <label id="discordTicketFilterLabel" for="discordTicketFilterStatus" class="visually-hidden">Filtrer</label>
-                    <select id="discordTicketFilterStatus" onchange="displayDiscordTickets()">
-                        <option value="active">Actifs (non archivés)</option>
-                        <option value="open">Non traités</option>
-                        <option value="in_progress">En cours</option>
-                        <option value="quoted">Devis à faire</option>
-                        <option value="handled">Traités</option>
-                        <option value="archived">Archivés (salon supprimé)</option>
-                        <option value="all">Tous</option>
-                    </select>
-                    <button id="discordTicketSyncBtn" type="button" class="discord-ticket-sync-btn" onclick="syncDiscordTickets()">↻ Synchroniser Discord</button>
-                </div>
+                <p id="discordTicketsConfigHint" class="dt-hint hidden"></p>
+                <div id="discordTicketList" class="dt-list"></div>
             </div>
-            <p id="discordTicketsConfigHint" class="discord-tickets-config-hint hidden"></p>
-            <div id="discordTicketList" class="discord-ticket-list"></div>
         </div>
 
         <div id="data-tab" class="tab-content">
@@ -761,6 +777,40 @@
                 </div>
             </div>
 
+            <div id="commissionsSeedImportSection" class="form-section" style="display: none;">
+                <h2 id="commissionsSeedImportTitle">Importer les commissions (seed)</h2>
+                <p id="commissionsSeedImportHint" style="margin-bottom: 12px; color: #52525b; font-size: 14px; line-height: 1.5;">
+                    Charge <code>pages/assets/commissions-seed.json</code> (65 commissions, compta + PayPal) dans MongoDB. Les mondes déjà présents sont ignorés.
+                </p>
+                <p id="commissionsSeedCountLabel" style="margin-bottom: 12px; font-size: 14px; font-weight: 500;"></p>
+                <div class="button-group">
+                    <button id="importCommissionsSeedButton" type="button" onclick="importCommissionsSeed()">Importer commissions-seed.json</button>
+                    <button id="normalizeCommissionBuildDatesButton" type="button" class="secondary" onclick="normalizeCommissionBuildDates()">Normaliser les dates (YYYY-MM-DD)</button>
+                </div>
+            </div>
+
+            <div id="obsoleteSeedCleanupSection" class="form-section" style="display: none;">
+                <h2 id="obsoleteSeedCleanupTitle">Supprimer les commissions seed erronées</h2>
+                <p id="obsoleteSeedCleanupHint" style="margin-bottom: 12px; color: #52525b; font-size: 14px; line-height: 1.5;">
+                    Doublons ou erreurs d’import seed (<code>c-Ved-map-tower-x3</code>, faux renders Soymemox, etc.). Action irréversible.
+                </p>
+                <p id="obsoleteSeedCountLabel" style="margin-bottom: 12px; font-size: 14px; font-weight: 500;"></p>
+                <div class="button-group">
+                    <button id="deleteObsoleteSeedButton" type="button" class="danger" onclick="deleteObsoleteSeedCommissions()">Supprimer les commissions erronées</button>
+                </div>
+            </div>
+
+            <div id="legacyImportCleanupSection" class="form-section" style="display: none;">
+                <h2 id="legacyImportCleanupTitle">Supprimer les imports compta legacy</h2>
+                <p id="legacyImportCleanupHint" style="margin-bottom: 12px; color: #52525b; font-size: 14px; line-height: 1.5;">
+                    Commissions générées par l’import automatique (<code>c-import-*</code>, <code>legacy-import</code>). Action irréversible.
+                </p>
+                <p id="legacyImportCountLabel" style="margin-bottom: 12px; font-size: 14px; font-weight: 500;"></p>
+                <div class="button-group">
+                    <button id="deleteLegacyImportButton" type="button" class="danger" onclick="deleteLegacyImportCommissions()">Supprimer les imports legacy</button>
+                </div>
+            </div>
+
             <div id="dataImportSection" class="form-section">
                 <h2>📤 Import des Données</h2>
                 <p style="margin-bottom: 15px;">Importez des données depuis un fichier JSON précédemment exporté.</p>
@@ -789,7 +839,7 @@
         </div>
     </div>
 
-    <script src="../pages/assets/app.js?v=20260613"></script>
+    <script src="../pages/assets/app.js?v=20260611obsolete"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </body>
 </html>

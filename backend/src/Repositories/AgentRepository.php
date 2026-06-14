@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\Regex;
 use MongoDB\Collection;
 use MongoDB\Database;
 
@@ -31,6 +32,34 @@ final class AgentRepository
     public function findByPseudo(string $pseudo): ?array
     {
         $item = $this->collection->findOne(['pseudo' => $pseudo]);
+        return $item ? (array) $item : null;
+    }
+
+    public function findByDiscordUserId(string $discordUserId): ?array
+    {
+        $discordUserId = trim($discordUserId);
+        if ($discordUserId === '' || !ctype_digit($discordUserId)) {
+            return null;
+        }
+
+        $item = $this->collection->findOne(['discordUserId' => $discordUserId]);
+        if ($item !== null) {
+            return (array) $item;
+        }
+
+        $mentionPattern = '<@' . preg_quote($discordUserId, '/') . '>';
+        $item = $this->collection->findOne([
+            'discord' => new Regex($mentionPattern, 'i'),
+        ]);
+
+        if ($item !== null) {
+            return (array) $item;
+        }
+
+        $item = $this->collection->findOne([
+            'discord' => new Regex(preg_quote($discordUserId, '/'), 'i'),
+        ]);
+
         return $item ? (array) $item : null;
     }
 

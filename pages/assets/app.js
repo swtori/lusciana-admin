@@ -24,6 +24,13 @@ const API_BASE_URL = (() => {
             return `${window.location.origin}/api`;
         })();
 
+        function getCommissionsSeedAssetUrl() {
+            if (window.location.pathname.includes('/admin/')) {
+                return '../pages/assets/commissions-seed.json?v=20260530';
+            }
+            return 'assets/commissions-seed.json?v=20260530';
+        }
+
         let agentsCache = [];
         let commissionsCache = [];
         let expensesCache = [];
@@ -32,6 +39,10 @@ const API_BASE_URL = (() => {
         let discordTicketsCache = [];
         let discordTicketsConfigured = false;
         const discordTicketWlDrafts = {};
+        let discordTicketWlBusyId = null;
+        const discordTicketDescDrafts = {};
+        const discordTicketDescSaveTimers = {};
+        const expandedDiscordTicketIds = new Set();
         let discordBotIngestConfigured = false;
         let discordIntegrationMode = 'none';
         let activeTodoSummaryFilter = 'all';
@@ -347,12 +358,14 @@ const API_BASE_URL = (() => {
         const I18N = {
             fr: {
                 header: {
-                    title: '🏗️ Commission Manager',
+                    title: 'Commission Manager',
                     subtitleLoggedOut: 'Connectez-vous pour charger les données depuis l\'API MongoDB.',
                     subtitleLoggedIn: 'Données chargées depuis MongoDB via l’API serveur.',
                     language: 'Langue',
                     emailPlaceholder: 'Email',
                     passwordPlaceholder: 'Mot de passe',
+                    showPassword: 'Voir le mot de passe',
+                    hidePassword: 'Masquer le mot de passe',
                     login: 'Connexion',
                     logout: 'Déconnexion',
                     noSession: 'Aucune session active.',
@@ -379,7 +392,8 @@ const API_BASE_URL = (() => {
                 discordTickets: {
                     title: 'Tickets Discord',
                     subtitle: 'Suivi des tickets — alimenté par ton bot Discord via l\'API.',
-                    sync: '↻ Import secours (API Discord)',
+                    sync: '↻ Sync',
+                    syncLong: '↻ Import secours (API Discord)',
                     syncing: 'Import…',
                     filterActive: 'Actifs (non archivés)',
                     filterOpen: 'Non traités',
@@ -396,8 +410,12 @@ const API_BASE_URL = (() => {
                     whitelistBtn: 'Whitelist',
                     dewhitelistBtn: 'Déwhitelist',
                     whitelistEmpty: 'Entrez au moins un pseudo Minecraft (ex. Steve).',
-                    whitelistSaved: 'Whitelist envoyée ! Le bot exécute la commande sous ~1 min — vérifie le salon Discord du ticket.',
-                    dewhitelistSaved: 'Déwhitelist envoyée ! Le bot retire le(s) pseudo(s) sous ~1 min — vérifie le salon Discord du ticket.',
+                    whitelistSaved: 'Joueur(s) whitelisté(s) sur Minecraft.',
+                    dewhitelistSaved: 'Joueur(s) retiré(s) de la whitelist Minecraft.',
+                    whitelistInvalid: 'Pseudo Minecraft invalide : {pseudo}',
+                    wlWebhookFailed: 'Le bot n\'a pas pu être joint (webhook). Vérifiez DISCORD_BOT_TICKETS_WEBHOOK_URL sur le même VPS que le bot.',
+                    wlRconFailed: 'Échec RCON Minecraft. Le retrait/ajout sera retenté — réessayez si besoin.',
+                    wlBusy: 'Whitelist en cours…',
                     colStatus: 'Statut',
                     colDesc: 'Description',
                     colClientWl: 'Client WL',
@@ -416,6 +434,13 @@ const API_BASE_URL = (() => {
                     syncSuccess: 'Import terminé : {created} créés, {updated} mis à jour, {archived} archivés ({total} salons actifs).',
                     syncError: 'Échec de la synchronisation Discord.',
                     descPlaceholder: 'Note interne…',
+                    descUpdatedBy: 'Dernière modif. : {by} — {at}',
+                    descUpdatedByDiscord: 'Discord (modal)',
+                    descSaving: 'Enregistrement…',
+                    wlAddTitle: 'Whitelist',
+                    wlRemoveTitle: 'Déwhitelist',
+                    expandRow: 'Développer la description',
+                    collapseRow: 'Réduire',
                     permissionSync: 'Seuls les managers peuvent lancer l\'import secours Discord.'
                 },
                 common: {
@@ -541,6 +566,7 @@ const API_BASE_URL = (() => {
                     category: 'Catégorie :',
                     selectCategory: 'Sélectionner',
                     manager: 'Manager',
+                    trial: 'Trial',
                     apprentice: 'Apprentice',
                     builder: 'Builder',
                     client: 'Client',
@@ -787,7 +813,41 @@ const API_BASE_URL = (() => {
                     importButton: '📤 Importer les données',
                     clearButton: '🗑️ Supprimer toutes les données',
                     storageRemote: 'MongoDB (serveur)',
-                    storageLoggedOut: 'Session non connectée'
+                    storageLoggedOut: 'Session non connectée',
+                    legacyImportTitle: 'Supprimer les imports compta legacy',
+                    legacyImportHint: 'Commissions générées par l’import automatique (c-import-*, legacy-import). Action irréversible.',
+                    legacyImportCount: '{count} commission(s) legacy détectée(s) en base.',
+                    legacyImportButton: 'Supprimer les imports legacy',
+                    legacyImportNone: 'Aucune commission legacy à supprimer.',
+                    legacyImportConfirm: 'Supprimer {count} commission(s) legacy (c-import-*, import compta) ?',
+                    legacyImportConfirmFinal: 'Confirmation finale : cette action est irréversible.',
+                    legacyImportDone: '{count} commission(s) legacy supprimée(s).',
+                    legacyImportFailed: 'Échec de la suppression : {error}',
+                    legacyImportPrompt: '{count} commission(s) d’import legacy sont en base. Les supprimer maintenant ?',
+                    seedImportTitle: 'Importer les commissions (seed)',
+                    seedImportHint: 'Charge commissions-seed.json (compta Mars–Octobre). Les mondes déjà en base sont ignorés.',
+                    seedImportCount: '{pending} à importer sur {total} dans le fichier ({existing} déjà présents).',
+                    seedImportButton: 'Importer commissions-seed.json',
+                    seedImportNone: 'Toutes les commissions du seed sont déjà en base.',
+                    seedImportConfirm: 'Importer {pending} commission(s) depuis commissions-seed.json ?',
+                    seedImportDone: '{inserted} commission(s) importée(s), {skipped} ignorée(s) (doublon).',
+                    seedImportFailed: 'Échec de l’import seed : {error}',
+                    seedImportPrompt: '{pending} commission(s) du seed peuvent être importées. Procéder maintenant ?',
+                    seedImportLoadFailed: 'Impossible de charger commissions-seed.json.',
+                    normalizeBuildDatesButton: 'Normaliser les dates (YYYY-MM-DD)',
+                    normalizeBuildDatesConfirm: 'Convertir les mois compta (Mars, Octobre…) et corriger les dates invalides en base ?',
+                    normalizeBuildDatesDone: '{updated} commission(s) mise(s) à jour.',
+                    normalizeBuildDatesFailed: 'Échec de la normalisation : {error}',
+                    obsoleteSeedTitle: 'Supprimer les commissions seed erronées',
+                    obsoleteSeedHint: 'Doublons ou erreurs d’import (ex. c-Ved-map-tower-x3, faux renders Soymemox). Action irréversible.',
+                    obsoleteSeedCount: '{count} commission(s) erronée(s) en base : {list}',
+                    obsoleteSeedButton: 'Supprimer les commissions erronées',
+                    obsoleteSeedNone: 'Aucune commission erronée à supprimer.',
+                    obsoleteSeedConfirm: 'Supprimer {count} commission(s) erronée(s) ?\n{list}',
+                    obsoleteSeedConfirmFinal: 'Confirmation finale : suppression irréversible.',
+                    obsoleteSeedDone: '{count} commission(s) erronée(s) supprimée(s).',
+                    obsoleteSeedFailed: 'Échec de la suppression : {error}',
+                    obsoleteSeedPrompt: '{count} commission(s) seed erronée(s) en base. Les supprimer maintenant ?\n{list}'
                 },
                 alerts: {
                     permissionTodos: 'Seuls les builders et plus peuvent gérer les tâches.',
@@ -843,12 +903,14 @@ const API_BASE_URL = (() => {
             },
             en: {
                 header: {
-                    title: '🏗️ Commission Manager',
+                    title: 'Commission Manager',
                     subtitleLoggedOut: 'Sign in to load data from the MongoDB API.',
                     subtitleLoggedIn: 'Data loaded from MongoDB through the server API.',
                     language: 'Language',
                     emailPlaceholder: 'Email',
                     passwordPlaceholder: 'Password',
+                    showPassword: 'Show password',
+                    hidePassword: 'Hide password',
                     login: 'Sign in',
                     logout: 'Sign out',
                     noSession: 'No active session.',
@@ -869,7 +931,7 @@ const API_BASE_URL = (() => {
                 discordTickets: {
                     title: 'Discord Tickets',
                     subtitle: 'Ticket tracking — fed by your Discord bot via the API.',
-                    sync: '↻ Fallback import (Discord API)',
+                    sync: '↻ Sync',
                     syncing: 'Importing…',
                     filterActive: 'Active (not archived)',
                     filterOpen: 'Not handled',
@@ -886,8 +948,12 @@ const API_BASE_URL = (() => {
                     whitelistBtn: 'Whitelist',
                     dewhitelistBtn: 'Dewhitelist',
                     whitelistEmpty: 'Enter at least one Minecraft username (e.g. Steve).',
-                    whitelistSaved: 'Whitelist queued! The bot runs the command within ~1 min — check the Discord ticket channel.',
-                    dewhitelistSaved: 'Dewhitelist queued! The bot removes the player(s) within ~1 min — check the Discord ticket channel.',
+                    whitelistSaved: 'Player(s) whitelisted on Minecraft.',
+                    dewhitelistSaved: 'Player(s) removed from the Minecraft whitelist.',
+                    whitelistInvalid: 'Invalid Minecraft username: {pseudo}',
+                    wlWebhookFailed: 'Could not reach the bot (webhook). Check DISCORD_BOT_TICKETS_WEBHOOK_URL on the same VPS as the bot.',
+                    wlRconFailed: 'Minecraft RCON failed. Retry in a few seconds if needed.',
+                    wlBusy: 'Whitelist in progress…',
                     colStatus: 'Status',
                     colDesc: 'Description',
                     colClientWl: 'Client WL',
@@ -906,6 +972,13 @@ const API_BASE_URL = (() => {
                     syncSuccess: 'Sync done: {created} created, {updated} updated, {archived} archived ({total} active channels).',
                     syncError: 'Discord sync failed.',
                     descPlaceholder: 'Internal note…',
+                    descUpdatedBy: 'Last edit: {by} — {at}',
+                    descUpdatedByDiscord: 'Discord (ticket modal)',
+                    descSaving: 'Saving…',
+                    wlAddTitle: 'Whitelist',
+                    wlRemoveTitle: 'Dewhitelist',
+                    expandRow: 'Expand description',
+                    collapseRow: 'Collapse',
                     permissionSync: 'Only managers can sync Discord tickets.'
                 },
                 common: {
@@ -1020,6 +1093,7 @@ const API_BASE_URL = (() => {
                     category: 'Category:',
                     selectCategory: 'Select',
                     manager: 'Manager',
+                    trial: 'Trial',
                     apprentice: 'Apprentice',
                     builder: 'Builder',
                     client: 'Client',
@@ -1266,7 +1340,41 @@ const API_BASE_URL = (() => {
                     importButton: '📤 Import data',
                     clearButton: '🗑️ Delete all data',
                     storageRemote: 'MongoDB (server)',
-                    storageLoggedOut: 'No active session'
+                    storageLoggedOut: 'No active session',
+                    legacyImportTitle: 'Delete legacy accounting imports',
+                    legacyImportHint: 'Commissions from automatic import (c-import-*, legacy-import). Cannot be undone.',
+                    legacyImportCount: '{count} legacy commission(s) found in the database.',
+                    legacyImportButton: 'Delete legacy imports',
+                    legacyImportNone: 'No legacy commissions to delete.',
+                    legacyImportConfirm: 'Delete {count} legacy commission(s) (c-import-*, accounting import)?',
+                    legacyImportConfirmFinal: 'Final confirmation: this cannot be undone.',
+                    legacyImportDone: '{count} legacy commission(s) deleted.',
+                    legacyImportFailed: 'Deletion failed: {error}',
+                    legacyImportPrompt: '{count} legacy import commission(s) found. Delete them now?',
+                    seedImportTitle: 'Import commissions (seed)',
+                    seedImportHint: 'Loads commissions-seed.json (accounting Mars–Oct). Existing worlds are skipped.',
+                    seedImportCount: '{pending} to import out of {total} in file ({existing} already present).',
+                    seedImportButton: 'Import commissions-seed.json',
+                    seedImportNone: 'All seed commissions are already in the database.',
+                    seedImportConfirm: 'Import {pending} commission(s) from commissions-seed.json?',
+                    seedImportDone: '{inserted} commission(s) imported, {skipped} skipped (duplicate).',
+                    seedImportFailed: 'Seed import failed: {error}',
+                    seedImportPrompt: '{pending} seed commission(s) can be imported. Proceed now?',
+                    seedImportLoadFailed: 'Unable to load commissions-seed.json.',
+                    normalizeBuildDatesButton: 'Normalize dates (YYYY-MM-DD)',
+                    normalizeBuildDatesConfirm: 'Convert accounting month names (Mars, Octobre…) and fix invalid dates in the database?',
+                    normalizeBuildDatesDone: '{updated} commission(s) updated.',
+                    normalizeBuildDatesFailed: 'Normalization failed: {error}',
+                    obsoleteSeedTitle: 'Delete erroneous seed commissions',
+                    obsoleteSeedHint: 'Import mistakes (e.g. c-Ved-map-tower-x3, fake Soymemox renders). Cannot be undone.',
+                    obsoleteSeedCount: '{count} erroneous commission(s) in DB: {list}',
+                    obsoleteSeedButton: 'Delete erroneous commissions',
+                    obsoleteSeedNone: 'No erroneous commissions to delete.',
+                    obsoleteSeedConfirm: 'Delete {count} erroneous commission(s)?\n{list}',
+                    obsoleteSeedConfirmFinal: 'Final confirmation: this cannot be undone.',
+                    obsoleteSeedDone: '{count} erroneous commission(s) deleted.',
+                    obsoleteSeedFailed: 'Deletion failed: {error}',
+                    obsoleteSeedPrompt: '{count} erroneous seed commission(s) found. Delete now?\n{list}'
                 },
                 alerts: {
                     permissionTodos: 'Only builders and above can manage tasks.',
@@ -1322,12 +1430,14 @@ const API_BASE_URL = (() => {
             },
             de: {
                 header: {
-                    title: '🏗️ Commission Manager',
+                    title: 'Commission Manager',
                     subtitleLoggedOut: 'Melde dich an, um die Daten über die MongoDB-API zu laden.',
                     subtitleLoggedIn: 'Daten wurden über die Server-API aus MongoDB geladen.',
                     language: 'Sprache',
                     emailPlaceholder: 'E-Mail',
                     passwordPlaceholder: 'Passwort',
+                    showPassword: 'Passwort anzeigen',
+                    hidePassword: 'Passwort verbergen',
                     login: 'Anmelden',
                     logout: 'Abmelden',
                     noSession: 'Keine aktive Sitzung.',
@@ -1348,7 +1458,7 @@ const API_BASE_URL = (() => {
                 discordTickets: {
                     title: 'Discord-Tickets',
                     subtitle: 'Ticket-Verfolgung — dein Discord-Bot liefert die Daten per API.',
-                    sync: '↻ Fallback-Import (Discord-API)',
+                    sync: '↻ Sync',
                     syncing: 'Import…',
                     filterActive: 'Aktiv (nicht archiviert)',
                     filterOpen: 'Nicht bearbeitet',
@@ -1365,8 +1475,12 @@ const API_BASE_URL = (() => {
                     whitelistBtn: 'Whitelist',
                     dewhitelistBtn: 'Dewhitelist',
                     whitelistEmpty: 'Mindestens einen Minecraft-Namen eingeben (z. B. Steve).',
-                    whitelistSaved: 'Whitelist gesendet! Der Bot führt den Befehl in ~1 Min aus — Discord-Ticket prüfen.',
-                    dewhitelistSaved: 'Dewhitelist gesendet! Der Bot entfernt die Spieler in ~1 Min — Discord-Ticket prüfen.',
+                    whitelistSaved: 'Spieler auf Minecraft whitelisted.',
+                    dewhitelistSaved: 'Spieler von der Minecraft-Whitelist entfernt.',
+                    whitelistInvalid: 'Ungültiger Minecraft-Name: {pseudo}',
+                    wlWebhookFailed: 'Bot nicht erreichbar (Webhook). DISCORD_BOT_TICKETS_WEBHOOK_URL auf demselben VPS prüfen.',
+                    wlRconFailed: 'Minecraft-RCON fehlgeschlagen. Bei Bedarf erneut versuchen.',
+                    wlBusy: 'Whitelist läuft…',
                     colStatus: 'Status',
                     colDesc: 'Beschreibung',
                     colClientWl: 'Kunden-WL',
@@ -1385,6 +1499,13 @@ const API_BASE_URL = (() => {
                     syncSuccess: 'Sync abgeschlossen: {created} neu, {updated} aktualisiert, {archived} archiviert ({total} aktive Kanäle).',
                     syncError: 'Discord-Synchronisierung fehlgeschlagen.',
                     descPlaceholder: 'Interne Notiz…',
+                    descUpdatedBy: 'Zuletzt bearbeitet: {by} — {at}',
+                    descUpdatedByDiscord: 'Discord (Ticket-Modal)',
+                    descSaving: 'Speichern…',
+                    wlAddTitle: 'Whitelist',
+                    wlRemoveTitle: 'Dewhitelist',
+                    expandRow: 'Beschreibung aufklappen',
+                    collapseRow: 'Einklappen',
                     permissionSync: 'Nur Manager können Discord-Tickets synchronisieren.'
                 },
                 common: {
@@ -1499,6 +1620,7 @@ const API_BASE_URL = (() => {
                     category: 'Kategorie:',
                     selectCategory: 'Auswählen',
                     manager: 'Manager',
+                    trial: 'Trial',
                     apprentice: 'Apprentice',
                     builder: 'Builder',
                     client: 'Kunde',
@@ -1745,7 +1867,41 @@ const API_BASE_URL = (() => {
                     importButton: '📤 Daten importieren',
                     clearButton: '🗑️ Alle Daten löschen',
                     storageRemote: 'MongoDB (Server)',
-                    storageLoggedOut: 'Keine aktive Sitzung'
+                    storageLoggedOut: 'Keine aktive Sitzung',
+                    legacyImportTitle: 'Legacy-Import-Commissions löschen',
+                    legacyImportHint: 'Automatisch importierte Commissions (c-import-*, legacy-import). Unwiderruflich.',
+                    legacyImportCount: '{count} Legacy-Commission(s) in der Datenbank.',
+                    legacyImportButton: 'Legacy-Imports löschen',
+                    legacyImportNone: 'Keine Legacy-Commissions zum Löschen.',
+                    legacyImportConfirm: '{count} Legacy-Commission(s) löschen (c-import-*, Import)?',
+                    legacyImportConfirmFinal: 'Letzte Bestätigung: unwiderruflich.',
+                    legacyImportDone: '{count} Legacy-Commission(s) gelöscht.',
+                    legacyImportFailed: 'Löschen fehlgeschlagen: {error}',
+                    legacyImportPrompt: '{count} Legacy-Import-Commission(s) gefunden. Jetzt löschen?',
+                    seedImportTitle: 'Commissions importieren (Seed)',
+                    seedImportHint: 'Lädt commissions-seed.json. Bereits vorhandene Welten werden übersprungen.',
+                    seedImportCount: '{pending} zu importieren von {total} in der Datei ({existing} bereits vorhanden).',
+                    seedImportButton: 'commissions-seed.json importieren',
+                    seedImportNone: 'Alle Seed-Commissions sind bereits in der Datenbank.',
+                    seedImportConfirm: '{pending} Commission(s) aus commissions-seed.json importieren?',
+                    seedImportDone: '{inserted} importiert, {skipped} übersprungen (Duplikat).',
+                    seedImportFailed: 'Seed-Import fehlgeschlagen: {error}',
+                    seedImportPrompt: '{pending} Seed-Commission(s) können importiert werden. Jetzt starten?',
+                    seedImportLoadFailed: 'commissions-seed.json konnte nicht geladen werden.',
+                    normalizeBuildDatesButton: 'Daten normalisieren (YYYY-MM-DD)',
+                    normalizeBuildDatesConfirm: 'Compta-Monatsnamen (Mars, Octobre…) und ungültige Daten in der DB korrigieren?',
+                    normalizeBuildDatesDone: '{updated} Commission(s) aktualisiert.',
+                    normalizeBuildDatesFailed: 'Normalisierung fehlgeschlagen: {error}',
+                    obsoleteSeedTitle: 'Fehlerhafte Seed-Commissions löschen',
+                    obsoleteSeedHint: 'Import-Fehler (z. B. c-Ved-map-tower-x3, falsche Soymemox-Renders). Unwiderruflich.',
+                    obsoleteSeedCount: '{count} fehlerhafte Commission(s) in der DB: {list}',
+                    obsoleteSeedButton: 'Fehlerhafte Commissions löschen',
+                    obsoleteSeedNone: 'Keine fehlerhaften Commissions zum Löschen.',
+                    obsoleteSeedConfirm: '{count} fehlerhafte Commission(s) löschen?\n{list}',
+                    obsoleteSeedConfirmFinal: 'Letzte Bestätigung: unwiderruflich.',
+                    obsoleteSeedDone: '{count} fehlerhafte Commission(s) gelöscht.',
+                    obsoleteSeedFailed: 'Löschen fehlgeschlagen: {error}',
+                    obsoleteSeedPrompt: '{count} fehlerhafte Seed-Commission(s) gefunden. Jetzt löschen?\n{list}'
                 },
                 alerts: {
                     permissionTodos: 'Nur Builder und höher können Aufgaben verwalten.',
@@ -1831,6 +1987,9 @@ const API_BASE_URL = (() => {
             if (role === 'client') {
                 return t('agents.client');
             }
+            if (role === 'trial') {
+                return t('agents.trial');
+            }
             if (role === 'apprentice') {
                 return t('agents.apprentice');
             }
@@ -1870,9 +2029,13 @@ const API_BASE_URL = (() => {
 
             setText('#headerTitle', 'header.title');
             setText('#languageLabel', 'header.language');
+            setText('#loginEmailLabel', 'header.emailPlaceholder');
             setPlaceholder('#loginEmail', 'header.emailPlaceholder');
+            setText('#loginPasswordLabel', 'header.passwordPlaceholder');
             setPlaceholder('#loginPassword', 'header.passwordPlaceholder');
+            updateLoginPasswordToggleLabel();
             setText('#loginForm button[type="submit"]', 'header.login');
+            setText('#headerSubtitle', accessToken && currentUser ? 'header.subtitleLoggedIn' : 'header.subtitleLoggedOut');
             setText('#sessionInfo button.secondary', 'header.logout');
             setText('#tabListBtn', 'tabs.list');
 
@@ -1961,6 +2124,7 @@ const API_BASE_URL = (() => {
             setText('label[for="agentCategory"]', 'agents.category');
             setText('#agentCategory option[value=""]', 'agents.selectCategory');
             setText('#agentCategory option[value="manager"]', 'agents.manager');
+            setText('#agentCategory option[value="trial"]', 'agents.trial');
             setText('#agentCategory option[value="apprentice"]', 'agents.apprentice');
             setText('#agentCategory option[value="builder"]', 'agents.builder');
             setText('#agentCategory option[value="client"]', 'agents.client');
@@ -2139,6 +2303,16 @@ const API_BASE_URL = (() => {
             setText('label[for="importFile"]', 'data.importFile');
             setText('#importDataButton', 'data.importButton');
             setText('#clearDataButton', 'data.clearButton');
+            setText('#legacyImportCleanupTitle', 'data.legacyImportTitle');
+            setText('#legacyImportCleanupHint', 'data.legacyImportHint');
+            setText('#deleteLegacyImportButton', 'data.legacyImportButton');
+            setText('#obsoleteSeedCleanupTitle', 'data.obsoleteSeedTitle');
+            setText('#obsoleteSeedCleanupHint', 'data.obsoleteSeedHint');
+            setText('#deleteObsoleteSeedButton', 'data.obsoleteSeedButton');
+            setText('#commissionsSeedImportTitle', 'data.seedImportTitle');
+            setText('#commissionsSeedImportHint', 'data.seedImportHint');
+            setText('#importCommissionsSeedButton', 'data.seedImportButton');
+            setText('#normalizeCommissionBuildDatesButton', 'data.normalizeBuildDatesButton');
 
             document.querySelectorAll('.yes-no-btn.yes').forEach(btn => btn.textContent = t('common.yes'));
             document.querySelectorAll('.yes-no-btn.no').forEach(btn => btn.textContent = t('common.no'));
@@ -2237,15 +2411,19 @@ const API_BASE_URL = (() => {
                 return;
             }
 
-            if (accessToken && currentUser) {
-                loginForm.style.display = 'none';
-                sessionInfo.style.display = 'flex';
+            const isAuthenticated = Boolean(accessToken && currentUser);
+            document.body.classList.toggle('is-guest', !isAuthenticated);
+            document.body.classList.toggle('is-authenticated', isAuthenticated);
+
+            if (isAuthenticated) {
+                loginForm.classList.add('hidden');
+                sessionInfo.classList.remove('hidden');
                 sessionUserLabel.textContent = `${currentUser.name || currentUser.email} (${getRoleLabel(currentUser.role)})`;
                 headerSubtitle.textContent = t('header.subtitleLoggedIn');
                 setAuthStatus(t('header.connectedTo', { api: API_BASE_URL }), false);
             } else {
-                loginForm.style.display = 'flex';
-                sessionInfo.style.display = 'none';
+                loginForm.classList.remove('hidden');
+                sessionInfo.classList.add('hidden');
                 sessionUserLabel.textContent = '';
                 headerSubtitle.textContent = t('header.subtitleLoggedOut');
                 setAuthStatus(t('header.noSession'), false);
@@ -2358,6 +2536,21 @@ const API_BASE_URL = (() => {
 
             if (dataImportSection) {
                 dataImportSection.style.display = isAuthenticated && isDangerousAdminLike ? '' : 'none';
+            }
+
+            const legacyImportCleanupSection = document.getElementById('legacyImportCleanupSection');
+            if (legacyImportCleanupSection) {
+                legacyImportCleanupSection.style.display = isAuthenticated && isDangerousAdminLike ? '' : 'none';
+            }
+
+            const obsoleteSeedCleanupSection = document.getElementById('obsoleteSeedCleanupSection');
+            if (obsoleteSeedCleanupSection) {
+                obsoleteSeedCleanupSection.style.display = isAuthenticated && isDangerousAdminLike ? '' : 'none';
+            }
+
+            const commissionsSeedImportSection = document.getElementById('commissionsSeedImportSection');
+            if (commissionsSeedImportSection) {
+                commissionsSeedImportSection.style.display = isAuthenticated && isDangerousAdminLike ? '' : 'none';
             }
 
             const schematicLogsSection = document.getElementById('schematicLogsSection');
@@ -2645,6 +2838,384 @@ const API_BASE_URL = (() => {
             });
             refreshUIAfterLoad();
             applyTabFromHash();
+            await maybePromptLegacyImportCleanup();
+            await maybePromptObsoleteSeedCleanup();
+            await maybePromptCommissionsSeedImport();
+        }
+
+        const OBSOLETE_SEED_WORLD_NAMES = new Set([
+            'c-Ved-map-tower-x3',
+            'c-Ved',
+            'c-WanoKuni-soymemox-guillrmo-armenta',
+            'c-Scale-soymemox-guillrmo-armenta',
+            'c-soymemox-guillrmo-armenta'
+        ]);
+
+        function isObsoleteSeedCommission(commission) {
+            return OBSOLETE_SEED_WORLD_NAMES.has(String(commission?.worldName || '').trim());
+        }
+
+        function formatObsoleteWorldList(worldNames) {
+            const list = Array.isArray(worldNames) ? worldNames.filter(Boolean) : [];
+            return list.length ? list.join(', ') : '—';
+        }
+
+        function isLegacyImportCommission(commission) {
+            const worldName = String(commission?.worldName || '');
+            const buildSize = String(commission?.buildSize || '');
+            const buildType = String(commission?.buildType || '');
+            return /^c-import-/i.test(worldName)
+                || buildSize === 'legacy-import'
+                || buildType === 'legacy'
+                || Boolean(commission?.legacyImport);
+        }
+
+        async function refreshLegacyImportCountLabel() {
+            const label = document.getElementById('legacyImportCountLabel');
+            if (!label || !canManageDangerousData()) {
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/commissions/legacy-import');
+                label.textContent = t('data.legacyImportCount', { count: response.count || 0 });
+            } catch (error) {
+                const localCount = getCommissions().filter(isLegacyImportCommission).length;
+                label.textContent = t('data.legacyImportCount', { count: localCount });
+            }
+        }
+
+        async function deleteLegacyImportCommissions(skipConfirmation = false) {
+            if (!requirePermission(canManageDangerousData, 'Seuls les administrateurs et plus peuvent supprimer les imports legacy.')) {
+                return;
+            }
+
+            let count = 0;
+            try {
+                const preview = await apiRequest('/commissions/legacy-import');
+                count = Number(preview.count) || 0;
+            } catch (error) {
+                count = getCommissions().filter(isLegacyImportCommission).length;
+            }
+
+            if (!count) {
+                alert(t('data.legacyImportNone'));
+                return;
+            }
+
+            if (!skipConfirmation) {
+                if (!confirm(t('data.legacyImportConfirm', { count }))) {
+                    return;
+                }
+                if (!confirm(t('data.legacyImportConfirmFinal'))) {
+                    return;
+                }
+            }
+
+            try {
+                const response = await apiRequest('/commissions/legacy-import', { method: 'DELETE' });
+                sessionStorage.setItem('legacyImportCleanupDismissed', '1');
+                commissionsCache = getCommissions().filter(commission => !isLegacyImportCommission(commission));
+                writeSessionRemoteDataCache(remoteDataCacheUserKey(), {
+                    agents: agentsCache,
+                    commissions: commissionsCache,
+                    expenses: expensesCache,
+                    users: usersCache,
+                    todos: todosCache,
+                    discordTickets: discordTicketsCache,
+                    discordTicketsConfigured,
+                    discordBotIngestConfigured,
+                    discordIntegrationMode,
+                    accountProfile
+                });
+                refreshUIAfterLoad();
+                await refreshLegacyImportCountLabel();
+                alert(t('data.legacyImportDone', { count: response.deleted || count }));
+            } catch (error) {
+                alert(t('data.legacyImportFailed', { error: formatFetchError(error) }));
+            }
+        }
+
+        async function maybePromptLegacyImportCleanup() {
+            if (!canManageDangerousData()) {
+                return;
+            }
+            if (sessionStorage.getItem('legacyImportCleanupDismissed') === '1') {
+                await refreshLegacyImportCountLabel();
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/commissions/legacy-import');
+                const count = Number(response.count) || 0;
+                await refreshLegacyImportCountLabel();
+                if (count <= 0) {
+                    return;
+                }
+
+                const shouldDelete = confirm(t('data.legacyImportPrompt', { count }));
+                if (shouldDelete) {
+                    await deleteLegacyImportCommissions(true);
+                } else {
+                    sessionStorage.setItem('legacyImportCleanupDismissed', '1');
+                }
+            } catch (error) {
+                console.warn('[Lusciana] Vérification imports legacy impossible', error);
+            }
+        }
+
+        async function refreshObsoleteSeedCountLabel() {
+            const label = document.getElementById('obsoleteSeedCountLabel');
+            if (!label || !canManageDangerousData()) {
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/commissions/obsolete-seed');
+                const found = response.found || [];
+                label.textContent = t('data.obsoleteSeedCount', {
+                    count: response.count || 0,
+                    list: formatObsoleteWorldList(found)
+                });
+            } catch (error) {
+                const found = getCommissions()
+                    .filter(isObsoleteSeedCommission)
+                    .map(commission => commission.worldName);
+                label.textContent = t('data.obsoleteSeedCount', {
+                    count: found.length,
+                    list: formatObsoleteWorldList(found)
+                });
+            }
+        }
+
+        async function deleteObsoleteSeedCommissions(skipConfirmation = false) {
+            if (!requirePermission(canManageDangerousData, 'Seuls les administrateurs et plus peuvent supprimer les commissions erronées.')) {
+                return;
+            }
+
+            let count = 0;
+            let found = [];
+            try {
+                const preview = await apiRequest('/commissions/obsolete-seed');
+                count = Number(preview.count) || 0;
+                found = preview.found || [];
+            } catch (error) {
+                found = getCommissions()
+                    .filter(isObsoleteSeedCommission)
+                    .map(commission => commission.worldName);
+                count = found.length;
+            }
+
+            if (!count) {
+                alert(t('data.obsoleteSeedNone'));
+                return;
+            }
+
+            const list = formatObsoleteWorldList(found);
+            if (!skipConfirmation) {
+                if (!confirm(t('data.obsoleteSeedConfirm', { count, list }))) {
+                    return;
+                }
+                if (!confirm(t('data.obsoleteSeedConfirmFinal'))) {
+                    return;
+                }
+            }
+
+            try {
+                const response = await apiRequest('/commissions/obsolete-seed', { method: 'DELETE' });
+                sessionStorage.setItem('obsoleteSeedCleanupDismissed', '1');
+                commissionsCache = getCommissions().filter(commission => !isObsoleteSeedCommission(commission));
+                writeSessionRemoteDataCache(remoteDataCacheUserKey(), {
+                    agents: agentsCache,
+                    commissions: commissionsCache,
+                    expenses: expensesCache,
+                    users: usersCache,
+                    todos: todosCache,
+                    discordTickets: discordTicketsCache,
+                    discordTicketsConfigured,
+                    discordBotIngestConfigured,
+                    discordIntegrationMode,
+                    accountProfile
+                });
+                refreshUIAfterLoad();
+                await refreshObsoleteSeedCountLabel();
+                alert(t('data.obsoleteSeedDone', { count: response.deleted || count }));
+            } catch (error) {
+                alert(t('data.obsoleteSeedFailed', { error: formatFetchError(error) }));
+            }
+        }
+
+        async function maybePromptObsoleteSeedCleanup() {
+            if (!canManageDangerousData()) {
+                return;
+            }
+            if (sessionStorage.getItem('obsoleteSeedCleanupDismissed') === '1') {
+                await refreshObsoleteSeedCountLabel();
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/commissions/obsolete-seed');
+                const count = Number(response.count) || 0;
+                const found = response.found || [];
+                await refreshObsoleteSeedCountLabel();
+                if (count <= 0) {
+                    return;
+                }
+
+                const shouldDelete = confirm(t('data.obsoleteSeedPrompt', {
+                    count,
+                    list: formatObsoleteWorldList(found)
+                }));
+                if (shouldDelete) {
+                    await deleteObsoleteSeedCommissions(true);
+                } else {
+                    sessionStorage.setItem('obsoleteSeedCleanupDismissed', '1');
+                }
+            } catch (error) {
+                console.warn('[Lusciana] Vérification commissions obsolètes impossible', error);
+            }
+        }
+
+        async function fetchCommissionsSeedItems() {
+            const response = await fetch(getCommissionsSeedAssetUrl(), { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            if (!Array.isArray(data)) {
+                throw new Error('Format seed invalide');
+            }
+            return data;
+        }
+
+        function countPendingSeedCommissions(seedItems) {
+            const existingWorlds = new Set(
+                getCommissions()
+                    .map(commission => String(commission.worldName || '').trim())
+                    .filter(Boolean)
+            );
+            let pending = 0;
+            for (const item of seedItems) {
+                const worldName = String(item.worldName || '').trim();
+                if (worldName && !existingWorlds.has(worldName)) {
+                    pending++;
+                }
+            }
+            return {
+                pending,
+                total: seedItems.length,
+                existing: seedItems.length - pending
+            };
+        }
+
+        async function refreshCommissionsSeedCountLabel() {
+            const label = document.getElementById('commissionsSeedCountLabel');
+            if (!label || !canManageDangerousData()) {
+                return;
+            }
+
+            try {
+                const items = await fetchCommissionsSeedItems();
+                const stats = countPendingSeedCommissions(items);
+                label.textContent = t('data.seedImportCount', stats);
+            } catch (error) {
+                label.textContent = t('data.seedImportLoadFailed');
+                console.warn('[Lusciana] Chargement seed impossible', error);
+            }
+        }
+
+        async function importCommissionsSeed(skipConfirmation = false) {
+            if (!requirePermission(canManageDangerousData, 'Seuls les administrateurs et plus peuvent importer le seed.')) {
+                return;
+            }
+
+            let items = [];
+            try {
+                items = await fetchCommissionsSeedItems();
+            } catch (error) {
+                alert(t('data.seedImportFailed', { error: formatFetchError(error) }));
+                return;
+            }
+
+            const stats = countPendingSeedCommissions(items);
+            if (stats.pending <= 0) {
+                alert(t('data.seedImportNone'));
+                return;
+            }
+
+            if (!skipConfirmation && !confirm(t('data.seedImportConfirm', stats))) {
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/commissions/seed-import', {
+                    method: 'POST',
+                    body: {
+                        items,
+                        skipExisting: true
+                    }
+                });
+                sessionStorage.setItem('commissionsSeedImportDismissed', '1');
+                await loadRemoteData();
+                await refreshCommissionsSeedCountLabel();
+                alert(t('data.seedImportDone', {
+                    inserted: response.inserted || 0,
+                    skipped: response.skipped || 0
+                }));
+            } catch (error) {
+                alert(t('data.seedImportFailed', { error: formatFetchError(error) }));
+            }
+        }
+
+        async function normalizeCommissionBuildDates() {
+            if (!requirePermission(canManageDangerousData, 'Seuls les administrateurs et plus peuvent normaliser les dates.')) {
+                return;
+            }
+
+            if (!confirm(t('data.normalizeBuildDatesConfirm'))) {
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/commissions/normalize-build-dates', {
+                    method: 'POST'
+                });
+                await loadRemoteData();
+                alert(t('data.normalizeBuildDatesDone', {
+                    updated: response.updated || 0
+                }));
+            } catch (error) {
+                alert(t('data.normalizeBuildDatesFailed', { error: formatFetchError(error) }));
+            }
+        }
+
+        async function maybePromptCommissionsSeedImport() {
+            if (!canManageDangerousData()) {
+                return;
+            }
+            if (sessionStorage.getItem('commissionsSeedImportDismissed') === '1') {
+                await refreshCommissionsSeedCountLabel();
+                return;
+            }
+
+            try {
+                const items = await fetchCommissionsSeedItems();
+                const stats = countPendingSeedCommissions(items);
+                await refreshCommissionsSeedCountLabel();
+                if (stats.pending <= 0) {
+                    return;
+                }
+
+                const shouldImport = confirm(t('data.seedImportPrompt', stats));
+                if (shouldImport) {
+                    await importCommissionsSeed(true);
+                } else {
+                    sessionStorage.setItem('commissionsSeedImportDismissed', '1');
+                }
+            } catch (error) {
+                console.warn('[Lusciana] Vérification seed impossible', error);
+            }
         }
 
         async function refreshUsersData() {
@@ -2847,7 +3418,7 @@ const API_BASE_URL = (() => {
         }
 
         function captureDiscordTicketWlDrafts() {
-            document.querySelectorAll('.discord-ticket-nicknames').forEach(input => {
+            document.querySelectorAll('.dt-wl-input').forEach(input => {
                 const id = input.id.replace(/^discordNicknames_/, '');
                 if (id) {
                     setDiscordTicketWlDraft(id, input.value);
@@ -2855,19 +3426,112 @@ const API_BASE_URL = (() => {
             });
         }
 
-        function formatMinecraftNicknames(ticket) {
-            return Array.isArray(ticket.minecraftNicknames) ? ticket.minecraftNicknames : [];
+        function getDiscordTicketDescDraft(id) {
+            if (Object.prototype.hasOwnProperty.call(discordTicketDescDrafts, id)) {
+                return discordTicketDescDrafts[id];
+            }
+            const ticket = getDiscordTickets().find(item => item.id === id);
+            return ticket?.description ?? '';
         }
 
-        function renderDiscordTicketSavedNicknames(ticket, escapeHtml) {
-            const nicknames = formatMinecraftNicknames(ticket);
-            if (nicknames.length === 0) {
+        function setDiscordTicketDescDraft(id, value) {
+            discordTicketDescDrafts[id] = String(value ?? '');
+        }
+
+        function clearDiscordTicketDescDraft(id) {
+            delete discordTicketDescDrafts[id];
+        }
+
+        function captureDiscordTicketDescDrafts() {
+            document.querySelectorAll('.dt-desc-area').forEach(textarea => {
+                const id = textarea.dataset.ticketId;
+                if (id) {
+                    setDiscordTicketDescDraft(id, textarea.value);
+                }
+            });
+        }
+
+        function formatDiscordTicketDescriptionEditor(by) {
+            const raw = String(by || '').trim();
+            if (raw === '' || raw === 'discord') {
+                return t('discordTickets.descUpdatedByDiscord');
+            }
+            return raw;
+        }
+
+        function renderDiscordTicketDescriptionMeta(ticket, escapeHtml) {
+            const by = ticket.descriptionUpdatedBy;
+            const at = ticket.descriptionUpdatedAt;
+            if (!by && !at) {
                 return '';
             }
-            const chips = nicknames.map(nickname =>
-                `<button type="button" class="discord-ticket-wl-chip" title="${escapeHtml(t('discordTickets.colMinecraftNicknamesHint'))}" data-nickname="${escapeHtml(nickname)}" onclick="fillDiscordTicketWlInput('${ticket.id}', this.dataset.nickname)">${escapeHtml(nickname)}</button>`
-            ).join('');
-            return `<div class="discord-ticket-wl-saved-list">${chips}</div>`;
+            const label = formatDiscordTicketDescriptionEditor(by);
+            const atLabel = at ? formatDateTime(at) : '—';
+            return `<p class="dt-desc-meta">${escapeHtml(t('discordTickets.descUpdatedBy', { by: label, at: atLabel }))}</p>`;
+        }
+
+        function scheduleDiscordTicketDescSave(id, value) {
+            setDiscordTicketDescDraft(id, value);
+            const statusEl = document.getElementById(`discordDescStatus_${id}`);
+            if (statusEl) {
+                statusEl.textContent = t('discordTickets.descSaving');
+            }
+            if (discordTicketDescSaveTimers[id]) {
+                clearTimeout(discordTicketDescSaveTimers[id]);
+            }
+            discordTicketDescSaveTimers[id] = setTimeout(() => {
+                delete discordTicketDescSaveTimers[id];
+                void flushDiscordTicketDescSave(id);
+            }, 700);
+        }
+
+        async function flushDiscordTicketDescSave(id) {
+            if (discordTicketDescSaveTimers[id]) {
+                clearTimeout(discordTicketDescSaveTimers[id]);
+                delete discordTicketDescSaveTimers[id];
+            }
+            const draft = getDiscordTicketDescDraft(id);
+            const ticket = getDiscordTickets().find(item => item.id === id);
+            if (!ticket) return false;
+            if (String(ticket.description ?? '') === String(draft)) {
+                const statusEl = document.getElementById(`discordDescStatus_${id}`);
+                if (statusEl) {
+                    statusEl.textContent = '';
+                }
+                return true;
+            }
+            const ok = await saveDiscordTicketField(id, 'description', draft, { refresh: false });
+            if (ok) {
+                clearDiscordTicketDescDraft(id);
+                const metaEl = document.getElementById(`discordDescMeta_${id}`);
+                const previewEl = document.getElementById(`discordDescPreview_${id}`);
+                const updated = getDiscordTickets().find(item => item.id === id);
+                if (updated) {
+                    const escapeHtml = (s) => {
+                        if (s == null) return '';
+                        const div = document.createElement('div');
+                        div.textContent = s;
+                        return div.innerHTML;
+                    };
+                    if (metaEl) {
+                        metaEl.innerHTML = renderDiscordTicketDescriptionMeta(updated, escapeHtml);
+                    }
+                    if (previewEl) {
+                        const line = (draft || updated.description || '').replace(/\s+/g, ' ').trim();
+                        previewEl.value = line;
+                        previewEl.title = line;
+                    }
+                }
+            }
+            const statusEl = document.getElementById(`discordDescStatus_${id}`);
+            if (statusEl) {
+                statusEl.textContent = '';
+            }
+            return ok;
+        }
+
+        function formatMinecraftNicknames(ticket) {
+            return Array.isArray(ticket.minecraftNicknames) ? ticket.minecraftNicknames : [];
         }
 
         function parseMinecraftNicknamesInput(raw) {
@@ -2876,6 +3540,15 @@ const API_BASE_URL = (() => {
                 .map(p => p.trim())
                 .filter(Boolean)
                 .filter((p, i, arr) => arr.indexOf(p) === i);
+        }
+
+        function validateMinecraftNicknames(pseudos) {
+            for (const pseudo of pseudos) {
+                if (!/^[a-zA-Z0-9_]{1,16}$/.test(pseudo)) {
+                    return pseudo;
+                }
+            }
+            return null;
         }
 
         function nicknamesArraysEqual(a, b) {
@@ -2903,7 +3576,7 @@ const API_BASE_URL = (() => {
 
             if (discordBotIngestConfigured) {
                 hint.textContent = t('discordTickets.botModeHint');
-                hint.className = 'discord-tickets-config-hint is-bot-mode';
+                hint.className = 'dt-hint is-bot-mode';
                 hint.classList.remove('hidden');
                 return;
             }
@@ -2915,8 +3588,103 @@ const API_BASE_URL = (() => {
             }
 
             hint.textContent = t('discordTickets.configMissing');
-            hint.className = 'discord-tickets-config-hint';
+            hint.className = 'dt-hint';
             hint.classList.remove('hidden');
+        }
+
+        function toggleDiscordTicketRow(id) {
+            if (expandedDiscordTicketIds.has(id)) {
+                expandedDiscordTicketIds.delete(id);
+            } else {
+                expandedDiscordTicketIds.add(id);
+            }
+            displayDiscordTickets();
+        }
+
+        function renderDiscordTicketWlChips(ticket, escapeHtml, maxVisible = 3) {
+            const nicknames = formatMinecraftNicknames(ticket);
+            if (nicknames.length === 0) {
+                return '';
+            }
+            const visible = nicknames.slice(0, maxVisible);
+            const extra = nicknames.length - visible.length;
+            const chips = visible.map(nickname =>
+                `<button type="button" class="dt-chip" title="${escapeHtml(t('discordTickets.colMinecraftNicknamesHint'))}" data-nickname="${escapeHtml(nickname)}" onclick="fillDiscordTicketWlInput('${ticket.id}', this.dataset.nickname)">${escapeHtml(nickname)}</button>`
+            ).join('');
+            const more = extra > 0
+                ? `<span class="dt-chip dt-chip-more">+${extra}</span>`
+                : '';
+            return `<div class="dt-chips">${chips}${more}</div>`;
+        }
+
+        function renderDiscordTicketRow(ticket, escapeHtml, canEdit) {
+            const status = ticket.status || 'open';
+            const archived = ticket.channelArchived === true;
+            const isExpanded = expandedDiscordTicketIds.has(ticket.id);
+            const wrapClasses = [
+                'dt-row-wrap',
+                `status-${status}`,
+                archived ? 'is-archived' : '',
+                isExpanded ? 'is-expanded' : '',
+            ].filter(Boolean).join(' ');
+
+            const ticketLabel = escapeHtml(ticket.ticketName || 'ticket');
+            const discordUrl = ticket.discordUrl || '';
+            const nameCell = `
+                <div class="dt-cell-name">
+                    <span class="dt-name" title="#${ticketLabel}">#${ticketLabel}</span>
+                    ${discordUrl ? `<a class="dt-link" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(t('discordTickets.openDiscord'))}">↗</a>` : ''}
+                </div>`;
+
+            const statusCell = canEdit
+                ? `<div class="dt-cell-status"><select class="dt-status-select" aria-label="${escapeHtml(t('discordTickets.colStatus'))}" onchange="saveDiscordTicketField('${ticket.id}', 'status', this.value, { refresh: false })">${['open', 'in_progress', 'quoted', 'handled', 'archived'].map(value =>
+                    `<option value="${value}"${value === status ? ' selected' : ''}>${escapeHtml(discordTicketStatusLabel(value))}</option>`
+                ).join('')}</select></div>`
+                : `<div class="dt-cell-status"><span class="dt-badge status-${status}">${escapeHtml(discordTicketStatusLabel(status))}</span></div>`;
+
+            const savedNicknames = formatMinecraftNicknames(ticket);
+            const wlDraft = getDiscordTicketWlDraft(ticket.id);
+            const wlBusy = discordTicketWlBusyId === ticket.id;
+            const wlDisabled = wlBusy ? ' disabled' : '';
+            const wlCell = canEdit
+                ? `<div class="dt-cell-wl"><div class="dt-wl${wlBusy ? ' is-busy' : ''}">
+                    ${renderDiscordTicketWlChips(ticket, escapeHtml)}
+                    <input type="text" id="discordNicknames_${ticket.id}" class="dt-wl-input" value="${escapeHtml(wlDraft)}" placeholder="${escapeHtml(t('discordTickets.colMinecraftNicknamesActionPlaceholder'))}" title="${escapeHtml(t('discordTickets.colMinecraftNicknamesHint'))}" oninput="setDiscordTicketWlDraft('${ticket.id}', this.value)"${wlDisabled}>
+                    <button type="button" class="dt-icon-btn dt-icon-btn--add" title="${escapeHtml(t('discordTickets.wlAddTitle'))}" aria-label="${escapeHtml(t('discordTickets.wlAddTitle'))}" onclick="applyDiscordTicketWl('${ticket.id}', 'add')"${wlDisabled}>+</button>
+                    <button type="button" class="dt-icon-btn dt-icon-btn--remove" title="${escapeHtml(t('discordTickets.wlRemoveTitle'))}" aria-label="${escapeHtml(t('discordTickets.wlRemoveTitle'))}" onclick="applyDiscordTicketWl('${ticket.id}', 'remove')"${wlDisabled}>−</button>
+                </div></div>`
+                : `<div class="dt-cell-wl"><span class="dt-readonly-wl" title="${escapeHtml(savedNicknames.join(', '))}">${escapeHtml(savedNicknames.join(', ') || '—')}</span></div>`;
+
+            const descDraft = getDiscordTicketDescDraft(ticket.id);
+            const descPreview = escapeHtml((descDraft || ticket.description || '').replace(/\s+/g, ' ').trim());
+            const descCell = canEdit
+                ? `<div class="dt-cell-desc">
+                    <input type="text" id="discordDescPreview_${ticket.id}" class="dt-desc-input" value="${descPreview}" placeholder="${escapeHtml(t('discordTickets.descPlaceholder'))}" title="${descPreview}" onclick="toggleDiscordTicketRow('${ticket.id}')" readonly>
+                </div>`
+                : `<div class="dt-cell-desc"><span class="dt-desc-read" title="${descPreview}">${descPreview || '—'}</span></div>`;
+
+            const expandLabel = isExpanded ? t('discordTickets.collapseRow') : t('discordTickets.expandRow');
+            const expandCell = `<div class="dt-cell-expand">
+                <button type="button" class="dt-expand" aria-expanded="${isExpanded ? 'true' : 'false'}" aria-label="${escapeHtml(expandLabel)}" title="${escapeHtml(expandLabel)}" onclick="toggleDiscordTicketRow('${ticket.id}')">${isExpanded ? '▾' : '▸'}</button>
+            </div>`;
+
+            const detailPanel = canEdit
+                ? `<div class="dt-detail">
+                    <textarea id="discordDesc_${ticket.id}" data-ticket-id="${ticket.id}" class="dt-desc-area" placeholder="${escapeHtml(t('discordTickets.descPlaceholder'))}" oninput="scheduleDiscordTicketDescSave('${ticket.id}', this.value)" onblur="flushDiscordTicketDescSave('${ticket.id}')">${escapeHtml(descDraft)}</textarea>
+                    <div id="discordDescMeta_${ticket.id}">${renderDiscordTicketDescriptionMeta(ticket, escapeHtml)}</div>
+                    <span id="discordDescStatus_${ticket.id}" class="dt-desc-status"></span>
+                </div>`
+                : (ticket.description || ticket.descriptionUpdatedBy)
+                    ? `<div class="dt-detail">
+                        <p class="dt-desc-read" style="white-space: pre-wrap;">${escapeHtml(ticket.description || '—')}</p>
+                        ${renderDiscordTicketDescriptionMeta(ticket, escapeHtml)}
+                    </div>`
+                    : '';
+
+            return `<article class="${wrapClasses}" data-ticket-id="${ticket.id}">
+                <div class="dt-row">${nameCell}${statusCell}${wlCell}${descCell}${expandCell}</div>
+                ${detailPanel}
+            </article>`;
         }
 
         function displayDiscordTickets() {
@@ -2924,11 +3692,12 @@ const API_BASE_URL = (() => {
             if (!list) return;
 
             captureDiscordTicketWlDrafts();
+            captureDiscordTicketDescDrafts();
             updateDiscordTicketsConfigHint();
 
             const tickets = filterDiscordTickets(getDiscordTickets());
             if (tickets.length === 0) {
-                list.innerHTML = `<p class="commission-table-empty">${t('discordTickets.empty')}</p>`;
+                list.innerHTML = `<p class="dt-empty">${t('discordTickets.empty')}</p>`;
                 return;
             }
 
@@ -2940,74 +3709,23 @@ const API_BASE_URL = (() => {
             };
 
             const canEdit = canManageOperationalData();
-
-            const rows = tickets.map(ticket => {
-                const archived = ticket.channelArchived === true;
-                const rowClass = archived ? 'is-archived' : `is-status-${ticket.status || 'open'}`;
-                const discordUrl = ticket.discordUrl || '';
-                const ticketNameCell = discordUrl
-                    ? `<div class="discord-ticket-name-cell"><code>#${escapeHtml(ticket.ticketName || 'ticket')}</code><a class="discord-ticket-link" href="${escapeHtml(discordUrl)}" target="_blank" rel="noopener noreferrer">${t('discordTickets.openDiscord')} ↗</a></div>`
-                    : `<code>#${escapeHtml(ticket.ticketName || 'ticket')}</code>`;
-
-                const currentStatus = ticket.status || 'open';
-                const savedNicknames = formatMinecraftNicknames(ticket);
-                const actionDraft = getDiscordTicketWlDraft(ticket.id);
-
-                const nicknamesCell = canEdit
-                    ? `<div class="discord-ticket-wl-cell">
-                        ${renderDiscordTicketSavedNicknames(ticket, escapeHtml)}
-                        <div class="discord-ticket-wl-row">
-                            <input type="text" id="discordNicknames_${ticket.id}" class="discord-ticket-nicknames" value="${escapeHtml(actionDraft)}" placeholder="${escapeHtml(t('discordTickets.colMinecraftNicknamesActionPlaceholder'))}" title="${escapeHtml(t('discordTickets.colMinecraftNicknamesHint'))}" oninput="setDiscordTicketWlDraft('${ticket.id}', this.value)">
-                            <div class="discord-ticket-wl-actions">
-                                <button type="button" class="discord-ticket-wl-btn discord-ticket-wl-btn--add" onclick="applyDiscordTicketWl('${ticket.id}', 'add')">${t('discordTickets.whitelistBtn')}</button>
-                                <button type="button" class="discord-ticket-wl-btn discord-ticket-wl-btn--remove" onclick="applyDiscordTicketWl('${ticket.id}', 'remove')">${t('discordTickets.dewhitelistBtn')}</button>
-                            </div>
-                        </div>
-                    </div>`
-                    : `<span>${escapeHtml(savedNicknames.join(', ') || '—')}</span>`;
-
-                const statusCell = canEdit
-                    ? `<select class="discord-ticket-select" onchange="saveDiscordTicketField('${ticket.id}', 'status', this.value, { refresh: false })">${['open', 'in_progress', 'quoted', 'handled', 'archived'].map(value =>
-                        `<option value="${value}"${value === currentStatus ? ' selected' : ''}>${escapeHtml(discordTicketStatusLabel(value))}</option>`
-                    ).join('')}</select>`
-                    : `<span class="discord-ticket-badge status-${currentStatus}">${escapeHtml(discordTicketStatusLabel(currentStatus))}</span>`;
-
-                const descCell = canEdit
-                    ? `<textarea class="discord-ticket-desc" rows="2" placeholder="${escapeHtml(t('discordTickets.descPlaceholder'))}" onblur="saveDiscordTicketField('${ticket.id}', 'description', this.value, { refresh: false })">${escapeHtml(ticket.description || '')}</textarea>`
-                    : `<span class="discord-ticket-desc-read">${escapeHtml(ticket.description || '—')}</span>`;
-
-                return `<tr class="discord-ticket-row ${rowClass}">
-                    <td class="discord-ticket-name">${ticketNameCell}</td>
-                    <td>${nicknamesCell}</td>
-                    <td>${statusCell}</td>
-                    <td>${descCell}</td>
-                </tr>`;
-            }).join('');
-
-            list.innerHTML = `
-                <div class="commission-table-wrap">
-                    <table class="commission-table discord-ticket-table">
-                        <thead>
-                            <tr>
-                                <th>${t('discordTickets.colTicket')}</th>
-                                <th>${t('discordTickets.colMinecraftNicknames')}</th>
-                                <th>${t('discordTickets.colStatus')}</th>
-                                <th>${t('discordTickets.colDesc')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>
-            `;
+            list.innerHTML = tickets.map(ticket => renderDiscordTicketRow(ticket, escapeHtml, canEdit)).join('');
         }
 
         async function applyDiscordTicketWl(id, action) {
             const input = document.getElementById(`discordNicknames_${id}`);
-            if (!input) return;
+            if (!input || discordTicketWlBusyId) return;
 
             const pseudos = parseMinecraftNicknamesInput(input.value);
             if (pseudos.length === 0) {
                 alert(t('discordTickets.whitelistEmpty'));
+                input.focus();
+                return;
+            }
+
+            const invalid = validateMinecraftNicknames(pseudos);
+            if (invalid) {
+                alert(t('discordTickets.whitelistInvalid', { pseudo: invalid }));
                 input.focus();
                 return;
             }
@@ -3017,6 +3735,9 @@ const API_BASE_URL = (() => {
             }
 
             const successKey = action === 'remove' ? 'discordTickets.dewhitelistSaved' : 'discordTickets.whitelistSaved';
+
+            discordTicketWlBusyId = id;
+            displayDiscordTickets();
 
             try {
                 const response = await apiRequest(`/discord-tickets/${id}`, {
@@ -3029,13 +3750,23 @@ const API_BASE_URL = (() => {
                 const next = getDiscordTickets().map(item => item.id === id ? response.item : item);
                 saveDiscordTickets(next);
                 clearDiscordTicketWlDraft(id);
-                displayDiscordTickets();
-                alert(t(successKey));
+
+                if (response.warning) {
+                    alert(response.warning);
+                } else if (response.botSyncTriggered === false) {
+                    alert(t('discordTickets.wlWebhookFailed'));
+                } else if (response.item && response.item.needsBotSync) {
+                    alert(t('discordTickets.wlRconFailed'));
+                } else {
+                    alert(t(successKey));
+                }
                 return true;
             } catch (error) {
                 alert(error.message || t('discordTickets.syncError'));
-                displayDiscordTickets();
                 return false;
+            } finally {
+                discordTicketWlBusyId = null;
+                displayDiscordTickets();
             }
         }
 
@@ -4024,6 +4755,116 @@ const API_BASE_URL = (() => {
             return Number.isNaN(date.getTime()) ? t('common.never') : date.toLocaleString(getCurrentLocale());
         }
 
+        const COMMISSION_MONTH_ORDER = {
+            mars: 0,
+            avril: 1,
+            mai: 2,
+            juin: 3,
+            juillet: 4,
+            aout: 5,
+            septembre: 6,
+            octobre: 7
+        };
+
+        function normalizeCommissionMonthKey(value) {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+        }
+
+        function parseCommissionBuildTimestamp(value) {
+            if (!value) return 0;
+            if (typeof value === 'number') return value;
+            const raw = String(value).trim();
+            if (!raw) return 0;
+
+            const direct = Date.parse(raw);
+            if (!Number.isNaN(direct)) return direct;
+
+            const iso = Date.parse(raw.includes('T') ? raw : `${raw}T12:00:00`);
+            if (!Number.isNaN(iso)) return iso;
+
+            const monthKey = normalizeCommissionMonthKey(raw);
+            if (COMMISSION_MONTH_ORDER[monthKey] !== undefined) {
+                return new Date(2025, COMMISSION_MONTH_ORDER[monthKey], 1).getTime();
+            }
+
+            return 0;
+        }
+
+        function formatCommissionBuildDate(value) {
+            if (!value) return '—';
+            const raw = String(value).trim();
+            const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+            if (isoMatch) {
+                const year = Number(isoMatch[1]);
+                const month = Number(isoMatch[2]);
+                const day = Number(isoMatch[3]);
+                if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) {
+                    return '—';
+                }
+                return new Date(year, month - 1, day).toLocaleDateString(getCurrentLocale(), {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            }
+
+            const timestamp = parseCommissionBuildTimestamp(raw);
+            if (timestamp <= 0) return '—';
+
+            const date = new Date(timestamp);
+            const year = date.getFullYear();
+            if (year < 1900 || year > 2100) return '—';
+
+            return date.toLocaleDateString(getCurrentLocale(), {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        function toIsoDateParts(year, month, day) {
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        function timestampToInputDate(timestamp) {
+            const date = new Date(timestamp);
+            return toIsoDateParts(date.getFullYear(), date.getMonth() + 1, date.getDate());
+        }
+
+        function toCommissionDateInputValue(value) {
+            if (!value) return '';
+            const raw = String(value).trim();
+            const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+                const year = Number(isoMatch[1]);
+                const month = Number(isoMatch[2]);
+                const day = Number(isoMatch[3]);
+                if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    return toIsoDateParts(year, month, day);
+                }
+                return '';
+            }
+
+            const monthKey = normalizeCommissionMonthKey(raw);
+            if (COMMISSION_MONTH_ORDER[monthKey] !== undefined) {
+                return toIsoDateParts(2025, COMMISSION_MONTH_ORDER[monthKey] + 1, 1);
+            }
+
+            const timestamp = parseCommissionBuildTimestamp(raw);
+            if (timestamp <= 0) return '';
+
+            const date = new Date(timestamp);
+            const year = date.getFullYear();
+            if (year < 1900 || year > 2100) return '';
+
+            return timestampToInputDate(timestamp);
+        }
+
         function formatLoginEventDetails(event) {
             const ipAddress = event?.ipAddress || t('common.none');
             return `${t('users.ipAddress')}: ${ipAddress}`;
@@ -4624,7 +5465,7 @@ const API_BASE_URL = (() => {
                 commissionRateFields.classList.add('hidden');
                 memberSinceFields.classList.add('hidden');
                 document.getElementById('agentCommissionRate').removeAttribute('required');
-            } else if (this.value === 'manager' || this.value === 'builder' || this.value === 'apprentice') {
+            } else if (this.value === 'manager' || this.value === 'builder' || this.value === 'apprentice' || this.value === 'trial') {
                 commissionRateFields.classList.remove('hidden');
                 memberSinceFields.classList.remove('hidden');
                 clientFields.classList.add('hidden');
@@ -4717,7 +5558,7 @@ const API_BASE_URL = (() => {
             list.innerHTML = '';
             
             const buildersManagers = sortAgentsActiveFirst(
-                agents.filter(a => a.category === 'manager' || a.category === 'builder' || a.category === 'apprentice')
+                agents.filter(a => a.category === 'manager' || a.category === 'builder' || a.category === 'apprentice' || a.category === 'trial')
             );
             const clients = sortAgentsActiveFirst(agents.filter(a => a.category === 'client'));
             
@@ -4762,7 +5603,7 @@ const API_BASE_URL = (() => {
                         <p><strong>${t('agents.payment')}:</strong> ${paymentText}</p>
                         <p><strong>${t('agents.portfolio')}:</strong> ${agent.pf || t('common.none')}</p>
                         ${agent.commissionRate ? `<p><strong>${t('agents.commissionRateShort')}:</strong> ${agent.commissionRate}%</p>` : ''}
-                        ${(agent.category === 'manager' || agent.category === 'builder' || agent.category === 'apprentice') && agent.memberSince ? `<p><strong>${t('agents.memberSinceShort')}:</strong> ${new Date(agent.memberSince + 'T12:00:00').toLocaleDateString(getCurrentLocale())}</p>` : ''}
+                        ${(agent.category === 'manager' || agent.category === 'builder' || agent.category === 'apprentice' || agent.category === 'trial') && agent.memberSince ? `<p><strong>${t('agents.memberSinceShort')}:</strong> ${new Date(agent.memberSince + 'T12:00:00').toLocaleDateString(getCurrentLocale())}</p>` : ''}
                         <span class="badge ${agent.category}">${getRoleLabel(agent.category)}</span>
                         ${isCurrentTeamMember ? '' : `<span class="badge inactive-team">${t('agents.inactiveTeamBadge')}</span>`}
                         ${engagementHtml}
@@ -4864,7 +5705,7 @@ const API_BASE_URL = (() => {
                     document.getElementById('companyAddress').value = agent.address || '';
                     document.getElementById('companyName').value = agent.companyName || '';
                 }
-            } else if (agent.category === 'manager' || agent.category === 'builder' || agent.category === 'apprentice') {
+            } else if (agent.category === 'manager' || agent.category === 'builder' || agent.category === 'apprentice' || agent.category === 'trial') {
                 if (commissionRateFields) commissionRateFields.classList.remove('hidden');
                 if (memberSinceFields) memberSinceFields.classList.remove('hidden');
             }
@@ -5595,10 +6436,6 @@ Version : ${version}`;
                 return div.innerHTML;
             };
 
-            const formatDate = (d) => d
-                ? new Date(d).toLocaleDateString(getCurrentLocale(), { day: '2-digit', month: 'short', year: 'numeric' })
-                : '—';
-
             const buildersStr = (c) => {
                 const realized = Array.isArray(c.realizedBy) ? c.realizedBy : [];
                 const selected = Array.isArray(c.selectedAgents) ? c.selectedAgents : [];
@@ -5612,8 +6449,8 @@ Version : ${version}`;
             };
 
             const sorted = [...commissions].sort((a, b) => {
-                const dateA = a.buildStart ? new Date(a.buildStart).getTime() : 0;
-                const dateB = b.buildStart ? new Date(b.buildStart).getTime() : 0;
+                const dateA = parseCommissionBuildTimestamp(a.buildStart) || parseCommissionBuildTimestamp(a.createdAt);
+                const dateB = parseCommissionBuildTimestamp(b.buildStart) || parseCommissionBuildTimestamp(b.createdAt);
                 return dateB - dateA;
             });
 
@@ -5631,8 +6468,8 @@ Version : ${version}`;
                     <td class="commission-col-world" title="${escapeHtml(commission.worldName || '')}">${escapeHtml(commission.worldName || '—')}</td>
                     <td class="commission-col-price">${price} €</td>
                     <td class="commission-col-size">${escapeHtml(commission.buildSize || '—')}</td>
-                    <td class="commission-col-date">${formatDate(commission.buildStart)}</td>
-                    <td class="commission-col-date">${formatDate(commission.buildEnd)}</td>
+                    <td class="commission-col-date">${escapeHtml(formatCommissionBuildDate(commission.buildStart))}</td>
+                    <td class="commission-col-date">${escapeHtml(formatCommissionBuildDate(commission.buildEnd))}</td>
                     <td class="commission-col-client" title="${escapeHtml(commission.clientName || '')}">${escapeHtml(commission.clientName || '—')}</td>
                     <td class="commission-col-builders" title="${escapeHtml(buildersStr(commission))}">${escapeHtml(buildersStr(commission))}</td>
                     <td class="commission-col-state">${stateBadge}</td>
@@ -5681,8 +6518,8 @@ Version : ${version}`;
             document.getElementById('worldName').value = commission.worldName || 'c-';
             loadAgentsIntoSelects();
             document.getElementById('version').value = commission.version;
-            document.getElementById('buildStart').value = commission.buildStart;
-            document.getElementById('buildEnd').value = commission.buildEnd;
+            document.getElementById('buildStart').value = toCommissionDateInputValue(commission.buildStart);
+            document.getElementById('buildEnd').value = toCommissionDateInputValue(commission.buildEnd);
             const totalPriceInput = document.getElementById('commissionTotalPrice');
             if (totalPriceInput) {
                 totalPriceInput.value = commission.price != null && Number(commission.price) > 0
@@ -5838,6 +6675,11 @@ Version : ${version}`;
             if (commissionCount) commissionCount.textContent = commissions.length;
             if (todoCount) todoCount.textContent = todos.length;
             if (storageSize) storageSize.textContent = accessToken ? t('data.storageRemote') : t('data.storageLoggedOut');
+            if (canManageDangerousData()) {
+                void refreshLegacyImportCountLabel();
+                void refreshObsoleteSeedCountLabel();
+                void refreshCommissionsSeedCountLabel();
+            }
         }
 
         function formatSchematicLogDate(value) {
@@ -5928,6 +6770,26 @@ Version : ${version}`;
         let analystChartByAgent = null;
         let allTransactions = [];
 
+        function updateLoginPasswordToggleLabel() {
+            const input = document.getElementById('loginPassword');
+            const btn = document.getElementById('loginPasswordToggle');
+            if (!input || !btn) return;
+            const visible = input.type === 'text';
+            const key = visible ? 'header.hidePassword' : 'header.showPassword';
+            const label = t(key);
+            btn.setAttribute('aria-label', label);
+            btn.setAttribute('title', label);
+            btn.textContent = visible ? '🙈' : '👁️';
+        }
+
+        function toggleLoginPasswordVisibility() {
+            const input = document.getElementById('loginPassword');
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            updateLoginPasswordToggleLabel();
+            input.focus();
+        }
+
         bindElementEvent('loginForm', 'submit', async function(e) {
             e.preventDefault();
 
@@ -5942,6 +6804,11 @@ Version : ${version}`;
                 setAuthStatus(t('alerts.authInProgress'), false);
                 await login(email, password);
                 this.reset();
+                const loginPw = document.getElementById('loginPassword');
+                if (loginPw) {
+                    loginPw.type = 'password';
+                }
+                updateLoginPasswordToggleLabel();
             } catch (error) {
                 clearSessionData();
                 setAuthenticatedState(false);
@@ -6049,7 +6916,9 @@ Version : ${version}`;
             
             commissions.forEach(c => {
                 const dateStr = c.buildEnd || c.buildStart || c.createdAt;
-                const dateSort = dateStr ? new Date(dateStr).getTime() : 0;
+                const dateSort = parseCommissionBuildTimestamp(c.buildEnd)
+                    || parseCommissionBuildTimestamp(c.buildStart)
+                    || parseCommissionBuildTimestamp(c.createdAt);
                 const finished = isCommissionFinished(c);
                 const amountForAnalyst = getCommissionAmountForAnalyst(c);
                 list.push({
@@ -6120,7 +6989,7 @@ Version : ${version}`;
             }
             const wrap = document.getElementById('transactionsListWrap');
             if (!wrap) return;
-            const formatDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+            const formatDate = (d) => formatCommissionBuildDate(d);
             const typeLabels = { commission: 'Commission', expense: 'Dépense', builder: 'Builder', manager: 'Manager' };
             if (filtered.length === 0) {
                 wrap.innerHTML = `<p style="color: #94a3b8; padding: 24px;">${t('alerts.noTransactions')}</p>`;
@@ -6184,8 +7053,9 @@ Version : ${version}`;
                 }
                 
                 const dateStr = c.buildEnd || c.buildStart || c.createdAt;
-                if (dateStr && amountForAnalyst > 0) {
-                    const d = new Date(dateStr);
+                const dateTs = parseCommissionBuildTimestamp(dateStr);
+                if (dateTs > 0 && amountForAnalyst > 0) {
+                    const d = new Date(dateTs);
                     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
                     byMonth[key] = (byMonth[key] || 0) + amountForAnalyst;
                 }
@@ -6319,7 +7189,7 @@ Version : ${version}`;
                 });
             }
             
-            const builderManagers = agents.filter(a => a.category === 'manager' || a.category === 'builder' || a.category === 'apprentice');
+            const builderManagers = agents.filter(a => a.category === 'manager' || a.category === 'builder' || a.category === 'apprentice' || a.category === 'trial');
             const tableRows = builderManagers
                 .map(a => {
                     const net = byAgent[a.pseudo] || 0;

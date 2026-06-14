@@ -181,13 +181,17 @@ final class DiscordTicketIngestService
             }
         }
 
+        $description = trim((string) ($payload['description'] ?? ''));
+
         return [
             'discordChannelId' => $channelId,
             'ticketName' => (string) $payload['ticketName'],
             'guildId' => $guildId,
             'discordUrl' => $discordUrl,
             'status' => $closed ? 'archived' : $status,
-            'description' => trim((string) ($payload['description'] ?? '')),
+            'description' => $description,
+            'descriptionUpdatedBy' => $description !== '' ? 'discord' : null,
+            'descriptionUpdatedAt' => $description !== '' ? new UTCDateTime() : null,
             'clientWl' => $clientWl,
             'channelArchived' => $closed,
             'openedAt' => $openedAt,

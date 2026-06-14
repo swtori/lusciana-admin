@@ -13,6 +13,7 @@ final class Roles
     public const SUPERADMIN = 'superadmin';
 
     public const AGENT_CLIENT = 'client';
+    public const AGENT_TRIAL = 'trial';
     public const AGENT_APPRENTICE = 'apprentice';
     public const AGENT_BUILDER = 'builder';
     public const AGENT_MANAGER = 'manager';

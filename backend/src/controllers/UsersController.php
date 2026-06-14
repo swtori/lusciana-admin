@@ -184,7 +184,7 @@ final class UsersController
             $agentCategory = (string) ($normalizedAgent['category'] ?? '');
             $matchesRole = $role === Roles::MANAGER
                 ? $agentCategory === Roles::AGENT_MANAGER
-                : in_array($agentCategory, [Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER], true);
+                : in_array($agentCategory, [Roles::AGENT_TRIAL, Roles::AGENT_APPRENTICE, Roles::AGENT_BUILDER], true);
             if (!$matchesRole) {
                 throw new HttpException('La categorie de l agent ne correspond pas au role du compte', 422);
             }

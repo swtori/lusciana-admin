@@ -85,9 +85,16 @@ final class DiscordTicketRepository
         }
 
         if ($existing === null) {
+            $description = (string) ($data['description'] ?? '');
             $this->collection->insertOne(array_merge($base, [
                 'discordChannelId' => (string) $data['discordChannelId'],
-                'description' => (string) ($data['description'] ?? ''),
+                'description' => $description,
+                'descriptionUpdatedBy' => $description !== ''
+                    ? (string) ($data['descriptionUpdatedBy'] ?? 'discord')
+                    : null,
+                'descriptionUpdatedAt' => $description !== ''
+                    ? ($data['descriptionUpdatedAt'] ?? $now)
+                    : null,
                 'clientWl' => (string) ($data['clientWl'] ?? 'none'),
                 'minecraftNicknames' => [],
                 'needsBotSync' => false,
@@ -97,6 +104,7 @@ final class DiscordTicketRepository
             return 'created';
         }
 
+        // Ne jamais ecraser description / auteur : reserves aux modifs admin
         $this->collection->updateOne(
             ['_id' => $existing['_id']],
             ['$set' => $base]
@@ -131,6 +139,8 @@ final class DiscordTicketRepository
             $this->collection->insertOne(array_merge($data, [
                 'status' => 'open',
                 'description' => '',
+                'descriptionUpdatedBy' => null,
+                'descriptionUpdatedAt' => null,
                 'clientWl' => 'none',
                 'minecraftNicknames' => [],
                 'channelArchived' => false,

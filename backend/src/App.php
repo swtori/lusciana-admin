@@ -9,6 +9,7 @@ use App\Controllers\AgentsController;
 use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\CommissionsController;
+use App\Controllers\DiscordTeamController;
 use App\Controllers\DiscordTicketsController;
 use App\Controllers\ExpensesController;
 use App\Controllers\HealthController;
@@ -31,8 +32,10 @@ use App\Repositories\TodoRepository;
 use App\Repositories\UserRepository;
 use App\Services\AgentEngagementService;
 use App\Services\AuthService;
+use App\Services\DiscordBotTicketNotifyService;
 use App\Services\DiscordSyncService;
 use App\Services\DiscordTicketIngestService;
+use App\Services\TeamMemberOnboardService;
 use App\Services\HistoricalImportService;
 use App\Services\JwtService;
 use App\Services\SchematicsUploadService;
@@ -131,12 +134,21 @@ final class App
         $todos = new TodosController($todoRepository, $auth);
         $discordSync = new DiscordSyncService($this->config, $discordTicketRepository);
         $discordTicketIngest = new DiscordTicketIngestService($this->config, $discordTicketRepository);
+        $discordBotTicketNotify = new DiscordBotTicketNotifyService($this->config);
         $discordTickets = new DiscordTicketsController(
             $discordTicketRepository,
             $discordSync,
             $discordTicketIngest,
+            $discordBotTicketNotify,
             $auth
         );
+        $teamMemberOnboard = new TeamMemberOnboardService(
+            $this->config,
+            $agentRepository,
+            $userRepository,
+            $refreshTokenRepository
+        );
+        $discordTeam = new DiscordTeamController($teamMemberOnboard);
         $schematicsUpload = new SchematicsUploadService(
             (string) $this->config['schematics_upload_dir'],
             (int) $this->config['schematics_max_mb'] * 1024 * 1024
@@ -166,6 +178,12 @@ final class App
         $this->router->add('POST', '/api/agents/:id/engagement-events', [$agentEngagementController, 'createEvent']);
 
         $this->router->add('GET', '/api/commissions', [$commissions, 'list']);
+        $this->router->add('GET', '/api/commissions/legacy-import', [$commissions, 'legacyImportCount']);
+        $this->router->add('DELETE', '/api/commissions/legacy-import', [$commissions, 'deleteLegacyImport']);
+        $this->router->add('POST', '/api/commissions/seed-import', [$commissions, 'importSeed']);
+        $this->router->add('POST', '/api/commissions/normalize-build-dates', [$commissions, 'normalizeBuildDates']);
+        $this->router->add('GET', '/api/commissions/obsolete-seed', [$commissions, 'obsoleteSeedCount']);
+        $this->router->add('DELETE', '/api/commissions/obsolete-seed', [$commissions, 'deleteObsoleteSeed']);
         $this->router->add('GET', '/api/commissions/:id', [$commissions, 'show']);
         $this->router->add('POST', '/api/commissions', [$commissions, 'create']);
         $this->router->add('PATCH', '/api/commissions/:id', [$commissions, 'update']);
@@ -187,6 +205,10 @@ final class App
         $this->router->add('POST', '/api/discord-tickets/ack', [$discordTickets, 'ack']);
         $this->router->add('POST', '/api/discord-tickets/sync', [$discordTickets, 'sync']);
         $this->router->add('PATCH', '/api/discord-tickets/:id', [$discordTickets, 'update']);
+
+        $this->router->add('POST', '/api/discord-team/onboard', [$discordTeam, 'onboard']);
+        $this->router->add('GET', '/api/discord-team/by-discord/:discordUserId', [$discordTeam, 'lookup']);
+        $this->router->add('POST', '/api/discord-team/remove', [$discordTeam, 'remove']);
 
         $this->router->add('GET', '/api/schematics/info', [$schematics, 'info']);
         $this->router->add('GET', '/api/schematics/logs', [$schematics, 'logs']);

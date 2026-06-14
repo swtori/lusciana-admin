@@ -10,7 +10,9 @@ use App\Http\Request;
 use App\Repositories\AgentRepository;
 use App\Repositories\CommissionRepository;
 use App\Services\AuthService;
+use App\Support\CommissionBuildDate;
 use App\Support\MongoSerializer;
+use App\Support\ObsoleteCommissionWorlds;
 use App\Support\Roles;
 use App\Support\Validator;
 use MongoDB\BSON\UTCDateTime;
@@ -151,5 +153,205 @@ final class CommissionsController
         }
 
         return new JsonResponse(['message' => 'Commission supprimee']);
+    }
+
+    public function legacyImportCount(Request $request, array $params): JsonResponse
+    {
+        $this->auth->requireRole($request, Roles::ADMIN);
+
+        return new JsonResponse([
+            'count' => $this->commissions->countLegacyImports(),
+        ]);
+    }
+
+    public function deleteLegacyImport(Request $request, array $params): JsonResponse
+    {
+        $this->auth->requireRole($request, Roles::ADMIN);
+
+        $deleted = $this->commissions->deleteLegacyImports();
+
+        return new JsonResponse([
+            'message' => 'Commissions legacy supprimees',
+            'deleted' => $deleted,
+        ]);
+    }
+
+    public function importSeed(Request $request, array $params): JsonResponse
+    {
+        $user = $this->auth->requireRole($request, Roles::ADMIN);
+        $items = $request->body['items'] ?? null;
+
+        if (!is_array($items)) {
+            throw new HttpException('Liste de commissions invalide', 422);
+        }
+
+        $skipExisting = (bool) ($request->body['skipExisting'] ?? true);
+        $now = new UTCDateTime();
+        $worldNames = [];
+        $normalizedItems = [];
+
+        foreach ($items as $index => $raw) {
+            if (!is_array($raw)) {
+                throw new HttpException('Commission invalide a l index ' . $index, 422);
+            }
+
+            $worldName = trim((string) ($raw['worldName'] ?? ''));
+            $buildName = trim((string) ($raw['buildName'] ?? ''));
+            if ($worldName === '' || $buildName === '') {
+                throw new HttpException('worldName et buildName requis (index ' . $index . ')', 422);
+            }
+
+            $price = (float) ($raw['price'] ?? 0);
+            $worldNames[] = $worldName;
+            $normalizedItems[] = $this->normalizeSeedCommission($raw, $worldName, $buildName, $price, $user['id'], $now);
+        }
+
+        $existing = $skipExisting
+            ? $this->commissions->findExistingWorldNames($worldNames)
+            : [];
+        $existingSet = array_fill_keys($existing, true);
+
+        $toInsert = [];
+        $skipped = 0;
+        foreach ($normalizedItems as $document) {
+            $worldName = (string) $document['worldName'];
+            if (isset($existingSet[$worldName])) {
+                $skipped++;
+                continue;
+            }
+            $toInsert[] = $document;
+            $existingSet[$worldName] = true;
+        }
+
+        $inserted = $this->commissions->insertMany($toInsert);
+
+        return new JsonResponse([
+            'message' => 'Import seed termine',
+            'inserted' => $inserted,
+            'skipped' => $skipped,
+            'total' => count($items),
+        ]);
+    }
+
+    public function normalizeBuildDates(Request $request, array $params): JsonResponse
+    {
+        $this->auth->requireRole($request, Roles::ADMIN);
+
+        $updated = $this->commissions->normalizeAllBuildDates();
+
+        return new JsonResponse([
+            'message' => 'Dates de build normalisees',
+            'updated' => $updated,
+        ]);
+    }
+
+    public function obsoleteSeedCount(Request $request, array $params): JsonResponse
+    {
+        $this->auth->requireRole($request, Roles::ADMIN);
+        $worldNames = ObsoleteCommissionWorlds::all();
+
+        return new JsonResponse([
+            'count' => $this->commissions->countByWorldNames($worldNames),
+            'worldNames' => $worldNames,
+            'found' => $this->commissions->findMatchingWorldNames($worldNames),
+        ]);
+    }
+
+    public function deleteObsoleteSeed(Request $request, array $params): JsonResponse
+    {
+        $this->auth->requireRole($request, Roles::ADMIN);
+        $worldNames = ObsoleteCommissionWorlds::all();
+        $found = $this->commissions->findMatchingWorldNames($worldNames);
+        $deleted = $this->commissions->deleteByWorldNames($worldNames);
+
+        return new JsonResponse([
+            'message' => 'Commissions obsolete supprimees',
+            'deleted' => $deleted,
+            'found' => $found,
+        ]);
+    }
+
+    /** @param array<string, mixed> $raw */
+    private function normalizeSeedCommission(
+        array $raw,
+        string $worldName,
+        string $buildName,
+        float $price,
+        string $createdBy,
+        UTCDateTime $now
+    ): array {
+        $depositAmount = (float) ($raw['depositAmount'] ?? 0);
+        $priceDistribution = $this->normalizePriceDistribution($raw['priceDistribution'] ?? [], $price);
+
+        return [
+            'buildSize' => (string) ($raw['buildSize'] ?? ''),
+            'buildName' => $buildName,
+            'worldName' => $worldName,
+            'realizedBy' => array_values($raw['realizedBy'] ?? []),
+            'version' => (string) ($raw['version'] ?? ''),
+            'forCustomer' => (string) ($raw['forCustomer'] ?? 'yes'),
+            'price' => $price,
+            'buildStart' => CommissionBuildDate::normalize((string) ($raw['buildStart'] ?? '')),
+            'buildEnd' => CommissionBuildDate::normalize((string) ($raw['buildEnd'] ?? ''), true),
+            'depositPaid' => $depositAmount > 0 ? 'yes' : (string) ($raw['depositPaid'] ?? 'no'),
+            'depositAmount' => $depositAmount,
+            'buildType' => (string) ($raw['buildType'] ?? 'commission'),
+            'organics' => (string) ($raw['organics'] ?? 'yes'),
+            'selectedAgents' => array_values($raw['selectedAgents'] ?? []),
+            'priceDistribution' => $priceDistribution,
+            'commissionPercent' => (float) ($raw['commissionPercent'] ?? 15),
+            'wentWell' => (string) ($raw['wentWell'] ?? 'yes'),
+            'clientName' => (string) ($raw['clientName'] ?? ''),
+            'clientWants' => (string) ($raw['clientWants'] ?? ''),
+            'hasFeedback' => (string) ($raw['hasFeedback'] ?? 'no'),
+            'clientFeedback' => (string) ($raw['clientFeedback'] ?? ''),
+            'render' => (string) ($raw['render'] ?? 'no'),
+            'showcaseText' => (string) ($raw['showcaseText'] ?? ''),
+            'createdBy' => $createdBy,
+            'createdAt' => $now,
+            'updatedAt' => $now,
+            'seedImport' => [
+                'source' => 'commissions-seed.json',
+            ],
+        ];
+    }
+
+    /** @param array<string, mixed> $raw */
+    private function normalizePriceDistribution(array $raw, float $price): array
+    {
+        $normalized = [];
+
+        foreach ($raw as $agent => $value) {
+            $agentName = trim((string) $agent);
+            if ($agentName === '') {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $percent = (float) ($value['percent'] ?? 0);
+                $amount = (float) ($value['price'] ?? $value['amount'] ?? 0);
+                if ($percent <= 0 && $amount > 0 && $price > 0) {
+                    $percent = round(($amount / $price) * 100, 2);
+                }
+                if ($amount <= 0 && $percent > 0 && $price > 0) {
+                    $amount = round($price * $percent / 100, 2);
+                }
+                $normalized[$agentName] = [
+                    'price' => $amount,
+                    'percent' => $percent,
+                    'paid' => ($value['paid'] ?? false) === true || ($value['paid'] ?? '') === 'yes',
+                ];
+                continue;
+            }
+
+            $percent = (float) $value;
+            $normalized[$agentName] = [
+                'price' => $price > 0 ? round($price * $percent / 100, 2) : 0,
+                'percent' => $percent,
+                'paid' => false,
+            ];
+        }
+
+        return $normalized;
     }
 }

@@ -62,6 +62,10 @@ final class Config
             'discord_ticket_name_prefix' => self::optionalEnv('DISCORD_TICKET_NAME_PREFIX', 'ticket-'),
             'discord_ticket_category_id' => self::optionalEnv('DISCORD_TICKET_CATEGORY_ID'),
             'discord_tickets_ingest_secret' => self::optionalEnv('DISCORD_TICKETS_INGEST_SECRET'),
+            'discord_bot_tickets_webhook_url' => self::optionalEnv(
+                'DISCORD_BOT_TICKETS_WEBHOOK_URL',
+                'http://127.0.0.1:3847/internal/discord-tickets/process-pending'
+            ),
         ];
     }
 
